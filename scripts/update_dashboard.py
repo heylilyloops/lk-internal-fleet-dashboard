@@ -18,17 +18,14 @@ SPREADSHEET_ID = '1d_AzKPEc6GE_8t2WpND7ECmYK03ytubr7c2fGicKcvk'
 GID_INTERNAL   = 2055243006
 GID_EXTERNAL   = 1514192890
 
+# Uppercase lookup — handles any casing from sheet
 SITE_MAP = {
-    'DC HCI CIKUPA'   : 'HCI Cikupa',
-    'DC HCI JABABEKA' : 'HCI Jababeka',
-    'DC SIDOARJO'     : 'Corp Sidoarjo',
-    'DC AHI JABABEKA' : 'AHI Jababeka'
+    'NDC HCI CIKUPA'   : 'HCI Cikupa',
+    'NDC HCI JABABEKA' : 'HCI Jababeka',
+    'NDC SIDOARJO'     : 'Corp Sidoarjo',
+    'NDC AHI JABABEKA' : 'AHI Jababeka',
 }
-MONTH_MAP = {
-    '1':'January','2':'February','3':'March','4':'April','5':'May',
-    '6':'June','7':'July','8':'August','9':'September','10':'October',
-    '11':'November','12':'December'
-}
+MONTH_MAP = {}  # tidak dipakai, delivery date diparse langsung
 
 # ── FETCH SHEETS ─────────────────────────────────────────────────
 print("Fetching Google Sheets data...")
@@ -43,7 +40,6 @@ print(f"Internal rows: {len(int_data)-1}, External rows: {len(ext_data)-1}")
 
 # ── PARSE INTERNAL ────────────────────────────────────────────────
 int_rows = []
-header = int_data[0]
 for line in int_data[1:]:
     if len(line) < 13: continue
     site = line[0].strip()
@@ -75,45 +71,71 @@ print(f"INT parsed: {len(int_rows)} rows")
 # ── PARSE EXTERNAL ────────────────────────────────────────────────
 ext_header = ext_data[0]
 col = {h.strip(): i for i, h in enumerate(ext_header)}
+print(f"EXT header cols: {list(col.keys())[:12]}")
 
 ext_agg_area  = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 ext_agg_jalur = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int))))
 
+skipped = 0
 for line in ext_data[1:]:
-    if len(line) < max(col.values()) + 1: continue
-    site_raw   = line[col.get('SITE NAME', 0)].strip()
-    area       = line[col.get('Area', 2)].strip()
-    jalur      = line[col.get('Jalur', 3)].strip().title()
-    month_num  = line[col.get('Month Num', 9)].strip()
-    site       = SITE_MAP.get(site_raw)
-    if not site or not area: continue
-    month_name = MONTH_MAP.get(month_num)
-    if not month_name: continue
-    ext_agg_area[site][month_name][area] += 1
+    if not any(line): continue
+    # safe get dengan fallback index
+    def get_col(name, fallback):
+        idx = col.get(name, fallback)
+        return line[idx].strip() if idx < len(line) else ''
+
+    site_raw     = get_col('SITE NAME', 0)
+    area         = get_col('Area', 2)
+    jalur_raw    = get_col('Jalur', 3)
+    delivery_raw = get_col('DELIVERY DATE', 7)
+
+    # uppercase match untuk site
+    site = SITE_MAP.get(site_raw.upper())
+    if not site or not area:
+        skipped += 1
+        continue
+
+    # parse delivery date → YYYY-MM-DD
+    del_date = None
+    for fmt_str in ('%d %b %y', '%d-%b-%y', '%m/%d/%Y', '%Y-%m-%d'):
+        try:
+            del_date = datetime.strptime(delivery_raw, fmt_str).strftime('%Y-%m-%d')
+            break
+        except:
+            continue
+    if not del_date:
+        skipped += 1
+        continue
+
+    jalur = jalur_raw.title() if jalur_raw else ''
+
+    ext_agg_area[site][del_date][area] += 1
     if jalur:
-        ext_agg_jalur[site][month_name][area][jalur] += 1
+        ext_agg_jalur[site][del_date][area][jalur] += 1
+
+print(f"EXT skipped: {skipped}")
 
 ext_list_area = [
-    {"fleet":"External","site":s,"month":m,"area":a,"trips":t}
-    for s, months in ext_agg_area.items()
-    for m, areas in months.items()
+    {"fleet":"External","site":s,"date":d,"area":a,"trips":t}
+    for s, dates in ext_agg_area.items()
+    for d, areas in dates.items()
     for a, t in areas.items()
 ]
 ext_list_jalur = [
-    {"site":s,"month":m,"area":a,"jalur":j,"trips":t}
-    for s, months in ext_agg_jalur.items()
-    for m, areas in months.items()
+    {"site":s,"date":d,"area":a,"jalur":j,"trips":t}
+    for s, dates in ext_agg_jalur.items()
+    for d, areas in dates.items()
     for a, jalurs in areas.items()
     for j, t in jalurs.items()
 ]
 
-print(f"EXT area: {len(ext_list_area)}, EXT jalur: {len(ext_list_jalur)}")
+print(f"EXT area entries: {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}")
 
 # ── BUILD data_block.js ───────────────────────────────────────────
 data_block = (
-    'const RAW = '      + json.dumps(int_rows,       ensure_ascii=False) + ';\n' +
-    'const EXT_AGG = '  + json.dumps(ext_list_area,  ensure_ascii=False) + ';\n' +
-    'const EXT_JALUR = '+ json.dumps(ext_list_jalur, ensure_ascii=False) + ';\n'
+    'const RAW = '       + json.dumps(int_rows,        ensure_ascii=False) + ';\n' +
+    'const EXT_AGG = '   + json.dumps(ext_list_area,   ensure_ascii=False) + ';\n' +
+    'const EXT_JALUR = ' + json.dumps(ext_list_jalur,  ensure_ascii=False) + ';\n'
 )
 
 # ── INJECT KE HTML ────────────────────────────────────────────────
