@@ -325,12 +325,10 @@ function calcJalur(rows,site){
 function calcContrib(rows){
   const intMap={};
   rows.forEach(r=>{if(!intMap[r[1]]) intMap[r[1]]=0;intMap[r[1]]++;});
-  const activeMonths=new Set(rows.map(r=>r[7].slice(0,7)));
-  const MN={'01':'January','02':'February','03':'March','04':'April','05':'May'};
-  const activeMonthNames=new Set([...activeMonths].map(m=>MN[m.slice(5)]));
   let extFilter=EXT_AGG;
   if(activeSite!=='all') extFilter=extFilter.filter(e=>e.site===activeSite);
-  extFilter=extFilter.filter(e=>activeMonthNames.has(e.month));
+  if(dateFrom) extFilter=extFilter.filter(e=>e.date>=dateFrom);
+  if(dateTo)   extFilter=extFilter.filter(e=>e.date<=dateTo);
   const extMap={};
   extFilter.forEach(e=>{extMap[e.area]=(extMap[e.area]||0)+e.trips;});
   const areas=new Set([...Object.keys(intMap),...Object.keys(extMap)]);
@@ -348,17 +346,16 @@ function calcContribExpandable(rows){
     areaMap[area].jalurs[jalur].int++;areaMap[area].jalurs[jalur].ci+=r[3]||0;
     if(r[4]){areaMap[area].jalurs[jalur].ce+=r[4];areaMap[area].jalurs[jalur].ceCnt++;}
   });
-  const activeMonths=new Set(rows.map(r=>r[7].slice(0,7)));
-  const MN={'01':'January','02':'February','03':'March','04':'April','05':'May'};
-  const activeMonthNames=new Set([...activeMonths].map(m=>MN[m.slice(5)]));
   let extFilterArea=EXT_AGG;
   if(activeSite!=='all') extFilterArea=extFilterArea.filter(e=>e.site===activeSite);
-  extFilterArea=extFilterArea.filter(e=>activeMonthNames.has(e.month));
+  if(dateFrom) extFilterArea=extFilterArea.filter(e=>e.date>=dateFrom);
+  if(dateTo)   extFilterArea=extFilterArea.filter(e=>e.date<=dateTo);
   const extAreaMap={};
   extFilterArea.forEach(e=>{extAreaMap[e.area]=(extAreaMap[e.area]||0)+e.trips;});
   let extFilterJalur=EXT_JALUR;
   if(activeSite!=='all') extFilterJalur=extFilterJalur.filter(e=>e.site===activeSite);
-  extFilterJalur=extFilterJalur.filter(e=>activeMonthNames.has(e.month));
+  if(dateFrom) extFilterJalur=extFilterJalur.filter(e=>e.date>=dateFrom);
+  if(dateTo)   extFilterJalur=extFilterJalur.filter(e=>e.date<=dateTo);
   const extJalurMap={};
   extFilterJalur.forEach(e=>{const key=e.area+'||'+e.jalur;extJalurMap[key]=(extJalurMap[key]||0)+e.trips;});
   const allAreas=new Set([...Object.keys(areaMap),...Object.keys(extAreaMap)]);
@@ -447,10 +444,11 @@ function calcProvinsi(rows){
   const result={};
   NDC.forEach(s=>{result[s]={};});
   rows.forEach(r=>{const s=r[0],area=r[1];if(!result[s]) return;if(!result[s][area]) result[s][area]={int:0,ext:0};result[s][area].int++;});
-  const activeMonths=new Set(rows.map(r=>r[7].slice(0,7)));
-  const MN={'01':'January','02':'February','03':'March','04':'April','05':'May'};
-  const activeMonthNames=new Set([...activeMonths].map(m=>MN[m.slice(5)]));
-  EXT_AGG.filter(e=>activeMonthNames.has(e.month)).forEach(e=>{if(!result[e.site]) return;if(!result[e.site][e.area]) result[e.site][e.area]={int:0,ext:0};result[e.site][e.area].ext+=e.trips;});
+  EXT_AGG.filter(e=>{
+    if(dateFrom&&e.date<dateFrom) return false;
+    if(dateTo&&e.date>dateTo) return false;
+    return true;
+  }).forEach(e=>{if(!result[e.site]) return;if(!result[e.site][e.area]) result[e.site][e.area]={int:0,ext:0};result[e.site][e.area].ext+=e.trips;});
   return result;
 }
 
@@ -467,10 +465,12 @@ function calcVisibility(rows){
     const totCI=jalurs.reduce((s,j)=>s+j.ci,0);
     const totCE=jalurs.filter(j=>j.ceCnt>0).reduce((s,j)=>s+j.ce,0);
     const intTrips=jalurs.reduce((s,j)=>s+j.trips,0);
-    const activeMonths=new Set(rows.map(r=>r[7].slice(0,7)));
-    const MN={'01':'January','02':'February','03':'March','04':'April','05':'May'};
-    const activeMonthNames=new Set([...activeMonths].map(m=>MN[m.slice(5)]));
-    const extTrips=EXT_AGG.filter(e=>e.site===s&&activeMonthNames.has(e.month)).reduce((s,e)=>s+e.trips,0);
+    const extTrips=EXT_AGG.filter(e=>{
+      if(e.site!==s) return false;
+      if(dateFrom&&e.date<dateFrom) return false;
+      if(dateTo&&e.date>dateTo) return false;
+      return true;
+    }).reduce((s,e)=>s+e.trips,0);
     const totalTrips=intTrips+extTrips;
     const pct=totalTrips?Math.round(intTrips/totalTrips*100):0;
     const ratePerDay=+(intTrips/dayCount).toFixed(1);
