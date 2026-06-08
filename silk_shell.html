@@ -5,119 +5,171 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SILK — Support Delivery LK Internal Fleet NDC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--sw:224px;--navy:#0b1c36;--navy2:#112240;--navy3:#162d4a;--blue:#266CA9;--blue2:#1d5a91;--blue3:#3d82be;--bg:#f0f4f9;--surface:#fff;--muted:#637d9a;--border:#dce6f0;--border2:#c5d8ec;--txt:#0d2137;--txt2:#3a5472;--teal:#00c49a;--orange:#f5a623;--cyan:#5ba4f5;--green:#22a06b;--red:#e24b4b;--yellow:#f59e0b;--font:'Plus Jakarta Sans',system-ui,sans-serif;--mono:'DM Mono',monospace;}
+:root{
+  --sw:220px;
+  --navy:#0b1c36;--navy2:#112240;--navy3:#1a2f4a;
+  --blue:#266CA9;--blue2:#1d5a91;--blue3:#3d82be;
+  --bg:#f0f4f9;--surface:#fff;
+  --muted:#637d9a;--border:#dce6f0;--border2:#c5d8ec;
+  --txt:#0d2137;--txt2:#3a5472;
+  --teal:#00c49a;--orange:#f5a623;--cyan:#5ba4f5;
+  --green:#22a06b;--red:#e24b4b;--yellow:#f59e0b;--purple:#8b6cf7;
+  --font:'Plus Jakarta Sans',system-ui,sans-serif;
+  --mono:'DM Mono',monospace;
+}
 body{font-family:var(--font);background:var(--bg);color:var(--txt);display:flex;height:100vh;overflow:hidden;font-size:13px}
+
+/* ── SIDEBAR ── */
 .sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;height:100vh;overflow-y:auto}
 .sb::-webkit-scrollbar{width:3px}.sb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
-.sb-logo{padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px}
-.sb-icon{width:36px;height:36px;background:var(--blue);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;letter-spacing:-.5px;flex-shrink:0;font-family:var(--mono)}
-.sb-brand{flex:1;min-width:0}
-.sb-brand-name{font-size:13px;font-weight:700;color:#fff;letter-spacing:.3px}
-.sb-brand-sub{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.9px;margin-top:1px;line-height:1.3}
-.sb-section{padding:14px 14px 5px;font-size:9px;font-weight:600;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:1.2px}
-.sb-item{display:flex;align-items:center;gap:9px;padding:9px 14px;cursor:pointer;color:rgba(255,255,255,.5);font-size:12px;font-weight:500;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all .15s}
-.sb-item:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.05)}
-.sb-item.active{color:#fff;background:rgba(38,108,169,.2);border-left-color:var(--blue)}
-.sb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.sb-badge{margin-left:auto;font-size:9.5px;padding:2px 7px;border-radius:10px;font-weight:600;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)}
-.sb-item.active .sb-badge{background:var(--blue);color:#fff}
-.sb-divider{height:1px;background:rgba(255,255,255,.06);margin:6px 12px}
+.sb-logo{padding:16px 16px 14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.sb-icon{width:34px;height:34px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;letter-spacing:-.5px;flex-shrink:0;font-family:var(--mono)}
+.sb-brand-name{font-size:12px;font-weight:700;color:#fff;letter-spacing:.3px}
+.sb-brand-sub{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;margin-top:1px;line-height:1.4}
+.sb-section{padding:14px 14px 5px;font-size:9px;font-weight:600;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.2px}
+.sb-menu-item{display:flex;align-items:center;gap:9px;padding:8px 14px;cursor:pointer;color:rgba(255,255,255,.5);font-size:12px;font-weight:500;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all .15s;border-radius:0}
+.sb-menu-item:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.05)}
+.sb-menu-item.active{color:#fff;background:rgba(38,108,169,.25);border-left-color:var(--blue)}
+.sb-menu-icon{font-size:14px;width:16px;text-align:center;flex-shrink:0}
+.sb-site-item{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;color:rgba(255,255,255,.45);font-size:11.5px;font-weight:500;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all .15s}
+.sb-site-item:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.04)}
+.sb-site-item.active{color:#fff;background:rgba(255,255,255,.07);border-left-color:var(--blue)}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sb-badge{margin-left:auto;font-size:9.5px;padding:1px 6px;border-radius:8px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
+.sb-site-item.active .sb-badge{background:rgba(38,108,169,.4);color:rgba(255,255,255,.8)}
+.sb-divider{height:1px;background:rgba(255,255,255,.06);margin:5px 12px}
+.sb-info{padding:10px 14px 14px;font-size:10px;color:rgba(255,255,255,.25);line-height:1.7;margin-top:auto}
+
+/* ── MAIN ── */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px}
-.topbar-left h1{font-size:14px;font-weight:700;color:var(--txt);letter-spacing:-.2px}
-.topbar-left p{font-size:10px;color:var(--muted);margin-top:1px}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-title{font-size:14px;font-weight:700;color:var(--txt);letter-spacing:-.2px}
+.topbar-sub{font-size:10px;color:var(--muted)}
 .topbar-right{display:flex;align-items:center;gap:8px}
 .chip{background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:4px 10px;font-size:11px;color:var(--txt2);font-weight:500;white-space:nowrap}
 .chip.hi{background:#dcfff4;border-color:#86efcb;color:#065f46}
 .chip.lo{background:#fff1f2;border-color:#fca5a5;color:#991b1b}
 .chip.neu{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
-.view-toggle{display:flex;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:3px;gap:2px}
-.vtab{padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer;color:var(--muted);font-weight:500;border:none;background:transparent;transition:all .14s}
-.vtab.active{background:var(--surface);color:var(--blue);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.date-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap}
+
+/* ── DATE BAR ── */
+.date-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:7px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
 .date-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
-.date-inputs{display:flex;align-items:center;gap:8px}
+.date-inputs{display:flex;align-items:center;gap:6px}
 .date-input-wrap{display:flex;flex-direction:column;gap:2px}
 .date-input-wrap label{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-input[type=date]{background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:5px 10px;font-size:11.5px;color:var(--txt);font-family:var(--font);cursor:pointer;outline:none;font-weight:500}
+input[type=date]{background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--txt);font-family:var(--font);cursor:pointer;outline:none;font-weight:500}
 input[type=date]:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(38,108,169,.15)}
-.date-sep{font-size:11px;color:var(--muted);padding:0 2px}
-.date-quick{display:flex;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:3px}
-.dq{padding:4px 11px;border-radius:6px;font-size:11px;cursor:pointer;color:var(--muted);font-weight:500;border:none;background:transparent;transition:all .14s;white-space:nowrap}
+.date-sep{font-size:11px;color:var(--muted);padding:0 2px;margin-top:12px}
+.date-quick{display:flex;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px}
+.dq{padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;color:var(--muted);font-weight:500;border:none;background:transparent;transition:all .14s;white-space:nowrap}
 .dq:hover{color:var(--txt);background:rgba(0,0,0,.04)}
 .dq.active{background:var(--surface);color:var(--blue);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .date-count{font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
 .date-count b{color:var(--txt2)}
+
+/* ── CONTENT ── */
 .content{flex:1;overflow-y:auto;padding:16px 20px 28px}
 .content::-webkit-scrollbar{width:5px}.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-.kpi-row{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:14px}
-.kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px 15px;position:relative;overflow:hidden;transition:box-shadow .15s}
+
+/* ── CARDS & LAYOUT ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
+.card-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:11px;display:flex;align-items:center;gap:8px}
+.card-badge{font-size:9px;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.mb12{margin-bottom:12px}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;position:relative;overflow:hidden;transition:box-shadow .15s}
 .kpi:hover{box-shadow:0 2px 12px rgba(38,108,169,.1)}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.kpi.c1::before{background:var(--blue)}.kpi.c2::before{background:var(--teal)}.kpi.c3::before{background:var(--orange)}.kpi.c4::before{background:#8b6cf7}.kpi.c5::before{background:var(--green)}.kpi.c6::before{background:var(--red)}.kpi.c7::before{background:var(--cyan)}
-.klbl{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600}
-.kval{font-size:21px;font-weight:700;color:var(--txt);line-height:1;letter-spacing:-.4px;font-family:var(--mono)}
-.ksub{font-size:10px;color:var(--muted);margin-top:4px}
-.alert-banner{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px}
-.alert-banner.kritis{background:#fff1f2;border-color:#fca5a5}
-.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
-.alert-content{flex:1}
-.alert-title{font-size:11px;font-weight:700;color:#7c2d12;margin-bottom:4px}
-.alert-banner.kritis .alert-title{color:#991b1b}
-.alert-items{display:flex;flex-wrap:wrap;gap:6px}
-.alert-tag{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:500}
-.alert-tag.kritis{background:#fee2e2;color:#991b1b}
-.alert-tag.warning{background:#ffedd5;color:#92400e}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
-.ctitle{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:11px;display:flex;align-items:center;gap:8px}
-.ctitle-badge{font-size:9px;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
-.leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:9px}
-.li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
-.ls{width:9px;height:9px;border-radius:2px;flex-shrink:0}
-.mom-table{width:100%;border-collapse:collapse;font-size:12px}
-.mom-table th{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 8px;text-align:right;border-bottom:1px solid var(--border);font-weight:600}
-.mom-table th:first-child{text-align:left}
-.mom-table td{padding:7px 8px;border-bottom:1px solid #f0f4f9;vertical-align:middle;color:var(--txt)}
-.mom-table tr:last-child td{border-bottom:none}
-.mom-table tr:hover td{background:var(--bg)}
-.site-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
-.scard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;border-top:3px solid var(--blue);position:relative;overflow:hidden;transition:box-shadow .15s}
-.scard:hover{box-shadow:0 4px 16px rgba(38,108,169,.12)}
-.scard-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
-.scard-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.scard-trip{font-size:18px;font-weight:700;color:var(--txt);font-family:var(--mono);margin-top:2px;letter-spacing:-.5px}
-.scard-sub{font-size:10px;color:var(--muted);margin-top:2px}
-.pct-big{font-size:24px;font-weight:800;padding:6px 12px;border-radius:10px;line-height:1;font-family:var(--mono)}
-.scard-tbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
-.scard-tbl th{font-size:9px;color:var(--muted);text-transform:uppercase;padding:2px 4px;text-align:right;border-bottom:1px solid var(--border);font-weight:600}
-.scard-tbl th:first-child{text-align:left}
-.scard-tbl td{padding:4px 4px;border-bottom:1px solid #f5f7fa;vertical-align:middle}
-.scard-tbl tr:last-child td{border-bottom:none}
-.scard-footer{display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}
-.scard-footer b{color:var(--txt2)}
-.scard-alert{position:absolute;top:12px;right:12px;font-size:9px;padding:2px 6px;border-radius:6px;font-weight:700}
-.scard-alert.k{background:#fee2e2;color:#991b1b}
-.scard-alert.w{background:#ffedd5;color:#92400e}
-.prov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
-.prov-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
-.prov-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-.prov-site-name{font-size:12px;font-weight:700;color:var(--txt)}
-.prov-pct-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px}
-.prov-tbl{width:100%;border-collapse:collapse;font-size:11px}
-.prov-tbl th{font-size:9px;color:var(--muted);text-transform:uppercase;padding:3px 5px;text-align:right;border-bottom:1px solid var(--border);font-weight:600}
-.prov-tbl th:first-child{text-align:left}
-.prov-tbl td{padding:5px 5px;border-bottom:1px solid #f5f7fa;vertical-align:middle}
-.prov-tbl tr:last-child td{border-bottom:none;font-weight:700;color:var(--txt)}
-.prov-tbl tr:hover td{background:var(--bg)}
-.prov-bar-wrap{width:60px;height:4px;background:var(--border);border-radius:2px;display:inline-block;vertical-align:middle;margin-right:4px}
-.prov-bar-fill{height:100%;border-radius:2px}
+.kpi.c-blue::before{background:var(--blue)}.kpi.c-teal::before{background:var(--teal)}
+.kpi.c-orange::before{background:var(--orange)}.kpi.c-purple::before{background:var(--purple)}
+.kpi.c-green::before{background:var(--green)}.kpi.c-red::before{background:var(--red)}
+.kpi.c-cyan::before{background:var(--cyan)}.kpi.c-yellow::before{background:var(--yellow)}
+.kpi-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600}
+.kpi-value{font-size:22px;font-weight:700;color:var(--txt);line-height:1;letter-spacing:-.5px;font-family:var(--mono)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* ── SCORECARD EFISIENSI ── */
+.sc-table{width:100%;border-collapse:collapse}
+.sc-table th{font-size:9px;color:var(--muted);text-transform:uppercase;padding:5px 10px;text-align:left;border-bottom:2px solid var(--border);font-weight:600;background:var(--bg);white-space:nowrap}
+.sc-table th.r{text-align:right}
+.sc-table th.c{text-align:center}
+.sc-table td{padding:9px 10px;border-bottom:1px solid #f0f4f9;vertical-align:middle}
+.sc-table tr:last-child td{border-bottom:none}
+.sc-table tr:hover td{background:#fafbfd}
+.sc-jalur{font-weight:700;font-size:12px;color:var(--txt)}
+.sc-area{font-size:10px;color:var(--muted);margin-top:1px}
+.sc-bar-wrap{height:4px;background:var(--border);border-radius:2px;margin-top:4px;width:80px}
+.sc-bar-fill{height:4px;border-radius:2px}
+.sc-val{font-family:var(--mono);font-size:11.5px;text-align:right}
+.sc-val.int{color:var(--blue);font-weight:600}
+.sc-val.ext{color:var(--muted)}
+.sc-gap-pos{font-family:var(--mono);font-size:11px;color:var(--green);font-weight:700;text-align:right}
+.sc-gap-neg{font-family:var(--mono);font-size:11px;color:var(--red);font-weight:700;text-align:right}
+.sc-gap-neu{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+.status-pill{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block;white-space:nowrap}
+.sp-ideal{background:#dcfff4;color:#065f46}
+.sp-worth{background:#eff6ff;color:#1d4ed8}
+.sp-review{background:#fff7ed;color:#92400e}
+.sp-eval{background:#fff1f2;color:#991b1b}
+.sp-nodata{background:var(--bg);color:var(--muted)}
+
+/* ── INSIGHT CARDS ── */
+.insight-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.insight-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px}
+.insight-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.insight-body{flex:1}
+.insight-title{font-size:12px;font-weight:700;color:var(--txt);margin-bottom:3px}
+.insight-desc{font-size:11px;color:var(--txt2);line-height:1.5}
+.insight-tag{display:inline-block;font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+.it-pos{background:#dcfff4;color:#065f46}
+.it-neg{background:#fff1f2;color:#991b1b}
+.it-neu{background:#eff6ff;color:#1d4ed8}
+.it-warn{background:#fff7ed;color:#92400e}
+
+/* ── MATRIX 4 KUADRAN ── */
+.matrix-wrap{position:relative;height:320px;background:var(--bg);border-radius:8px;overflow:hidden}
+.matrix-axis-x{position:absolute;bottom:40px;left:0;right:0;height:1px;background:var(--border2)}
+.matrix-axis-y{position:absolute;left:50%;top:0;bottom:40px;width:1px;background:var(--border2)}
+.matrix-label{position:absolute;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.matrix-q{position:absolute;font-size:9px;font-weight:700;padding:4px 8px;border-radius:5px}
+.matrix-dot{position:absolute;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;transition:transform .15s}
+.matrix-dot:hover{transform:translate(-50%,-50%) scale(1.5)}
+.matrix-tooltip{position:absolute;background:var(--navy);color:#fff;font-size:10px;padding:6px 10px;border-radius:6px;pointer-events:none;white-space:nowrap;z-index:10;display:none}
+
+/* ── COVERAGE ── */
+.cov-site-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;margin-bottom:12px}
+.cov-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.cov-site-name{font-size:12px;font-weight:700}
+.cov-pct-big{font-size:20px;font-weight:800;font-family:var(--mono);padding:5px 12px;border-radius:8px;line-height:1}
+.cov-area-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cov-area-item{background:var(--bg);border-radius:8px;padding:10px 12px}
+.cov-area-name{font-size:11px;font-weight:600;color:var(--txt);margin-bottom:4px}
+.cov-area-bar-track{height:4px;background:var(--border2);border-radius:2px;margin-bottom:5px}
+.cov-area-bar-fill{height:4px;border-radius:2px}
+.cov-area-stats{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.cov-area-stats b{color:var(--txt2)}
+
+/* ── OOS SECTION ── */
+.oos-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:11px;padding:14px 16px;margin-bottom:8px}
+.oos-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.oos-site{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.oos-total{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--txt)}
+.oos-area-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f5f7fa;font-size:11px}
+.oos-area-row:last-child{border-bottom:none}
+
+/* ── OPERASIONAL ── */
 .jalur-wrap{overflow-x:auto}
-.jtbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:600px}
+.jtbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:700px}
 .jtbl th{font-size:9px;color:var(--muted);text-transform:uppercase;padding:6px 10px;text-align:right;border-bottom:1px solid var(--border);font-weight:600;white-space:nowrap;background:var(--bg)}
 .jtbl th:first-child,.jtbl th:nth-child(2),.jtbl th:nth-child(3){text-align:left}
 .jtbl td{padding:7px 10px;border-bottom:1px solid #f0f4f9;vertical-align:middle;color:var(--txt)}
@@ -125,158 +177,152 @@ input[type=date]:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(38,108
 .jtbl tr:hover td{background:var(--bg)}
 .jtbl tr.row-kritis td{background:#fff5f5}
 .jtbl tr.row-warning td{background:#fffbeb}
+
+/* ── ALERT BANNER ── */
+.alert-banner{border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px}
+.alert-banner.eval{background:#fff1f2;border:1px solid #fca5a5}
+.alert-banner.mon{background:#fff7ed;border:1px solid #fed7aa}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.alert-content{flex:1}
+.alert-title{font-size:11px;font-weight:700;color:#991b1b;margin-bottom:4px}
+.alert-banner.mon .alert-title{color:#92400e}
+.alert-items{display:flex;flex-wrap:wrap;gap:6px}
+.alert-tag{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:500}
+.alert-tag.kritis{background:#fee2e2;color:#991b1b}
+.alert-tag.warning{background:#ffedd5;color:#92400e}
+
+/* ── MISC ── */
 .mono{font-family:var(--mono);font-size:11px}
 .pos{color:var(--green);font-weight:600}.neg{color:var(--red);font-weight:600}
 .pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:9px;display:inline-block}
-.phi{background:#dbeeff;color:#1e40af}.pmi{background:#dcfce7;color:#166534}.plo{background:#fff7ed;color:#92400e}.pvlo{background:#fff1f2;color:#991b1b}
-.vis-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
-.vis-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden}
-.vis-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.vis-header{margin-bottom:10px}
-.vis-site{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
-.vis-trip-line{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.vis-trip-count{font-size:15px;font-weight:700;color:var(--txt);font-family:var(--mono);letter-spacing:-.3px}
-.vis-pct-badge{font-size:13px;font-weight:800;padding:5px 10px;border-radius:9px;font-family:var(--mono);flex-shrink:0}
-.vis-rate{font-size:10px;color:var(--muted);margin-top:3px}
-.vis-divider{height:1px;background:var(--border);margin:10px 0}
-.vis-tbl{width:100%;border-collapse:collapse;font-size:11.5px}
-.vis-tbl th{font-size:9px;color:var(--muted);text-transform:uppercase;padding:3px 4px;border-bottom:1px solid var(--border);font-weight:600}
-.vis-tbl th:first-child{text-align:left}
-.vis-tbl th:last-child{text-align:right}
-.vis-tbl td{padding:5px 4px;border-bottom:1px solid #f5f7fa;vertical-align:middle;font-size:11px}
-.vis-tbl tr:last-child td{border-bottom:none}
-.vis-tbl tr:hover td{background:var(--bg)}
-.vis-jalur{font-weight:600;color:var(--txt)}
-.vis-area{font-size:10px;color:var(--muted)}
-.vis-cost{font-family:var(--mono);text-align:right;color:var(--txt2)}
-.vis-saving-pos{font-family:var(--mono);text-align:right;font-weight:700;color:var(--green)}
-.vis-saving-neg{font-family:var(--mono);text-align:right;font-weight:700;color:var(--red)}
-.vis-bar-track{height:3px;background:var(--border);border-radius:2px;margin-top:3px}
-.vis-bar-fill{height:3px;border-radius:2px}
-.vis-footer{display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}
-.vis-footer b{color:var(--txt2);font-family:var(--mono)}
-/* EXPANDABLE CONTRIB TABLE v2.4 */
+.phi{background:#dbeeff;color:#1e40af}.pmi{background:#dcfce7;color:#166534}
+.plo{background:#fff7ed;color:#92400e}.pvlo{background:#fff1f2;color:#991b1b}
+.no-data{padding:40px;text-align:center;color:var(--muted);font-size:12px}
+canvas{display:block}
+.leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:9px}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.ls{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.scope-note{font-size:9px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-weight:500}
+
+/* ── MOM TABLE ── */
+.mom-table{width:100%;border-collapse:collapse;font-size:12px}
+.mom-table th{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 8px;text-align:right;border-bottom:1px solid var(--border);font-weight:600}
+.mom-table th:first-child{text-align:left}
+.mom-table td{padding:7px 8px;border-bottom:1px solid #f0f4f9;vertical-align:middle}
+.mom-table tr:last-child td{border-bottom:none}
+.mom-table tr:hover td{background:var(--bg)}
+
+/* ── CONTRIB TABLE ── */
 .contrib-wrap{overflow-x:auto}
 .contrib-tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:680px}
 .contrib-tbl th{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:5px 10px;text-align:right;border-bottom:1px solid var(--border);font-weight:600;white-space:nowrap;background:var(--bg)}
 .contrib-tbl th:first-child{text-align:left}
 .contrib-tbl td{padding:6px 10px;border-bottom:.5px solid #f0f4f9;vertical-align:middle}
-.row-area-g{cursor:pointer}
-.row-area-g td{background:var(--bg);font-weight:600}
+.row-area-g{cursor:pointer}.row-area-g td{background:var(--bg);font-weight:600}
 .row-area-g:hover td{filter:brightness(.97)}
 .area-cell-inner{display:flex;align-items:center;gap:8px}
-.toggle-ch{font-size:13px;color:var(--muted);transition:transform .18s;display:inline-block;line-height:1;flex-shrink:0;font-weight:400}
+.toggle-ch{font-size:13px;color:var(--muted);transition:transform .18s;display:inline-block;line-height:1;flex-shrink:0}
 .toggle-ch.open{transform:rotate(90deg)}
-.row-jalur-g td{background:var(--surface)}
-.row-jalur-g td:first-child{padding-left:30px}
-.row-jalur-g:hover td{background:var(--bg)}
-.row-jalur-g.hidden{display:none}
+.row-jalur-g td{background:var(--surface)}.row-jalur-g td:first-child{padding-left:30px}
+.row-jalur-g:hover td{background:var(--bg)}.row-jalur-g.hidden{display:none}
 .jalur-chip{background:var(--border);color:var(--txt2);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;display:inline-block}
-canvas{display:block}
-.no-data{padding:32px;text-align:center;color:var(--muted);font-size:12px}
-@media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr)}.site-cards,.prov-grid{grid-template-columns:1fr}.row2{grid-template-columns:1fr}}
-/* scope info badge */
-.scope-note{font-size:9px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-weight:500}
-/* SLA section */
-.sla-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
-.sla-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden}
-.sla-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.sla-site{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
-.sla-advantage{font-size:22px;font-weight:800;font-family:var(--mono);color:var(--green);letter-spacing:-.5px}
-.sla-advantage.neg{color:var(--red)}
-.sla-adv-label{font-size:10px;color:var(--muted);margin-top:2px;margin-bottom:10px}
-.sla-tbl{width:100%;border-collapse:collapse;font-size:11px}
-.sla-tbl th{font-size:9px;color:var(--muted);text-transform:uppercase;padding:3px 4px;border-bottom:1px solid var(--border);font-weight:600}
-.sla-tbl td{padding:5px 4px;border-bottom:1px solid #f5f7fa;vertical-align:middle}
-.sla-tbl tr:last-child td{border-bottom:none}
-.sla-tbl tr:hover td{background:var(--bg)}
-.sla-jalur{font-weight:600;color:var(--txt);font-size:11px}
-.sla-int{font-family:var(--mono);color:var(--blue);font-weight:700;text-align:right}
-.sla-ext{font-family:var(--mono);color:var(--muted);text-align:right}
-.sla-delta-pos{font-family:var(--mono);color:var(--green);font-weight:700;text-align:right}
-.sla-delta-neg{font-family:var(--mono);color:var(--red);font-weight:700;text-align:right}
-/* Out-of-scope section */
-.oos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
-.oos-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;border-left:3px solid var(--yellow)}
-.oos-site{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;color:var(--txt2)}
-.oos-total{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--txt)}
-.oos-sub{font-size:10px;color:var(--muted);margin-bottom:10px}
-.oos-area-list{display:flex;flex-direction:column;gap:5px}
-.oos-area-row{display:flex;justify-content:space-between;align-items:center;font-size:11px}
-.oos-area-name{color:var(--txt2);font-weight:500}
-.oos-area-count{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid4{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
+
+<!-- SIDEBAR -->
 <aside class="sb">
   <div class="sb-logo">
     <div class="sb-icon">SILK</div>
-    <div class="sb-brand">
+    <div>
       <div class="sb-brand-name">SILK Dashboard</div>
-      <div class="sb-brand-sub">Support Delivery LK<br>Internal Fleet NDC · Corp</div>
+      <div class="sb-brand-sub">Internal Fleet NDC</div>
     </div>
   </div>
-  <div class="sb-section">Overview</div>
-  <button class="sb-item active" data-site="all" onclick="navTo('all')">
+
+  <div class="sb-section">Menu</div>
+  <button class="sb-menu-item active" onclick="setMenu('overview')">
+    <span class="sb-menu-icon">📊</span>Overview
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('efisiensi')">
+    <span class="sb-menu-icon">⚖️</span>Efisiensi
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('coverage')">
+    <span class="sb-menu-icon">🗺️</span>Coverage
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('insight')">
+    <span class="sb-menu-icon">💡</span>Insight
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('operasional')">
+    <span class="sb-menu-icon">🔍</span>Operasional
+  </button>
+
+  <div class="sb-divider"></div>
+  <div class="sb-section">NDC Sites</div>
+  <button class="sb-site-item active" data-site="all" onclick="navTo('all')">
     <span class="sb-dot" style="background:#266CA9"></span>Semua NDC
     <span class="sb-badge" id="badge-all">—</span>
   </button>
-  <div class="sb-divider"></div>
-  <div class="sb-section">NDC Sites</div>
-  <button class="sb-item" data-site="AHI Jababeka" onclick="navTo('AHI Jababeka')">
+  <button class="sb-site-item" data-site="AHI Jababeka" onclick="navTo('AHI Jababeka')">
     <span class="sb-dot" style="background:#f5a623"></span>AHI Jababeka
     <span class="sb-badge" id="badge-AHI Jababeka">—</span>
   </button>
-  <button class="sb-item" data-site="HCI Jababeka" onclick="navTo('HCI Jababeka')">
+  <button class="sb-site-item" data-site="HCI Jababeka" onclick="navTo('HCI Jababeka')">
     <span class="sb-dot" style="background:#5ba4f5"></span>HCI Jababeka
     <span class="sb-badge" id="badge-HCI Jababeka">—</span>
   </button>
-  <button class="sb-item" data-site="HCI Cikupa" onclick="navTo('HCI Cikupa')">
+  <button class="sb-site-item" data-site="HCI Cikupa" onclick="navTo('HCI Cikupa')">
     <span class="sb-dot" style="background:#00c49a"></span>HCI Cikupa
     <span class="sb-badge" id="badge-HCI Cikupa">—</span>
   </button>
-  <button class="sb-item" data-site="Corp Sidoarjo" onclick="navTo('Corp Sidoarjo')">
+  <button class="sb-site-item" data-site="Corp Sidoarjo" onclick="navTo('Corp Sidoarjo')">
     <span class="sb-dot" style="background:#8b6cf7"></span>Corp Sidoarjo
     <span class="sb-badge" id="badge-Corp Sidoarjo">—</span>
   </button>
-  <div class="sb-divider"></div>
-  <div class="sb-section">Info</div>
-  <div style="padding:8px 14px 4px;font-size:10px;color:rgba(255,255,255,.3);line-height:1.6">
-    Data: Jan–Mei 2026<br>
+
+  <div class="sb-info">
+    Data: Jan–Jun 2026<br>
     Raw: <span id="infoRows">—</span> trips<br>
-    <span style="color:rgba(255,255,255,.15)">v2.5 · Kawan Lama Group</span>
+    <span style="color:rgba(255,255,255,.12)">v3.0 · Kawan Lama Group</span>
   </div>
 </aside>
+
+<!-- MAIN -->
 <div class="main">
   <div class="topbar">
     <div class="topbar-left">
-      <h1 id="mainTitle">Overview — Semua NDC</h1>
-      <p id="mainSub">Monitoring armada internal luar kota</p>
+      <div>
+        <div class="topbar-title" id="mainTitle">Overview — Semua NDC</div>
+        <div class="topbar-sub" id="mainSub">Monitoring armada internal luar kota</div>
+      </div>
     </div>
     <div class="topbar-right">
-      <div class="view-toggle">
-        <button class="vtab active" onclick="setView('mgmt')">📊 Management</button>
-        <button class="vtab" onclick="setView('ops')">🔍 Operational</button>
-      </div>
       <span class="chip neu" id="chipTrip">—</span>
       <span class="chip" id="chipPct">—</span>
       <span class="chip" id="chipSav">—</span>
+      <span class="chip neu" id="chipSLA">—</span>
     </div>
   </div>
+
   <div class="date-bar">
     <div class="date-label">Delivery Date</div>
     <div class="date-inputs">
       <div class="date-input-wrap"><label>Dari</label><input type="date" id="dateFrom" onchange="onDateChange()"></div>
-      <div class="date-sep" style="margin-top:14px">→</div>
+      <div class="date-sep">→</div>
       <div class="date-input-wrap"><label>Sampai</label><input type="date" id="dateTo" onchange="onDateChange()"></div>
     </div>
     <div class="date-quick" id="quickBtns"></div>
     <div class="date-count" id="dateCount"></div>
   </div>
+
   <div class="content" id="content"></div>
 </div>
+
 <script>
 __DATA_BLOCK__
+
 const NDC=['AHI Jababeka','HCI Jababeka','HCI Cikupa','Corp Sidoarjo'];
 const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7'};
 const SSHORT={'AHI Jababeka':'AHI JBBK','HCI Jababeka':'HCI JBBK','HCI Cikupa':'HCI CKP','Corp Sidoarjo':'Corp SDJ'};
@@ -284,7 +330,6 @@ const ACOLS=['#1a3a5c','#266CA9','#4a90c4','#6aadde','#a8cde8'];
 const CGREEN='var(--green)',CRED='var(--red)';
 const DAY_LABELS=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
 
-// ── SAVING SCOPE: area yang diperhitungkan untuk kalkulasi saving per site ──
 const SAVING_SCOPE={
   'AHI Jababeka':['Jawa Barat','Lampung'],
   'HCI Jababeka':['Jawa Barat','Lampung'],
@@ -295,62 +340,34 @@ const SAVING_SCOPE={
 // RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow]
 //        0    1    2    3  4    5      6         7      8   9   10
 
-let activeSite='all',activeView='mgmt',CH={};
-let dateFrom='',dateTo='';
+let activeSite='all', activeMenu='overview', CH={};
+let dateFrom='', dateTo='';
 
+// ── HELPERS ───────────────────────────────────────────────────────
 function fmt(n){return Math.round(n).toLocaleString('id-ID')}
 function fmtJt(n){const a=Math.abs(n);return(n<0?'-':'')+(a>=1e9?(a/1e9).toFixed(2)+' M':(a>=1e6?(a/1e6).toFixed(1)+' Jt':(a/1e3).toFixed(0)+' Rb'))}
 function fmtM(v){return fmtJt(v)}
 function pc(p){return p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'}
 function dc(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
-
-// Cek apakah row masuk scope saving berdasarkan site asal
-function isScopeRow(r){
-  const scope=SAVING_SCOPE[r[0]];
-  if(!scope) return false;
-  return scope.includes(r[1]);
-}
+function isScopeRow(r){const s=SAVING_SCOPE[r[0]];return s?s.includes(r[1]):false;}
 
 function getRows(){
   let rows=RAW;
   if(activeSite!=='all') rows=rows.filter(r=>r[0]===activeSite);
   if(dateFrom) rows=rows.filter(r=>r[7]>=dateFrom);
-  if(dateTo) rows=rows.filter(r=>r[7]<=dateTo);
+  if(dateTo)   rows=rows.filter(r=>r[7]<=dateTo);
   return rows;
 }
 
-// calcKpi: trip/DO/CBM dari semua area, saving hanya dari scope area
 function calcKpi(rows){
   const tCI=rows.reduce((s,r)=>s+(r[3]||0),0);
   const tCE=rows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
   const tDO=rows.reduce((s,r)=>s+(r[8]||0),0);
   const tCBM=rows.reduce((s,r)=>s+(r[9]||0),0);
-  // scope saving
   const scopeRows=rows.filter(r=>isScopeRow(r));
-  const tCI_scope=scopeRows.reduce((s,r)=>s+(r[3]||0),0);
-  const tCE_scope=scopeRows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
-  const sav=tCE_scope-tCI_scope;
-  return{trips:rows.length,tCI,tCE,tDO,tCBM,sav,tCI_scope,tCE_scope,scopeTrips:scopeRows.length};
-}
-
-function calcJalur(rows,site){
-  const map={};
-  const scopeAreas=SAVING_SCOPE[site]||[];
-  rows.forEach(r=>{
-    const k=r[2];
-    if(!map[k]) map[k]={j:r[2],area:r[1],t:0,ci:0,ce:0,ceCount:0,inScope:scopeAreas.includes(r[1])};
-    map[k].t++;map[k].ci+=r[3]||0;map[k].ce+=r[4]||0;
-    if(r[4]) map[k].ceCount++;
-  });
-  return Object.values(map).map(j=>{
-    const ci=j.ci/1e6;
-    const ce=j.ceCount>0?j.ce/1e6:null;
-    const gap=ce!==null?+(ce-ci).toFixed(1):null;
-    const pct_ef=ce&&ci?+((ce-ci)/ci*100).toFixed(1):null;
-    // alert hanya untuk jalur yang in scope
-    const alert=j.inScope&&pct_ef!==null?(pct_ef<-15?'kritis':pct_ef<0?'warning':null):null;
-    return{j:j.j,area:j.area,t:j.t,ci:+ci.toFixed(1),ce:ce!==null?+ce.toFixed(1):null,gap,pct_ef,alert,inScope:j.inScope};
-  }).sort((a,b)=>b.t-a.t);
+  const tCI_s=scopeRows.reduce((s,r)=>s+(r[3]||0),0);
+  const tCE_s=scopeRows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
+  return{trips:rows.length,tCI,tCE,tDO,tCBM,sav:tCE_s-tCI_s,tCI_s,tCE_s};
 }
 
 function calcContrib(rows){
@@ -366,274 +383,101 @@ function calcContrib(rows){
   return[...areas].map(a=>({area:a,int:intMap[a]||0,ext:extMap[a]||0,total:(intMap[a]||0)+(extMap[a]||0)})).sort((a,b)=>b.total-a.total);
 }
 
-function calcContribExpandable(rows){
-  const areaMap={};
-  rows.forEach(r=>{
-    const area=r[1],jalur=r[2];
-    if(!areaMap[area]) areaMap[area]={int:0,ci:0,ce:0,ceCnt:0,jalurs:{}};
-    areaMap[area].int++;areaMap[area].ci+=r[3]||0;
-    if(r[4]){areaMap[area].ce+=r[4];areaMap[area].ceCnt++;}
-    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0};
-    areaMap[area].jalurs[jalur].int++;areaMap[area].jalurs[jalur].ci+=r[3]||0;
-    if(r[4]){areaMap[area].jalurs[jalur].ce+=r[4];areaMap[area].jalurs[jalur].ceCnt++;}
-  });
-  let extFilterArea=EXT_AGG;
-  if(activeSite!=='all') extFilterArea=extFilterArea.filter(e=>e.site===activeSite);
-  if(dateFrom) extFilterArea=extFilterArea.filter(e=>e.date>=dateFrom);
-  if(dateTo)   extFilterArea=extFilterArea.filter(e=>e.date<=dateTo);
-  const extAreaMap={};
-  extFilterArea.forEach(e=>{extAreaMap[e.area]=(extAreaMap[e.area]||0)+e.trips;});
-  let extFilterJalur=EXT_JALUR;
-  if(activeSite!=='all') extFilterJalur=extFilterJalur.filter(e=>e.site===activeSite);
-  if(dateFrom) extFilterJalur=extFilterJalur.filter(e=>e.date>=dateFrom);
-  if(dateTo)   extFilterJalur=extFilterJalur.filter(e=>e.date<=dateTo);
-  const extJalurMap={};
-  extFilterJalur.forEach(e=>{const key=e.area+'||'+e.jalur;extJalurMap[key]=(extJalurMap[key]||0)+e.trips;});
-  const allAreas=new Set([...Object.keys(areaMap),...Object.keys(extAreaMap)]);
-  return[...allAreas].map(area=>{
-    const v=areaMap[area]||{int:0,ci:0,ce:0,ceCnt:0,jalurs:{}};
-    const jalurNames=new Set([...Object.keys(v.jalurs),...extFilterJalur.filter(e=>e.area===area).map(e=>e.jalur)]);
-    const jalurs=[...jalurNames].map(jname=>{
-      const jv=v.jalurs[jname]||{int:0,ci:0,ce:0,ceCnt:0};
-      const extKey=area+'||'+jname;
-      return{name:jname,int:jv.int,ext:extJalurMap[extKey]||0,total:jv.int+(extJalurMap[extKey]||0),ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null};
-    }).sort((a,b)=>b.total-a.total);
-    return{area,int:v.int,ext:extAreaMap[area]||0,total:v.int+(extAreaMap[area]||0),ci:v.ci,ce:v.ceCnt>0?v.ce:null,jalurs};
-  }).sort((a,b)=>b.total-a.total);
+function getExtTrips(site){
+  let ef=EXT_AGG.filter(e=>activeSite==='all'||e.site===activeSite);
+  if(site&&site!=='all') ef=EXT_AGG.filter(e=>e.site===site);
+  if(dateFrom) ef=ef.filter(e=>e.date>=dateFrom);
+  if(dateTo)   ef=ef.filter(e=>e.date<=dateTo);
+  return ef.reduce((s,e)=>s+e.trips,0);
 }
 
-function renderContribExpandable(rows){
-  const data=calcContribExpandable(rows);
-  function fj(v){if(v===null||v===undefined) return '<span style="color:var(--muted)">—</span>';return (v/1e6).toFixed(1);}
-  function savNom(ci,ce){if(ce===null||ce===undefined) return '<span style="color:var(--muted)">—</span>';const s=(ce-ci)/1e6;return `<span class="${s>=0?'pos':'neg'}">${s>=0?'+':''}${s.toFixed(1)}</span>`;}
-  function savPct(ci,ce){if(ce===null||ce===undefined||ci===0) return '<span style="color:var(--muted)">—</span>';const s=((ce-ci)/ci*100);return `<span class="${s>=0?'pos':'neg'}">${s>=0?'+':''}${s.toFixed(1)}%</span>`;}
-  function pcl(i,t){const p=t?Math.round(i/t*100):0;return{p,cls:p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'};}
-  let rows_html='';
-  data.forEach((a,ai)=>{
-    const{p,cls}=pcl(a.int,a.total);
-    rows_html+=`<tr class="row-area-g" onclick="toggleContrib(${ai})">
-      <td><div class="area-cell-inner"><span class="toggle-ch" id="tch-${ai}">›</span><span>${a.area}</span></div></td>
-      <td style="text-align:right" class="mono">${fmt(a.int)}</td>
-      <td style="text-align:right" class="mono">${fmt(a.ext)}</td>
-      <td style="text-align:right" class="mono">${fmt(a.total)}</td>
-      <td style="text-align:right"><span class="pill ${cls}">${p}%</span></td>
-      <td style="text-align:right" class="mono">${fj(a.ci)}</td>
-      <td style="text-align:right" class="mono">${fj(a.ce)}</td>
-      <td style="text-align:right">${savNom(a.ci,a.ce)}</td>
-    </tr>`;
-    a.jalurs.forEach(j=>{
-      const jPct=j.total?Math.round(j.int/j.total*100):0;
-      const jCls=jPct>=50?'phi':jPct>=25?'pmi':jPct>=10?'plo':'pvlo';
-      rows_html+=`<tr class="row-jalur-g hidden" data-cg="${ai}">
-        <td><span class="jalur-chip">${j.name}</span></td>
-        <td style="text-align:right" class="mono">${fmt(j.int)}</td>
-        <td style="text-align:right" class="mono">${j.ext>0?fmt(j.ext):'<span style="color:var(--muted)">—</span>'}</td>
-        <td style="text-align:right" class="mono">${fmt(j.total)}</td>
-        <td style="text-align:right">${j.total>0?`<span class="pill ${jCls}">${jPct}%</span>`:'<span style="color:var(--muted)">—</span>'}</td>
-        <td style="text-align:right" class="mono">${fj(j.ci)}</td>
-        <td style="text-align:right" class="mono">${fj(j.ce)}</td>
-        <td style="text-align:right">${savPct(j.ci,j.ce)}</td>
-      </tr>`;
+function calcJalur(rows, site){
+  const map={};
+  const scopeAreas=SAVING_SCOPE[site]||[];
+  rows.forEach(r=>{
+    const k=r[2];
+    if(!map[k]) map[k]={j:r[2],area:r[1],t:0,ci:0,ce:0,ceCount:0,ltSum:0,ltCnt:0,inScope:scopeAreas.includes(r[1])};
+    map[k].t++;map[k].ci+=r[3]||0;map[k].ce+=r[4]||0;
+    if(r[4]) map[k].ceCount++;
+    if(r[10]!==null&&r[10]!==undefined&&!isNaN(r[10])){map[k].ltSum+=r[10];map[k].ltCnt++;}
+  });
+  return Object.values(map).map(j=>{
+    const ci=j.ci/1e6, ce=j.ceCount>0?j.ce/1e6:null;
+    const gap=ce!==null?+(ce-ci).toFixed(1):null;
+    const pct_ef=ce&&ci?+((ce-ci)/ci*100).toFixed(1):null;
+    const alert=j.inScope&&pct_ef!==null?(pct_ef<-15?'kritis':pct_ef<0?'warning':null):null;
+    const lt_int=j.ltCnt>0?+(j.ltSum/j.ltCnt).toFixed(2):null;
+    const extLT=(typeof EXT_LT!=='undefined'?EXT_LT:[]).find(e=>e.site===site&&e.jalur===j.j);
+    const lt_ext=extLT?extLT.avg_lt:null;
+    const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
+    // Status 4 kuadran
+    let status='nodata';
+    if(pct_ef!==null&&lt_delta!==null){
+      const cheaper=pct_ef>=0, faster=lt_delta>=0;
+      if(cheaper&&faster) status='ideal';
+      else if(!cheaper&&faster) status='worth';
+      else if(cheaper&&!faster) status='review';
+      else status='eval';
+    } else if(pct_ef!==null){
+      status=pct_ef>=0?'ideal_cost':'eval_cost';
+    }
+    return{j:j.j,area:j.area,t:j.t,ci:+ci.toFixed(1),ce:ce!==null?+ce.toFixed(1):null,gap,pct_ef,alert,inScope:j.inScope,lt_int,lt_ext,lt_delta,status};
+  }).sort((a,b)=>b.t-a.t);
+}
+
+function calcSLAAvg(rows){
+  // Overall avg SLA delta across all jalurs with benchmark
+  const sitesToUse=activeSite==='all'?NDC:[activeSite];
+  let totalDelta=0, cnt=0;
+  sitesToUse.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    calcJalur(sr,s).forEach(j=>{
+      if(j.lt_delta!==null){totalDelta+=j.lt_delta;cnt++;}
     });
   });
-  return`<div class="card" style="margin-bottom:12px">
-    <div class="ctitle">Kontribusi Internal per Area
-      <span class="ctitle-badge">klik area untuk expand jalur · savings vs ext</span>
-    </div>
-    <div class="contrib-wrap">
-    <table class="contrib-tbl">
-      <thead><tr>
-        <th style="min-width:160px;text-align:left">Area / Jalur</th>
-        <th>INT Trip</th><th>EXT Trip</th><th>Total</th><th>% INT</th>
-        <th>Cost Int (Jt)</th><th>Cost Ext (Jt)</th><th>Savings / %</th>
-      </tr></thead>
-      <tbody>${rows_html}</tbody>
-    </table>
-    </div>
-  </div>`;
+  return cnt>0?+(totalDelta/cnt).toFixed(2):null;
 }
 
-function toggleContrib(ai){
-  const rows=document.querySelectorAll('[data-cg="'+ai+'"]');
-  const icon=document.getElementById('tch-'+ai);
-  const isOpen=icon.classList.contains('open');
-  rows.forEach(r=>r.classList.toggle('hidden',isOpen));
-  icon.classList.toggle('open',!isOpen);
-}
-
-function calcDailyAvg(rows){
-  const dateMap={};
-  rows.forEach(r=>{if(!dateMap[r[7]]) dateMap[r[7]]=0;dateMap[r[7]]++;});
-  const dowCounts=[0,0,0,0,0,0,0];
-  const dowDays=[0,0,0,0,0,0,0];
-  Object.entries(dateMap).forEach(([d,cnt])=>{const dow=new Date(d).getDay();dowCounts[dow]+=cnt;dowDays[dow]++;});
-  const order=[1,2,3,4,5,6,0];
-  return order.map(i=>({label:DAY_LABELS[i],avg:dowDays[i]>0?+(dowCounts[i]/dowDays[i]).toFixed(1):0,isWeekend:i===0||i===6}));
-}
-
-function calcProvinsi(rows){
-  const result={};
-  NDC.forEach(s=>{result[s]={};});
-  rows.forEach(r=>{const s=r[0],area=r[1];if(!result[s]) return;if(!result[s][area]) result[s][area]={int:0,ext:0};result[s][area].int++;});
-  EXT_AGG.filter(e=>{
-    if(dateFrom&&e.date<dateFrom) return false;
-    if(dateTo&&e.date>dateTo) return false;
-    return true;
-  }).forEach(e=>{if(!result[e.site]) return;if(!result[e.site][e.area]) result[e.site][e.area]={int:0,ext:0};result[e.site][e.area].ext+=e.trips;});
-  return result;
-}
-
-function calcVisibility(rows){
-  const siteMap={};
-  NDC.forEach(s=>siteMap[s]={});
-  rows.forEach(r=>{const s=r[0],jalur=r[2],area=r[1];if(!siteMap[s]) return;const key=jalur;if(!siteMap[s][key]) siteMap[s][key]={jalur,area,trips:0,ci:0,ce:0,ceCnt:0};siteMap[s][key].trips++;siteMap[s][key].ci+=r[3]||0;if(r[4]){siteMap[s][key].ce+=r[4];siteMap[s][key].ceCnt++;}});
-  const dates=new Set(rows.map(r=>r[7]));
-  const dayCount=dates.size||1;
-  const weekCount=dayCount/7;
-  const result={};
-  NDC.forEach(s=>{
-    const jalurs=Object.values(siteMap[s]).filter(j=>j.trips>0).sort((a,b)=>b.ci-a.ci);
-    const totCI=jalurs.reduce((s,j)=>s+j.ci,0);
-    const totCE=jalurs.filter(j=>j.ceCnt>0).reduce((s,j)=>s+j.ce,0);
-    const intTrips=jalurs.reduce((s,j)=>s+j.trips,0);
-    const extTrips=EXT_AGG.filter(e=>{
-      if(e.site!==s) return false;
-      if(dateFrom&&e.date<dateFrom) return false;
-      if(dateTo&&e.date>dateTo) return false;
-      return true;
-    }).reduce((s,e)=>s+e.trips,0);
-    const totalTrips=intTrips+extTrips;
-    const pct=totalTrips?Math.round(intTrips/totalTrips*100):0;
-    const ratePerDay=+(intTrips/dayCount).toFixed(1);
-    const ratePerWeek=+(intTrips/weekCount).toFixed(1);
-    const rateLabel=ratePerDay>=1?`${ratePerDay} unit/day`:`${ratePerWeek} unit/week`;
-    result[s]={jalurs,totCI,totCE,intTrips,extTrips,totalTrips,pct,rateLabel,dayCount};
-  });
-  return result;
-}
-
-// ── SLA ANALYSIS ──────────────────────────────────────────────────
-function calcSLA(rows, site) {
-  // Internal avg LT one way per jalur
-  const intMap = {};
-  rows.filter(r=>r[0]===site).forEach(r=>{
-    const j=r[2], lt=r[10];
-    if(lt===null||lt===undefined||isNaN(lt)) return;
-    if(!intMap[j]) intMap[j]={sum:0,cnt:0,area:r[1]};
-    intMap[j].sum+=lt; intMap[j].cnt++;
-  });
-  // External benchmark
-  const extMap = {};
-  (typeof EXT_LT!=='undefined'?EXT_LT:[]).filter(e=>e.site===site).forEach(e=>{
-    extMap[e.jalur]=e.avg_lt;
-  });
-  // Merge — only jalurs that have both
-  const results=[];
-  Object.entries(intMap).forEach(([j,v])=>{
-    const intAvg=+(v.sum/v.cnt).toFixed(2);
-    const extAvg=extMap[j]||null;
-    const delta=extAvg!==null?+(extAvg-intAvg).toFixed(2):null; // positive = internal faster
-    results.push({jalur:j,area:v.area,intAvg,extAvg,delta});
-  });
-  return results.filter(r=>r.extAvg!==null).sort((a,b)=>b.delta-a.delta);
-}
-
-function renderSLASection(rows) {
-  const sitesToShow=activeSite==='all'?NDC:[activeSite];
-  // Overall summary per site
-  let html=`<div class="card" style="margin-bottom:12px">
-    <div class="ctitle">SLA Advantage — Internal vs External
-      <span class="ctitle-badge">Lead Time One Way Int vs Avg Aktual Ext · hari lebih cepat = positif</span>
-    </div>
-    <div class="sla-grid" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
-
-  sitesToShow.forEach(s=>{
-    const sr=rows.filter(r=>r[0]===s);
-    if(!sr.length){html+=`<div class="sla-card" style="border-top:3px solid ${SCOL[s]}"><div class="sla-site" style="color:${SCOL[s]}">${SSHORT[s]}</div><div style="color:var(--muted);font-size:11px">Tidak ada data</div></div>`;return;}
-    const slaData=calcSLA(rows,s);
-    if(!slaData.length){html+=`<div class="sla-card" style="border-top:3px solid ${SCOL[s]}"><div class="sla-site" style="color:${SCOL[s]}">${SSHORT[s]}</div><div style="color:var(--muted);font-size:11px">Belum ada benchmark ext</div></div>`;return;}
-    // Overall avg delta
-    const avgDelta=+(slaData.reduce((s,r)=>s+r.delta,0)/slaData.length).toFixed(2);
-    const fasterCount=slaData.filter(r=>r.delta>0).length;
-    const col=SCOL[s]||'#266CA9';
-    html+=`<div class="sla-card" style="border-top:3px solid ${col}">
-      <div class="sla-site" style="color:${col}">${SSHORT[s]}</div>
-      <div class="sla-advantage ${avgDelta<0?'neg':''}">${avgDelta>=0?'+':''}${avgDelta} hari</div>
-      <div class="sla-adv-label">${fasterCount}/${slaData.length} jalur lebih cepat vs external</div>
-      <table class="sla-tbl">
-        <thead><tr><th style="text-align:left">Jalur</th><th>Int (hr)</th><th>Ext (hr)</th><th>Δ</th></tr></thead>
-        <tbody>
-        ${slaData.slice(0,8).map(r=>`<tr>
-          <td><div class="sla-jalur">${r.jalur}</div></td>
-          <td class="sla-int">${r.intAvg}</td>
-          <td class="sla-ext">${r.extAvg}</td>
-          <td class="${r.delta>=0?'sla-delta-pos':'sla-delta-neg'}">${r.delta>=0?'+':''}${r.delta}</td>
-        </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-  });
-  html+=`</div></div>`;
-  return html;
-}
-
-// ── OUT-OF-SCOPE HIGHLIGHT ─────────────────────────────────────────
-function calcOutOfScope(rows) {
+function calcOutOfScope(rows){
   const result={};
   NDC.forEach(s=>{
     const scope=SAVING_SCOPE[s]||[];
     const oos=rows.filter(r=>r[0]===s&&!scope.includes(r[1]));
     if(!oos.length){result[s]=null;return;}
     const areaMap={};
-    oos.forEach(r=>{
-      if(!areaMap[r[1]]) areaMap[r[1]]={trips:0,ci:0};
-      areaMap[r[1]].trips++;
-      areaMap[r[1]].ci+=r[3]||0;
-    });
-    result[s]={
-      total:oos.length,
-      ci:oos.reduce((s,r)=>s+(r[3]||0),0),
-      areas:Object.entries(areaMap).sort((a,b)=>b[1].trips-a[1].trips)
-    };
+    oos.forEach(r=>{if(!areaMap[r[1]]) areaMap[r[1]]={trips:0,ci:0};areaMap[r[1]].trips++;areaMap[r[1]].ci+=r[3]||0;});
+    result[s]={total:oos.length,ci:oos.reduce((s,r)=>s+(r[3]||0),0),areas:Object.entries(areaMap).sort((a,b)=>b[1].trips-a[1].trips)};
   });
   return result;
 }
 
-function renderOutOfScope(rows) {
-  const sitesToShow=activeSite==='all'?NDC:[activeSite];
-  const oosData=calcOutOfScope(rows);
-  const hasSites=sitesToShow.filter(s=>oosData[s]&&oosData[s].total>0);
-  if(!hasSites.length) return '';
-
-  let html=`<div class="card" style="margin-bottom:12px">
-    <div class="ctitle">Coverage di Luar Scope Saving
-      <span class="ctitle-badge">area yang tetap dilayani internal · belum ter-capture di saving</span>
-    </div>
-    <div class="oos-grid" style="grid-template-columns:repeat(${Math.min(hasSites.length,4)},1fr)">`;
-
-  hasSites.forEach(s=>{
-    const d=oosData[s];
-    const col=SCOL[s]||'#266CA9';
-    html+=`<div class="oos-card">
-      <div class="oos-site" style="color:${col}">${SSHORT[s]}</div>
-      <div class="oos-total">${d.total.toLocaleString('id-ID')} trip</div>
-      <div class="oos-sub">${fmtM(d.ci)} · di luar scope ${(SAVING_SCOPE[s]||[]).join('+')}  </div>
-      <div class="oos-area-list">
-        ${d.areas.map(([area,v])=>`<div class="oos-area-row">
-          <span class="oos-area-name">${area}</span>
-          <span class="oos-area-count">${v.trips} trip · ${fmtM(v.ci)}</span>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  });
-  html+=`</div></div>`;
-  return html;
+function getScopeLabel(){
+  if(activeSite==='all') return 'Jabar+Lampung (JKT) · Jatim (SDJ)';
+  const sc=SAVING_SCOPE[activeSite];
+  return sc?sc.join(' + '):'semua area';
 }
 
+// ── NAVIGATION ───────────────────────────────────────────────────
+function setMenu(menu){
+  activeMenu=menu;
+  document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
+  const menuMap={'overview':0,'efisiensi':1,'coverage':2,'insight':3,'operasional':4};
+  const btns=document.querySelectorAll('.sb-menu-item');
+  if(btns[menuMap[menu]]) btns[menuMap[menu]].classList.add('active');
+  render();
+}
+
+function navTo(s){
+  activeSite=s;
+  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.toggle('active',el.dataset.site===s));
+  render();
+}
+
+// ── DATE HELPERS ─────────────────────────────────────────────────
 function initDateRange(){
   const dates=RAW.map(r=>r[7]).sort();
-  const minD=dates[0],maxD=dates[dates.length-1];
-  dateFrom=minD;dateTo=maxD;
+  const minD=dates[0], maxD=dates[dates.length-1];
+  dateFrom=minD; dateTo=maxD;
   ['dateFrom','dateTo'].forEach(id=>{document.getElementById(id).min=minD;document.getElementById(id).max=maxD;});
   document.getElementById('dateFrom').value=minD;
   document.getElementById('dateTo').value=maxD;
@@ -643,23 +487,39 @@ function initDateRange(){
 
 function buildQuickBtns(minD,maxD){
   const months=[...new Set(RAW.map(r=>r[7].slice(0,7)))].sort();
-  const MNAMES={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'Mei'};
+  const MNAMES={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'Mei','06':'Jun'};
   let html=`<button class="dq active" id="dq-all" onclick="setQuick('all','${minD}','${maxD}')">Semua</button>`;
-  months.forEach(m=>{const[yr,mo]=m.split('-');const label=MNAMES[mo]||mo;const first=m+'-01';const last=new Date(+yr,+mo,0).toISOString().slice(0,10);html+=`<button class="dq" id="dq-${m}" onclick="setQuick('${m}','${first}','${last}')">${label}</button>`;});
+  // MTD button
+  const today=new Date().toISOString().slice(0,10);
+  const curMonth=today.slice(0,7);
+  const mtdFirst=curMonth+'-01';
+  html+=`<button class="dq" id="dq-mtd" onclick="setQuick('mtd','${mtdFirst}','${today}')">MTD</button>`;
+  months.forEach(m=>{
+    const[yr,mo]=m.split('-');
+    const label=MNAMES[mo]||mo;
+    const first=m+'-01';
+    const last=new Date(+yr,+mo,0).toISOString().slice(0,10);
+    html+=`<button class="dq" id="dq-${m}" onclick="setQuick('${m}','${first}','${last}')">${label}</button>`;
+  });
   document.getElementById('quickBtns').innerHTML=html;
 }
 
-function setQuick(key,from,to){dateFrom=from;dateTo=to;document.getElementById('dateFrom').value=from;document.getElementById('dateTo').value=to;document.querySelectorAll('.dq').forEach(b=>b.classList.remove('active'));const btn=document.getElementById('dq-'+key);if(btn) btn.classList.add('active');render();}
-function onDateChange(){dateFrom=document.getElementById('dateFrom').value;dateTo=document.getElementById('dateTo').value;document.querySelectorAll('.dq').forEach(b=>b.classList.remove('active'));render();}
-function navTo(s){activeSite=s;document.querySelectorAll('.sb-item').forEach(el=>el.classList.toggle('active',el.dataset.site===s));render();}
-function setView(v){activeView=v;document.querySelectorAll('.vtab').forEach((b,i)=>b.classList.toggle('active',i===(v==='mgmt'?0:1)));render();}
-
-function getScopeLabel(){
-  if(activeSite==='all') return 'Jabar+Lampung (JKT) · Jatim (SDJ)';
-  const sc=SAVING_SCOPE[activeSite];
-  return sc?sc.join(' + '):'semua area';
+function setQuick(key,from,to){
+  dateFrom=from;dateTo=to;
+  document.getElementById('dateFrom').value=from;
+  document.getElementById('dateTo').value=to;
+  document.querySelectorAll('.dq').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('dq-'+key);if(btn) btn.classList.add('active');
+  render();
+}
+function onDateChange(){
+  dateFrom=document.getElementById('dateFrom').value;
+  dateTo=document.getElementById('dateTo').value;
+  document.querySelectorAll('.dq').forEach(b=>b.classList.remove('active'));
+  render();
 }
 
+// ── MAIN RENDER ──────────────────────────────────────────────────
 function render(){
   const rows=getRows();
   const kpi=calcKpi(rows);
@@ -667,7 +527,11 @@ function render(){
   const tInt=contrib.reduce((s,r)=>s+r.int,0);
   const tAll=contrib.reduce((s,r)=>s+r.total,0);
   const pct=tAll?Math.round(tInt/tAll*100):0;
-  document.getElementById('mainTitle').textContent=activeSite==='all'?'Overview — Semua NDC':activeSite;
+  const slaAvg=calcSLAAvg(rows);
+
+  // Update topbar
+  const menuLabels={overview:'Overview',efisiensi:'Efisiensi Jalur',coverage:'Coverage',insight:'Insight',operasional:'Operasional'};
+  document.getElementById('mainTitle').textContent=(activeSite==='all'?'Semua NDC':activeSite)+' — '+menuLabels[activeMenu];
   const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
   const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
   document.getElementById('mainSub').textContent=`${dFrom} – ${dTo} · Armada internal luar kota`;
@@ -677,32 +541,48 @@ function render(){
   const sav=kpi.sav;
   document.getElementById('chipSav').textContent=(sav>=0?'Hemat ':'Lebih mahal ')+fmtM(Math.abs(sav));
   document.getElementById('chipSav').className='chip '+(sav>=0?'hi':'lo');
+  document.getElementById('chipSLA').textContent=slaAvg!==null?(slaAvg>=0?'SLA +'+slaAvg+'hr':'SLA '+slaAvg+'hr'):'SLA —';
+  document.getElementById('chipSLA').className='chip '+(slaAvg!==null&&slaAvg>0?'hi':'neu');
   document.getElementById('dateCount').innerHTML=`Filter: <b>${rows.length.toLocaleString('id-ID')}</b> trip · <b>${dateFrom}</b> s/d <b>${dateTo}</b>`;
-  NDC.forEach(s=>{const sr=RAW.filter(r=>r[0]===s&&r[7]>=dateFrom&&r[7]<=dateTo);const el=document.getElementById('badge-'+s);if(el) el.textContent=sr.length>0?sr.length:'—';});
-  const elAll=document.getElementById('badge-all');if(elAll) elAll.textContent=RAW.filter(r=>r[7]>=dateFrom&&r[7]<=dateTo).length||'—';
+
+  // Update badges
+  NDC.forEach(s=>{
+    const sr=RAW.filter(r=>r[0]===s&&r[7]>=dateFrom&&r[7]<=dateTo);
+    const el=document.getElementById('badge-'+s);if(el) el.textContent=sr.length||'—';
+  });
+  const elAll=document.getElementById('badge-all');
+  if(elAll) elAll.textContent=RAW.filter(r=>r[7]>=dateFrom&&r[7]<=dateTo).length||'—';
+
   if(rows.length===0){document.getElementById('content').innerHTML=`<div class="no-data">Tidak ada data untuk range tanggal yang dipilih.</div>`;return;}
-  if(activeView==='mgmt') renderManagement(rows,kpi,contrib,tInt,tAll,pct,sav);
-  else renderOperational(rows,kpi,contrib,tInt,tAll,pct,sav);
+
+  // Dispatch ke menu
+  if(activeMenu==='overview') renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav);
+  else if(activeMenu==='efisiensi') renderEfisiensi(rows);
+  else if(activeMenu==='coverage') renderCoverage(rows,contrib,tInt,tAll,pct);
+  else if(activeMenu==='insight') renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
+  else if(activeMenu==='operasional') renderOperasional(rows,kpi,contrib,tInt,tAll,pct,sav);
 }
 
-function renderManagement(rows,kpi,contrib,tInt,tAll,pct,sav){
+// ── MENU: OVERVIEW ───────────────────────────────────────────────
+function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav){
   const cpdo=kpi.tDO>0?kpi.tCI/kpi.tDO:0;
   const scopeLabel=getScopeLabel();
-  const kpiHTML=`<div class="kpi-row">
-    <div class="kpi c1"><div class="klbl">Trip Internal LK</div><div class="kval">${fmt(rows.length)}</div><div class="ksub">trip dalam periode ini</div></div>
-    <div class="kpi c4"><div class="klbl">% Kontribusi Int</div><div class="kval">${pct}%</div><div class="ksub">${fmt(tInt)} int / ${fmt(tAll)} total</div></div>
-    <div class="kpi c3"><div class="klbl">Cost Internal</div><div class="kval">${fmtM(kpi.tCI)}</div><div class="ksub">total biaya armada int</div></div>
-    <div class="kpi c2"><div class="klbl">Cost External Ref</div><div class="kval">${kpi.tCE>0?fmtM(kpi.tCE):'—'}</div><div class="ksub">benchmark cost ext</div></div>
-    <div class="kpi c5"><div class="klbl">Savings / (Lebih Mahal)</div><div class="kval" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="ksub">${scopeLabel}</div></div>
-    <div class="kpi c7"><div class="klbl">Total CBM</div><div class="kval">${kpi.tCBM.toFixed(1)}</div><div class="ksub">total volume pengiriman int</div></div>
-    <div class="kpi c6"><div class="klbl">Total DO</div><div class="kval">${fmt(kpi.tDO)}</div><div class="ksub">${kpi.tDO>0?'Rp'+fmt(Math.round(cpdo))+'/DO':'—'}</div></div>
+  const slaAvg=calcSLAAvg(rows);
+
+  // KPI Row — 4 angka paling penting
+  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total</div></div>
+    <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label">Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
+    <div class="kpi c-${slaAvg!==null&&slaAvg>0?'teal':'orange'}"><div class="kpi-label">SLA Advantage</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:CRED}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
+    <div class="kpi c-purple"><div class="kpi-label">% Kontribusi Int</div><div class="kpi-value">${pct}%</div><div class="kpi-sub">Rp ${fmtM(kpi.tCI)} · ${fmt(kpi.tDO)} DO</div></div>
   </div>`;
 
+  // Site summary cards
   const sitesToShow=activeSite==='all'?NDC:[activeSite];
-  let siteHTML=`<div class="site-cards" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
+  let siteHTML=`<div class="grid4" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
   sitesToShow.forEach(s=>{
     const sr=rows.filter(r=>r[0]===s);
-    if(!sr.length){siteHTML+=`<div class="scard" style="border-top-color:${SCOL[s]||'var(--blue)'}"><div class="scard-head"><div><div class="scard-name">${SSHORT[s]||s}</div><div class="scard-trip">0</div><div class="scard-sub">trip internal</div></div><div class="pct-big" style="background:#fff1f2;color:#991b1b">0%</div></div><div style="font-size:10px;color:var(--muted);margin-top:8px">Tidak ada data trip internal</div></div>`;return;}
+    if(!sr.length){siteHTML+=`<div class="card"><div style="color:${SCOL[s]};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${SSHORT[s]}</div><div class="no-data" style="padding:12px 0">No data</div></div>`;return;}
     const sk=calcKpi(sr);
     const sc=calcContrib(sr);
     const si=sc.reduce((a,r)=>a+r.int,0);
@@ -711,176 +591,401 @@ function renderManagement(rows,kpi,contrib,tInt,tAll,pct,sav){
     const jalurs=calcJalur(sr,s);
     const critCount=jalurs.filter(j=>j.alert==='kritis').length;
     const warnCount=jalurs.filter(j=>j.alert==='warning').length;
-    const alertBadge=critCount?`<span class="scard-alert k">${critCount} EVALUASI</span>`:warnCount?`<span class="scard-alert w">${warnCount} MONITORING</span>`:'';
-    const pctCls=sp>=30?'#dcfff4;color:#065f46':sp>=15?'#eff6ff;color:#1d4ed8':'#fff1f2;color:#991b1b';
-    const scopeAreas=(SAVING_SCOPE[s]||[]).join('+');
-    siteHTML+=`<div class="scard" style="border-top-color:${SCOL[s]||'var(--blue)'}">
-      ${alertBadge}
-      <div class="scard-head">
-        <div><div class="scard-name">${SSHORT[s]||s}</div><div class="scard-trip">${fmt(sr.length)}</div><div class="scard-sub">trip internal</div></div>
-        <div class="pct-big" style="background:${pctCls}">${sp}%</div>
+    const alertBadge=critCount?`<span class="status-pill sp-eval" style="font-size:9px">${critCount} EVALUASI</span>`:warnCount?`<span class="status-pill sp-review" style="font-size:9px">${warnCount} MONITORING</span>`:'';
+    const pctCls=sp>=30?'background:#dcfff4;color:#065f46':sp>=15?'background:#eff6ff;color:#1d4ed8':'background:#fff1f2;color:#991b1b';
+    // SLA for site
+    const slaData=calcJalur(sr,s).filter(j=>j.lt_delta!==null);
+    const slaAvgSite=slaData.length?+(slaData.reduce((a,j)=>a+j.lt_delta,0)/slaData.length).toFixed(2):null;
+    siteHTML+=`<div class="card" style="border-top:3px solid ${SCOL[s]}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${SCOL[s]}">${SSHORT[s]}</div>
+          <div style="font-size:20px;font-weight:800;font-family:var(--mono);color:var(--txt);margin-top:2px">${fmt(sr.length)}</div>
+          <div style="font-size:10px;color:var(--muted)">trip internal</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:800;font-family:var(--mono);padding:5px 10px;border-radius:8px;${pctCls}">${sp}%</div>
+          <div style="margin-top:4px">${alertBadge}</div>
+        </div>
       </div>
-      <table class="scard-tbl"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>
-        <tr><td>Cost Int</td><td style="text-align:right;font-family:var(--mono)">${fmtM(sk.tCI)}</td></tr>
-        <tr><td>Cost Ext</td><td style="text-align:right;font-family:var(--mono)">${sk.tCE>0?fmtM(sk.tCE):'—'}</td></tr>
-        <tr><td>Savings <span class="scope-note">${scopeAreas}</span></td><td style="text-align:right;font-family:var(--mono);color:${sk.sav>=0?CGREEN:CRED}">${sk.sav>=0?'+':''}${fmtM(sk.sav)}</td></tr>
-        <tr><td>Total CBM</td><td style="text-align:right;font-family:var(--mono)">${sk.tCBM.toFixed(0)}</td></tr>
-        <tr><td>Total DO</td><td style="text-align:right;font-family:var(--mono)">${fmt(sk.tDO)}</td></tr>
-      </tbody></table>
-      <div class="scard-footer"><span>Jalur: <b>${jalurs.length}</b></span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">
+        <div style="background:var(--bg);border-radius:7px;padding:8px 10px">
+          <div style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Savings</div>
+          <div style="font-family:var(--mono);font-weight:700;color:${sk.sav>=0?CGREEN:CRED}">${sk.sav>=0?'+':''}${fmtM(sk.sav)}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">${(SAVING_SCOPE[s]||[]).join('+')}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:7px;padding:8px 10px">
+          <div style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">SLA Adv</div>
+          <div style="font-family:var(--mono);font-weight:700;color:${slaAvgSite!==null&&slaAvgSite>0?CGREEN:CRED}">${slaAvgSite!==null?(slaAvgSite>=0?'+':'')+slaAvgSite+' hr':'—'}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">vs ext avg</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">
+        <span>Jalur: <b style="color:var(--txt2)">${jalurs.length}</b></span>
+        <span>CBM: <b style="color:var(--txt2)">${sk.tCBM.toFixed(0)}</b></span>
+        <span>DO: <b style="color:var(--txt2)">${fmt(sk.tDO)}</b></span>
+      </div>
     </div>`;
   });
   siteHTML+='</div>';
 
-  // MoM: savings dari scope rows per bulan
+  // Charts: Savings trend + Trip trend
   const byMonth={};
   rows.forEach(r=>{
     const m=r[7].slice(0,7);
-    if(!byMonth[m]) byMonth[m]={trips:0,ci:0,ce:0,ceCnt:0,ci_scope:0,ce_scope:0,ceCnt_scope:0};
-    byMonth[m].trips++;byMonth[m].ci+=r[3]||0;byMonth[m].ce+=r[4]||0;
+    if(!byMonth[m]) byMonth[m]={trips:0,ci:0,ce:0,ceCnt:0,ci_s:0,ce_s:0,ceCnt_s:0};
+    byMonth[m].trips++;byMonth[m].ci+=r[3]||0;
     if(r[4]) byMonth[m].ceCnt++;
-    if(isScopeRow(r)){byMonth[m].ci_scope+=r[3]||0;if(r[4]){byMonth[m].ce_scope+=r[4];byMonth[m].ceCnt_scope++;}}
+    byMonth[m].ce+=r[4]||0;
+    if(isScopeRow(r)){byMonth[m].ci_s+=r[3]||0;if(r[4]){byMonth[m].ce_s+=r[4];byMonth[m].ceCnt_s++;}}
   });
   const months=Object.keys(byMonth).sort();
-  const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei'};
+  const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei','2026-06':'Jun'};
   const momRows=months.map((m,i)=>{
     const d=byMonth[m];
-    const ci=d.ci/1e6;
-    const ce=d.ceCnt>0?d.ce/1e6:null;
-    const sv_scope=d.ceCnt_scope>0?(d.ce_scope-d.ci_scope)/1e6:0;
+    const sv=d.ceCnt_s>0?(d.ce_s-d.ci_s)/1e6:0;
     const prev=i>0?byMonth[months[i-1]]:null;
-    return{m:MLBL[m]||m,trips:d.trips,ci:+ci.toFixed(1),ce:ce?+ce.toFixed(1):null,sav:+sv_scope.toFixed(1),prevTrips:prev?.trips};
+    return{m:MLBL[m]||m,trips:d.trips,sav:+sv.toFixed(1),prevTrips:prev?.trips,ci:+(d.ci/1e6).toFixed(1)};
   });
 
-  const visData=calcVisibility(rows);
-  const sitesForVis=activeSite==='all'?NDC:[activeSite];
-  let visHTML=`<div class="card" style="margin-bottom:12px"><div class="ctitle">Visibility Pengiriman Luar Kota — Armada Internal<span class="ctitle-badge">per jalur · saving vs ext</span></div><div class="vis-grid" style="grid-template-columns:repeat(${Math.min(sitesForVis.length,4)},1fr)">`;
-  sitesForVis.forEach(s=>{
-    const vd=visData[s];if(!vd) return;
-    const col=SCOL[s]||'#266CA9';
-    const pctCls=vd.pct>=30?'background:#dcfff4;color:#065f46':vd.pct>=15?'background:#eff6ff;color:#1d4ed8':'background:#fff1f2;color:#991b1b';
-    const maxCI=vd.jalurs.length?vd.jalurs[0].ci:1;
-    visHTML+=`<div class="vis-card" style="border-top:3px solid ${col}">
-      <div class="vis-header">
-        <div class="vis-site" style="color:${col}">${SSHORT[s]||s}</div>
-        <div class="vis-trip-line">
-          <div><div class="vis-trip-count">${vd.intTrips.toLocaleString('id-ID')}/${vd.totalTrips.toLocaleString('id-ID')} Trip</div><div class="vis-rate">${vd.rateLabel}</div></div>
-          <div class="vis-pct-badge" style="${pctCls}">${vd.pct}%</div>
-        </div>
-      </div>
-      <div class="vis-divider"></div>
-      <table class="vis-tbl"><thead><tr><th>Jalur</th><th>Int (Rp Jt)</th><th>Saving</th></tr></thead><tbody>
-      ${vd.jalurs.slice(0,8).map(j=>{const ci=j.ci/1e6;const ce=j.ceCnt>0?j.ce/1e6:null;const saving=ce!==null?+((j.ce-j.ci)/j.ci*100).toFixed(1):null;const barW=Math.round(j.ci/maxCI*100);return`<tr><td><div class="vis-jalur">${j.jalur}</div><div class="vis-area">${j.area}</div><div class="vis-bar-track"><div class="vis-bar-fill" style="width:${barW}%;background:${col}"></div></div></td><td class="vis-cost">${ci.toFixed(1)}</td><td class="${saving!==null?(saving>=0?'vis-saving-pos':'vis-saving-neg'):'vis-cost'}">${saving!==null?(saving>=0?'+':'')+saving+'%':'—'}</td></tr>`;}).join('')}
-      </tbody></table>
-      <div class="vis-footer"><span>Int: <b>Rp ${(vd.totCI/1e6).toFixed(1)} Jt</b></span><span>Ext: <b>Rp ${(vd.totCE/1e6).toFixed(1)} Jt</b></span></div>
-    </div>`;
-  });
-  visHTML+='</div></div>';
-
-  const chartMonthHTML=`<div class="row2">
-    <div class="card" style="margin-bottom:0"><div class="ctitle">Savings vs External per Bulan <span class="ctitle-badge">Jt Rp · scope area</span></div><div style="position:relative;height:160px"><canvas id="cSav"></canvas></div></div>
-    <div class="card" style="margin-bottom:0"><div class="ctitle">Trip Internal per Bulan</div><div style="position:relative;height:160px"><canvas id="cTrip"></canvas></div></div>
+  const chartsHTML=`<div class="grid2 mb12">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Savings per Bulan <span class="card-badge">scope area · Jt Rp</span></div>
+      <div style="position:relative;height:160px"><canvas id="cSav"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Trip Internal per Bulan</div>
+      <div style="position:relative;height:160px"><canvas id="cTrip"></canvas></div>
+    </div>
   </div>`;
 
-  const dailyData=calcDailyAvg(rows);
-  const chartDayHTML=`<div class="card" style="margin-bottom:12px">
-    <div class="ctitle">Rata-rata Trip Internal per Hari<div class="leg" style="margin-bottom:0;margin-left:8px"><span class="li"><span class="ls" style="background:#266CA9"></span>Hari Kerja</span><span class="li"><span class="ls" style="background:#a8cde8"></span>Weekend</span></div></div>
-    <div style="position:relative;height:170px"><canvas id="cDay"></canvas></div>
-  </div>`;
-
-  const momHTML=`<div class="card" style="margin-bottom:12px">
-    <div class="ctitle">Month-over-Month Summary <span class="ctitle-badge">${momRows.length} bulan · savings = scope area</span></div>
-    <table class="mom-table"><thead><tr><th>Bulan</th><th>Trip</th><th>MoM</th><th>Cost Int (Jt)</th><th>Cost Ext (Jt)</th><th>Savings Scope (Jt)</th></tr></thead>
-    <tbody>${momRows.map(m=>`<tr><td style="font-weight:600">${m.m}</td><td style="text-align:right;font-family:var(--mono)">${fmt(m.trips)}</td><td style="text-align:right">${m.prevTrips!=null?`<span class="${m.trips>=m.prevTrips?'pos':'neg'}">${m.trips>=m.prevTrips?'▲':'▼'}${Math.abs(m.trips-m.prevTrips)}</span>`:'<span style="color:var(--muted)">—</span>'}</td><td style="text-align:right;font-family:var(--mono)">${m.ci}</td><td style="text-align:right;font-family:var(--mono)">${m.ce!==null?m.ce:'<span style="color:var(--muted)">—</span>'}</td><td style="text-align:right;font-family:var(--mono);color:${m.sav>=0?CGREEN:CRED}">${m.sav>=0?'+':''}${m.sav}</td></tr>`).join('')}</tbody>
+  // MoM table
+  const momHTML=`<div class="card mb12">
+    <div class="card-title">Month-over-Month <span class="card-badge">${momRows.length} bulan · savings = scope area</span></div>
+    <table class="mom-table">
+      <thead><tr><th>Bulan</th><th>Trip</th><th>MoM</th><th>Cost Int (Jt)</th><th>Savings Scope (Jt)</th></tr></thead>
+      <tbody>${momRows.map(m=>`<tr>
+        <td style="font-weight:600">${m.m}</td>
+        <td style="text-align:right;font-family:var(--mono)">${fmt(m.trips)}</td>
+        <td style="text-align:right">${m.prevTrips!=null?`<span class="${m.trips>=m.prevTrips?'pos':'neg'}">${m.trips>=m.prevTrips?'▲':'▼'}${Math.abs(m.trips-m.prevTrips)}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+        <td style="text-align:right;font-family:var(--mono)">${m.ci}</td>
+        <td style="text-align:right;font-family:var(--mono);color:${m.sav>=0?CGREEN:CRED}">${m.sav>=0?'+':''}${m.sav}</td>
+      </tr>`).join('')}</tbody>
     </table>
   </div>`;
 
-  const provData=calcProvinsi(rows);
-  const sitesForProv=activeSite==='all'?NDC:[activeSite];
-  let provHTML=`<div class="card" style="margin-bottom:12px"><div class="ctitle">Summary per Provinsi — Kontribusi Armada Internal<span class="ctitle-badge">ground truth int+ext</span></div><div class="leg" style="margin-bottom:10px"><span class="li"><span class="ls" style="background:#266CA9"></span>Internal</span><span class="li"><span class="ls" style="background:#a8cde8"></span>External</span></div><div class="prov-grid" style="grid-template-columns:repeat(${Math.min(sitesForProv.length,4)},1fr)">`;
-  sitesForProv.forEach(s=>{
-    const sdata=provData[s]||{};
-    const areas=Object.entries(sdata).filter(([a,v])=>v.int>0||v.ext>0).sort((a,b)=>(b[1].int+b[1].ext)-(a[1].int+a[1].ext));
-    const totInt=areas.reduce((s,[,v])=>s+v.int,0);
-    const totExt=areas.reduce((s,[,v])=>s+v.ext,0);
-    const totAll=totInt+totExt;
-    const totPct=totAll?Math.round(totInt/totAll*100):0;
-    const maxTotal=areas.reduce((m,[,v])=>Math.max(m,v.int+v.ext),1);
-    const pctColor=totPct>=30?'background:#dcfff4;color:#065f46':totPct>=15?'background:#eff6ff;color:#1d4ed8':'background:#fff1f2;color:#991b1b';
-    const intColor=SCOL[s]||'#266CA9';
-    provHTML+=`<div class="prov-card"><div class="prov-card-head"><div class="prov-site-name" style="color:${intColor}">${SSHORT[s]||s}</div><span class="prov-pct-badge" style="${pctColor}">${totPct}% internal</span></div>
-    <table class="prov-tbl"><thead><tr><th>Provinsi</th><th>INT</th><th>EXT</th><th>Total</th><th>%INT</th></tr></thead><tbody>
-    ${areas.map(([area,v])=>{const total=v.int+v.ext;const p=total?Math.round(v.int/total*100):0;const barW=Math.round(total/maxTotal*100);const pCls=p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo';return`<tr><td><div style="font-weight:500;font-size:11px">${area}</div><div style="margin-top:3px"><span class="prov-bar-wrap"><span class="prov-bar-fill" style="width:${Math.round(v.int/Math.max(total,1)*barW)}%;background:${intColor}"></span></span></div></td><td style="text-align:right;font-family:var(--mono);color:${intColor};font-weight:600">${v.int}</td><td style="text-align:right;font-family:var(--mono);color:var(--muted)">${v.ext}</td><td style="text-align:right;font-family:var(--mono)">${total}</td><td style="text-align:right"><span class="pill ${pCls}">${p}%</span></td></tr>`;}).join('')}
-    <tr style="border-top:2px solid var(--border)"><td><b>Total</b></td><td style="text-align:right;font-family:var(--mono);color:${intColor};font-weight:700">${totInt}</td><td style="text-align:right;font-family:var(--mono)">${totExt}</td><td style="text-align:right;font-family:var(--mono)">${totAll}</td><td style="text-align:right"><span class="pill ${pc(totPct)}">${totPct}%</span></td></tr>
-    </tbody></table></div>`;
-  });
-  provHTML+='</div></div>';
-
-  const contribHTML=renderContribExpandable(rows);
-  const slaHTML=renderSLASection(rows);
-  const oosHTML=renderOutOfScope(rows);
-  document.getElementById('content').innerHTML=kpiHTML+siteHTML+oosHTML+visHTML+chartMonthHTML+chartDayHTML+momHTML+provHTML+slaHTML+contribHTML;
+  document.getElementById('content').innerHTML=kpiHTML+siteHTML+chartsHTML+momHTML;
 
   setTimeout(()=>{
-    dc('cSav');dc('cTrip');dc('cDay');
+    dc('cSav');dc('cTrip');
     const savColors=momRows.map(m=>m.sav>=0?'rgba(34,160,107,.75)':'rgba(226,75,75,.75)');
-    CH['cSav']=new Chart(document.getElementById('cSav'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.sav),backgroundColor:savColors,borderColor:momRows.map(m=>m.sav>=0?'#22a06b':'#e24b4b'),borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y>=0?'Hemat':'Lebih mahal'}: ${Math.abs(c.parsed.y).toFixed(1)} Jt`}}},scales:{x:{ticks:{color:'#637d9a',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11},callback:v=>v+'Jt'},grid:{color:'rgba(0,0,0,.05)'}}}}});
+    CH['cSav']=new Chart(document.getElementById('cSav'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.sav),backgroundColor:savColors,borderColor:momRows.map(m=>m.sav>=0?'#22a06b':'#e24b4b'),borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#637d9a',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11},callback:v=>v+'Jt'},grid:{color:'rgba(0,0,0,.05)'}}}}});
     CH['cTrip']=new Chart(document.getElementById('cTrip'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.trips),backgroundColor:'#266CA9',borderRadius:5,borderColor:'#1d5a91',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#637d9a',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11}},grid:{color:'rgba(0,0,0,.05)'}}}}});
-    CH['cDay']=new Chart(document.getElementById('cDay'),{type:'bar',data:{labels:dailyData.map(d=>d.label),datasets:[{data:dailyData.map(d=>d.avg),backgroundColor:dailyData.map(d=>d.isWeekend?'#a8cde8':'#266CA9'),borderRadius:5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Rata-rata: ${c.parsed.y} trip`}}},scales:{x:{ticks:{color:'#637d9a',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11}},grid:{color:'rgba(0,0,0,.05)'},beginAtZero:true}},layout:{padding:{top:28}}},plugins:[{id:'dataLabels',afterDatasetsDraw(chart){const{ctx,data}=chart;chart.getDatasetMeta(0).data.forEach((bar,i)=>{const val=data.datasets[0].data[i];if(!val) return;ctx.save();ctx.font='600 11px Plus Jakarta Sans, system-ui';ctx.fillStyle='#22a06b';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(`+${val}`,bar.x,bar.y-4);ctx.restore();});}}]});
   },30);
 }
 
-function renderOperational(rows,kpi,contrib,tInt,tAll,pct,sav){
+// ── MENU: EFISIENSI ──────────────────────────────────────────────
+function renderEfisiensi(rows){
+  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const statusLabel={'ideal':'IDEAL','worth':'WORTH IT','review':'REVIEW SLA','eval':'EVALUASI','eval_cost':'EVAL COST','ideal_cost':'OK COST','nodata':'NO DATA'};
+  const statusClass={'ideal':'sp-ideal','worth':'sp-worth','review':'sp-review','eval':'sp-eval','eval_cost':'sp-eval','ideal_cost':'sp-ideal','nodata':'sp-nodata'};
+
+  let html='';
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    if(!sr.length) return;
+    const jalurs=calcJalur(sr,s);
+    const col=SCOL[s]||'#266CA9';
+
+    html+=`<div class="card mb12">
+      <div class="card-title" style="color:${col}">${s}
+        <span class="card-badge">${jalurs.length} jalur · ${sr.length} trip · scope: ${(SAVING_SCOPE[s]||[]).join('+')}</span>
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <span class="status-pill sp-ideal">IDEAL</span>
+          <span class="status-pill sp-worth">WORTH IT</span>
+          <span class="status-pill sp-review">REVIEW SLA</span>
+          <span class="status-pill sp-eval">EVALUASI</span>
+        </span>
+      </div>
+      <div class="jalur-wrap">
+      <table class="sc-table">
+        <thead><tr>
+          <th style="min-width:140px">Jalur</th>
+          <th class="r">Cost Int (Jt)</th>
+          <th class="r">Cost Ext (Jt)</th>
+          <th class="r">Gap Cost</th>
+          <th class="r">LT Int (hr)</th>
+          <th class="r">LT Ext (hr)</th>
+          <th class="r">Gap SLA</th>
+          <th class="c">Status</th>
+        </tr></thead>
+        <tbody>
+        ${jalurs.map(j=>{
+          const maxCI=jalurs.reduce((m,jj)=>Math.max(m,jj.ci),1);
+          const barW=Math.round(j.ci/maxCI*100);
+          const inScopeStyle=j.inScope?'':'opacity:.65;';
+          return`<tr style="${inScopeStyle}">
+            <td>
+              <div class="sc-jalur">${j.j}${!j.inScope?'<span style="font-size:9px;color:var(--muted);margin-left:4px;font-weight:400">out-scope</span>':''}</div>
+              <div class="sc-area">${j.area}</div>
+              <div class="sc-bar-wrap"><div class="sc-bar-fill" style="width:${barW}%;background:${col}"></div></div>
+            </td>
+            <td class="sc-val int">${j.ci}</td>
+            <td class="sc-val ext">${j.ce!==null?j.ce:'<span style="color:var(--muted)">—</span>'}</td>
+            <td class="${j.gap!==null?(j.gap>=0?'sc-gap-pos':'sc-gap-neg'):'sc-gap-neu'}">${j.gap!==null?(j.gap>=0?'+':'')+j.gap+'Jt':'—'}</td>
+            <td class="sc-val int">${j.lt_int!==null?j.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
+            <td class="sc-val ext">${j.lt_ext!==null?j.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
+            <td class="${j.lt_delta!==null?(j.lt_delta>=0?'sc-gap-pos':'sc-gap-neg'):'sc-gap-neu'}">${j.lt_delta!==null?(j.lt_delta>=0?'+':'')+j.lt_delta+'hr':'—'}</td>
+            <td style="text-align:center"><span class="status-pill ${statusClass[j.status]||'sp-nodata'}">${statusLabel[j.status]||'—'}</span></td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+      </div>
+    </div>`;
+  });
+
+  // Legend
+  const legendHTML=`<div class="card mb12" style="padding:12px 16px">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--txt2)">
+      <span><span class="status-pill sp-ideal">IDEAL</span> Lebih murah + lebih cepat</span>
+      <span><span class="status-pill sp-worth">WORTH IT</span> Lebih mahal tapi jauh lebih cepat</span>
+      <span><span class="status-pill sp-review">REVIEW SLA</span> Lebih murah tapi lebih lambat</span>
+      <span><span class="status-pill sp-eval">EVALUASI</span> Lebih mahal + lebih lambat</span>
+    </div>
+  </div>`;
+
+  document.getElementById('content').innerHTML=legendHTML+html;
+}
+
+// ── MENU: COVERAGE ───────────────────────────────────────────────
+function renderCoverage(rows,contrib,tInt,tAll,pct){
+  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const oosData=calcOutOfScope(rows);
+
+  // Per site coverage card
+  let covHTML='';
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    if(!sr.length) return;
+    const sc=calcContrib(sr);
+    const si=sc.reduce((a,r)=>a+r.int,0);
+    const sa=sc.reduce((a,r)=>a+r.total,0);
+    const sp=sa?Math.round(si/sa*100):0;
+    const pctCls=sp>=30?'background:#dcfff4;color:#065f46':sp>=15?'background:#eff6ff;color:#1d4ed8':'background:#fff1f2;color:#991b1b';
+    const col=SCOL[s];
+    const scopeAreas=SAVING_SCOPE[s]||[];
+    const scopeData=sc.filter(r=>scopeAreas.includes(r.area));
+    const maxTotal=scopeData.reduce((m,r)=>Math.max(m,r.total),1);
+
+    covHTML+=`<div class="cov-site-card">
+      <div class="cov-header">
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${col}">${SSHORT[s]}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Scope: ${scopeAreas.join(' + ')}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="cov-pct-big" style="${pctCls}">${sp}%</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">${fmt(si)} int / ${fmt(sa)} total</div>
+        </div>
+      </div>
+      <div class="cov-area-grid">
+        ${scopeData.map(r=>{
+          const p=r.total?Math.round(r.int/r.total*100):0;
+          const barW=Math.round(r.total/maxTotal*100);
+          const pCls=p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo';
+          return`<div class="cov-area-item">
+            <div class="cov-area-name">${r.area}</div>
+            <div class="cov-area-bar-track"><div class="cov-area-bar-fill" style="width:${Math.round(r.int/Math.max(r.total,1)*barW)}%;background:${col}"></div></div>
+            <div class="cov-area-stats"><span>Int: <b>${fmt(r.int)}</b></span><span>Ext: <b>${fmt(r.ext)}</b></span><span><span class="pill ${pCls}">${p}%</span></span></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  // Out-of-scope section
+  const oosSites=sitesToShow.filter(s=>oosData[s]&&oosData[s].total>0);
+  let oosHTML='';
+  if(oosSites.length){
+    oosHTML=`<div class="card mb12">
+      <div class="card-title">Coverage di Luar Scope Saving
+        <span class="card-badge">tetap dilayani internal · belum ter-capture di saving</span>
+      </div>
+      <div class="grid${Math.min(oosSites.length,3)}" style="grid-template-columns:repeat(${Math.min(oosSites.length,3)},1fr)">
+      ${oosSites.map(s=>{
+        const d=oosData[s];
+        const col=SCOL[s];
+        return`<div class="oos-card">
+          <div class="oos-header">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${col}">${SSHORT[s]}</div>
+            <div style="font-size:18px;font-weight:800;font-family:var(--mono)">${d.total} <span style="font-size:11px;font-weight:500;color:var(--muted)">trip</span></div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${fmtM(d.ci)} · di luar ${(SAVING_SCOPE[s]||[]).join('+')}</div>
+          ${d.areas.map(([area,v])=>`<div class="oos-area-row">
+            <span style="color:var(--txt2);font-weight:500">${area}</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${v.trips} trip · ${fmtM(v.ci)}</span>
+          </div>`).join('')}
+        </div>`;
+      }).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('content').innerHTML=covHTML+oosHTML;
+}
+
+// ── MENU: INSIGHT ────────────────────────────────────────────────
+function renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
+  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const insights=[];
+  const oosData=calcOutOfScope(rows);
+
+  // Generate auto insights
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    if(!sr.length) return;
+    const jalurs=calcJalur(sr,s).filter(j=>j.inScope);
+    const idealJalurs=jalurs.filter(j=>j.status==='ideal');
+    const evalJalurs=jalurs.filter(j=>j.status==='eval');
+    const worthJalurs=jalurs.filter(j=>j.status==='worth');
+    const topIdeal=idealJalurs.sort((a,b)=>(b.lt_delta||0)-(a.lt_delta||0))[0];
+    const worstEval=evalJalurs.sort((a,b)=>(a.pct_ef||0)-(b.pct_ef||0))[0];
+    const bestWorth=worthJalurs.sort((a,b)=>(b.lt_delta||0)-(a.lt_delta||0))[0];
+
+    if(idealJalurs.length>0){
+      insights.push({icon:'✅',type:'pos',title:`${SSHORT[s]}: ${idealJalurs.length} jalur dalam posisi IDEAL`,desc:`Internal lebih murah sekaligus lebih cepat dari external. ${topIdeal?`Jalur terbaik: ${topIdeal.j} — hemat ${topIdeal.gap>=0?'+':''}${topIdeal.gap}Jt dan ${topIdeal.lt_delta>=0?'+':''}${topIdeal.lt_delta}hr lebih cepat.`:''}`,tag:'PERTAHANKAN'});
+    }
+    if(worthJalurs.length>0&&bestWorth){
+      insights.push({icon:'⚖️',type:'neu',title:`${SSHORT[s]}: ${worthJalurs.length} jalur WORTH IT — over cost tapi SLA jauh lebih baik`,desc:`${bestWorth.j} lebih mahal ${Math.abs(bestWorth.gap||0)}Jt vs external, tapi ${bestWorth.lt_delta}hr lebih cepat. Trade-off ini justified dari sisi service level.`,tag:'JUSTIFIED'});
+    }
+    if(evalJalurs.length>0&&worstEval){
+      insights.push({icon:'🔴',type:'neg',title:`${SSHORT[s]}: ${evalJalurs.length} jalur perlu EVALUASI`,desc:`Lebih mahal dan tidak lebih cepat dari external. ${worstEval.j}: over cost ${Math.abs(worstEval.pct_ef||0)}%${worstEval.lt_delta!==null?' dan '+Math.abs(worstEval.lt_delta)+'hr lebih lambat':''}.`,tag:'PERLU REVIEW'});
+    }
+    const oos=oosData[s];
+    if(oos&&oos.total>0){
+      insights.push({icon:'🗺️',type:'neu',title:`${SSHORT[s]}: ${oos.total} trip cover area di luar scope saving`,desc:`Armada internal melayani ${oos.areas.length} area tambahan (${oos.areas.slice(0,3).map(([a])=>a).join(', ')}) senilai ${fmtM(oos.ci)}. Kontribusi ini belum ter-capture dalam kalkulasi saving.`,tag:'KONTRIBUSI TAMBAHAN'});
+    }
+  });
+
+  // Overall SLA finding
+  if(slaAvg!==null){
+    insights.unshift({icon:'⚡',type:slaAvg>0?'pos':'neg',title:`Secara keseluruhan, armada internal ${slaAvg>0?slaAvg+'hr lebih cepat':''+Math.abs(slaAvg)+'hr lebih lambat'} dari external`,desc:`Rata-rata SLA advantage across semua jalur yang ada benchmark external-nya. ${sav<0?'Meskipun kita over cost '+fmtM(Math.abs(sav))+' vs external, ':''}SLA benefit ini menjadi justifikasi penggunaan armada internal untuk jalur-jalur strategis.`,tag:slaAvg>0?'SLA ADVANTAGE':'SLA GAP'});
+  }
+
+  // Overall savings finding
+  insights.unshift({
+    icon:sav>=0?'💰':'⚠️',
+    type:sav>=0?'pos':'warn',
+    title:`Total ${sav>=0?'saving':'over cost'} vs external: ${sav>=0?'+':''}${fmtM(sav)}`,
+    desc:`Dihitung dari area scope (${getScopeLabel()}). Cost internal: ${fmtM(kpi.tCI_s)}, benchmark external: ${fmtM(kpi.tCE_s)}. ${sav<0?'Over cost ini perlu dievaluasi per jalur di menu Efisiensi.':'Armada internal terbukti efisien dari sisi cost untuk area scope.'}`,
+    tag:sav>=0?'EFISIEN':'PERLU PERHATIAN'
+  });
+
+  const tagClass={'pos':'it-pos','neg':'it-neg','neu':'it-neu','warn':'it-warn'};
+
+  const insightHTML=`<div class="insight-list">
+    ${insights.map(i=>`<div class="insight-item">
+      <div class="insight-icon">${i.icon}</div>
+      <div class="insight-body">
+        <div class="insight-title">${i.title}</div>
+        <div class="insight-desc">${i.desc}</div>
+        <span class="insight-tag ${tagClass[i.type]||'it-neu'}">${i.tag}</span>
+      </div>
+    </div>`).join('')}
+  </div>`;
+
+  // Trade-off summary matrix
+  const matrixHTML=`<div class="card mb12">
+    <div class="card-title">Trade-off Matrix — Cost vs SLA per Jalur
+      <span class="card-badge">semua jalur in-scope yang punya benchmark</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${[{q:'IDEAL',desc:'Lebih murah + lebih cepat',cls:'sp-ideal',filter:j=>j.status==='ideal'},
+         {q:'WORTH IT',desc:'Over cost tapi SLA lebih baik',cls:'sp-worth',filter:j=>j.status==='worth'},
+         {q:'REVIEW SLA',desc:'Lebih murah tapi lebih lambat',cls:'sp-review',filter:j=>j.status==='review'},
+         {q:'EVALUASI',desc:'Over cost + SLA tidak lebih baik',cls:'sp-eval',filter:j=>j.status==='eval'}
+      ].map(q=>{
+        const allJalurs=sitesToShow.flatMap(s=>calcJalur(rows.filter(r=>r[0]===s),s).filter(j=>j.inScope&&j.status!=='nodata'));
+        const filtered=allJalurs.filter(q.filter);
+        return`<div style="background:var(--bg);border-radius:8px;padding:12px 14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="status-pill ${q.cls}">${q.q}</span>
+            <span style="font-size:18px;font-weight:800;font-family:var(--mono)">${filtered.length}</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${q.desc}</div>
+          <div style="font-size:11px;color:var(--txt2)">${filtered.slice(0,5).map(j=>`<span style="display:inline-block;margin-right:4px;margin-bottom:2px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px">${j.j}</span>`).join('')}${filtered.length>5?`<span style="font-size:10px;color:var(--muted)">+${filtered.length-5} lainnya</span>`:''}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  document.getElementById('content').innerHTML=insightHTML+matrixHTML;
+}
+
+// ── MENU: OPERASIONAL ────────────────────────────────────────────
+function renderOperasional(rows,kpi,contrib,tInt,tAll,pct,sav){
   const sitesToShow=activeSite==='all'?NDC:[activeSite];
   const jalurAll=activeSite==='all'
     ?NDC.flatMap(s=>{const sr=rows.filter(r=>r[0]===s);return calcJalur(sr,s).map(j=>({...j,site:s}));})
     :calcJalur(rows,activeSite).map(j=>({...j,site:activeSite}));
   const kritis=jalurAll.filter(j=>j.alert==='kritis');
   const warn=jalurAll.filter(j=>j.alert==='warning');
+
   let alertHTML='';
-  if(kritis.length) alertHTML+=`<div class="alert-banner kritis" style="margin-bottom:10px"><span class="alert-icon">🔴</span><div class="alert-content"><div class="alert-title">EVALUASI — Cost internal &gt;15% di atas benchmark eksternal</div><div class="alert-items">${kritis.map(j=>`<span class="alert-tag kritis">${SSHORT[j.site]||j.site}-${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
-  if(warn.length) alertHTML+=`<div class="alert-banner" style="margin-bottom:10px"><span class="alert-icon">🟡</span><div class="alert-content"><div class="alert-title">MONITORING — Cost internal melebihi benchmark eksternal</div><div class="alert-items">${warn.map(j=>`<span class="alert-tag warning">${SSHORT[j.site]||j.site}-${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
+  if(kritis.length) alertHTML+=`<div class="alert-banner eval"><span class="alert-icon">🔴</span><div class="alert-content"><div class="alert-title">EVALUASI — Cost internal >15% di atas benchmark eksternal</div><div class="alert-items">${kritis.map(j=>`<span class="alert-tag kritis">${SSHORT[j.site]||j.site} · ${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
+  if(warn.length) alertHTML+=`<div class="alert-banner mon"><span class="alert-icon">🟡</span><div class="alert-content"><div class="alert-title">MONITORING — Cost internal melebihi benchmark eksternal</div><div class="alert-items">${warn.map(j=>`<span class="alert-tag warning">${SSHORT[j.site]||j.site} · ${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
+
+  // KPI ringkas
   const cpdo=kpi.tDO>0?kpi.tCI/kpi.tDO:0;
   const scopeLabel=getScopeLabel();
-  const kpiHTML=`<div class="kpi-row">
-    <div class="kpi c1"><div class="klbl">Total Trip</div><div class="kval">${fmt(rows.length)}</div><div class="ksub">trip periode ini</div></div>
-    <div class="kpi c4"><div class="klbl">% Kontribusi Int</div><div class="kval">${pct}%</div><div class="ksub">${fmt(tInt)} int / ${fmt(tAll)} total</div></div>
-    <div class="kpi c3"><div class="klbl">Cost Internal</div><div class="kval">${fmtM(kpi.tCI)}</div><div class="ksub">total Rp</div></div>
-    <div class="kpi c2"><div class="klbl">Cost Ext Ref</div><div class="kval">${kpi.tCE>0?fmtM(kpi.tCE):'—'}</div><div class="ksub">benchmark</div></div>
-    <div class="kpi c5"><div class="klbl">Savings</div><div class="kval" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="ksub">${scopeLabel}</div></div>
-    <div class="kpi c7"><div class="klbl">Total CBM</div><div class="kval">${kpi.tCBM.toFixed(1)}</div><div class="ksub">total volume pengiriman int</div></div>
-    <div class="kpi c6"><div class="klbl">Total DO</div><div class="kval">${fmt(kpi.tDO)}</div><div class="ksub">${kpi.tDO>0?'Rp'+fmt(Math.round(cpdo))+'/DO':'—'}</div></div>
+  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+    <div class="kpi c-blue"><div class="kpi-label">Total Trip</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">trip periode ini</div></div>
+    <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO</div></div>
+    <div class="kpi c-${kpi.sav>=0?'green':'red'}"><div class="kpi-label">Savings</div><div class="kpi-value" style="color:${kpi.sav>=0?CGREEN:CRED}">${kpi.sav>=0?'+':''}${fmtM(kpi.sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
+    <div class="kpi c-cyan"><div class="kpi-label">Total CBM</div><div class="kpi-value">${kpi.tCBM.toFixed(1)}</div><div class="kpi-sub">total volume int</div></div>
   </div>`;
 
+  // Jalur tables per site
   let jalurHTML='';
   sitesToShow.forEach(s=>{
     const sr=rows.filter(r=>r[0]===s);if(!sr.length) return;
     const jalurs=calcJalur(sr,s);const maxT=jalurs[0]?.t||1;
     const scopeAreas=SAVING_SCOPE[s]||[];
-    jalurHTML+=`<div class="card" style="margin-bottom:12px"><div class="ctitle">${s} <span class="ctitle-badge">${jalurs.length} jalur · ${sr.length} trip · scope saving: ${scopeAreas.join('+')||'—'}</span></div><div class="jalur-wrap"><table class="jtbl"><thead><tr><th>Jalur</th><th>Area</th><th>Trip</th><th>Cost Int (Jt)</th><th>Cost Ext (Jt)</th><th>Gap (Jt)</th><th>Efisiensi</th><th>Status</th></tr></thead><tbody>${jalurs.map(j=>`<tr class="${j.alert?'row-'+j.alert:''}" style="${!j.inScope?'opacity:.75':''}"><td style="font-weight:600">${j.j}${!j.inScope?'<span style="font-size:9px;color:var(--muted);margin-left:4px">out-scope</span>':''}</td><td style="color:var(--muted)">${j.area}</td><td><span class="mono">${j.t}</span><div style="width:${Math.round(j.t/maxT*80)}px;height:4px;background:${SCOL[s]||'var(--blue)'};opacity:.5;border-radius:2px;margin-top:3px"></div></td><td style="text-align:right" class="mono">${j.ci}</td><td style="text-align:right" class="mono">${j.ce!==null?j.ce:'<span style="color:var(--muted)">—</span>'}</td><td style="text-align:right">${j.gap!==null?`<span class="${j.gap>=0?'pos':'neg'}">${j.gap>=0?'+':''}${j.gap}</span>`:'<span style="color:var(--muted)">—</span>'}</td><td style="text-align:right">${j.pct_ef!==null?`<span class="${j.pct_ef>=0?'pos':'neg'}">${j.pct_ef>=0?'+':''}${j.pct_ef}%</span>`:'<span style="color:var(--muted)">—</span>'}</td><td style="text-align:center">${j.alert==='kritis'?'<span class="alert-tag kritis">EVALUASI</span>':j.alert==='warning'?'<span class="alert-tag warning">MONITORING</span>':j.inScope?'<span style="color:var(--green);font-weight:600;font-size:10px">✓ OK</span>':'<span style="color:var(--muted);font-size:10px">—</span>'}</td></tr>`).join('')}</tbody></table></div></div>`;
+    jalurHTML+=`<div class="card mb12">
+      <div class="card-title">${s} <span class="card-badge">${jalurs.length} jalur · ${sr.length} trip · scope: ${scopeAreas.join('+')||'—'}</span></div>
+      <div class="jalur-wrap"><table class="jtbl">
+        <thead><tr><th>Jalur</th><th>Area</th><th>Trip</th><th>Cost Int (Jt)</th><th>Cost Ext (Jt)</th><th>Gap (Jt)</th><th>Efisiensi</th><th>LT Int</th><th>LT Ext</th><th>Δ SLA</th><th>Status</th></tr></thead>
+        <tbody>${jalurs.map(j=>`<tr class="${j.alert?'row-'+j.alert:''}" style="${!j.inScope?'opacity:.7':''}">
+          <td style="font-weight:600">${j.j}${!j.inScope?'<span style="font-size:9px;color:var(--muted);margin-left:4px">out-scope</span>':''}</td>
+          <td style="color:var(--muted)">${j.area}</td>
+          <td><span class="mono">${j.t}</span><div style="width:${Math.round(j.t/maxT*60)}px;height:3px;background:${SCOL[s]};opacity:.5;border-radius:2px;margin-top:3px"></div></td>
+          <td style="text-align:right" class="mono">${j.ci}</td>
+          <td style="text-align:right" class="mono">${j.ce!==null?j.ce:'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="text-align:right">${j.gap!==null?`<span class="${j.gap>=0?'pos':'neg'}">${j.gap>=0?'+':''}${j.gap}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="text-align:right">${j.pct_ef!==null?`<span class="${j.pct_ef>=0?'pos':'neg'}">${j.pct_ef>=0?'+':''}${j.pct_ef}%</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="text-align:right" class="mono">${j.lt_int!==null?j.lt_int:'—'}</td>
+          <td style="text-align:right" class="mono">${j.lt_ext!==null?j.lt_ext:'—'}</td>
+          <td style="text-align:right">${j.lt_delta!==null?`<span class="${j.lt_delta>=0?'pos':'neg'}">${j.lt_delta>=0?'+':''}${j.lt_delta}hr</span>`:'—'}</td>
+          <td style="text-align:center">${j.alert==='kritis'?'<span class="alert-tag kritis">EVALUASI</span>':j.alert==='warning'?'<span class="alert-tag warning">MONITORING</span>':j.inScope?'<span style="color:var(--green);font-weight:600;font-size:10px">✓ OK</span>':'<span style="color:var(--muted);font-size:10px">—</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
   });
 
-  const at=calcArmtd(rows);
-  const armHTML=`<div class="row2">
-    <div class="card" style="margin-bottom:0"><div class="ctitle">Distribusi Trip by Armada & Delivery Type</div><div class="leg" id="legArm"></div><div style="position:relative;height:180px"><canvas id="cArm"></canvas></div></div>
-    <div class="card" style="margin-bottom:0"><div class="ctitle">Kontribusi Internal per Area</div><div class="leg"><span class="li"><span class="ls" style="background:#266CA9"></span>Internal</span><span class="li"><span class="ls" style="background:#a8cde8"></span>External</span></div><div style="position:relative;height:180px"><canvas id="cArea"></canvas></div></div>
-  </div>`;
-  document.getElementById('content').innerHTML=alertHTML+kpiHTML+jalurHTML+armHTML;
-  setTimeout(()=>{
-    dc('cArm');dc('cArea');
-    document.getElementById('legArm').innerHTML=at.arms.map((a,i)=>`<span class="li"><span class="ls" style="background:${ACOLS[i%5]}"></span>${a}</span>`).join('');
-    CH['cArm']=new Chart(document.getElementById('cArm'),{type:'bar',data:{labels:at.tds,datasets:at.arms.map((arm,i)=>({label:arm,data:at.tds.map(td=>(at.data[arm]||{})[td]||0),backgroundColor:ACOLS[i%5],borderRadius:2}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{color:'#637d9a',font:{size:10}},grid:{display:false}},y:{stacked:true,ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}}}}});
-    CH['cArea']=new Chart(document.getElementById('cArea'),{type:'bar',data:{labels:contrib.map(c=>c.area),datasets:[{label:'Internal',data:contrib.map(c=>c.int),backgroundColor:'#266CA9',borderRadius:3},{label:'External',data:contrib.map(c=>c.ext),backgroundColor:'#a8cde8',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{color:'#637d9a',font:{size:10},maxRotation:30},grid:{display:false}},y:{stacked:true,ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}}}}});
-  },50);
+  document.getElementById('content').innerHTML=alertHTML+kpiHTML+jalurHTML;
 }
 
-function calcArmtd(rows){
-  const arms=[...new Set(rows.map(r=>r[5]))].sort();
-  const tds=[...new Set(rows.map(r=>r[6]))].sort();
-  const data={};
-  arms.forEach(a=>{data[a]={};tds.forEach(td=>data[a][td]=0);});
-  rows.forEach(r=>{if(data[r[5]]) data[r[5]][r[6]]=(data[r[5]][r[6]]||0)+1;});
-  return{arms,tds,data};
+// ── INIT ─────────────────────────────────────────────────────────
+function initDateRange(){
+  const dates=RAW.map(r=>r[7]).sort();
+  const minD=dates[0], maxD=dates[dates.length-1];
+  dateFrom=minD; dateTo=maxD;
+  ['dateFrom','dateTo'].forEach(id=>{document.getElementById(id).min=minD;document.getElementById(id).max=maxD;});
+  document.getElementById('dateFrom').value=minD;
+  document.getElementById('dateTo').value=maxD;
+  document.getElementById('infoRows').textContent=RAW.length.toLocaleString('id-ID');
+  buildQuickBtns(minD,maxD);
 }
 
 initDateRange();
@@ -888,28 +993,9 @@ render();
 </script>
 
 <style>
-#connectone-back {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #1e2d4a;
-  color: #fff;
-  text-decoration: none;
-  font-family: Inter, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 8px 14px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.1);
-  transition: background 0.2s, transform 0.2s;
-}
-#connectone-back:hover { background: #2a3f6a; transform: translateX(-2px); }
-#connectone-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+#connectone-back{position:fixed;bottom:16px;left:16px;z-index:99999;display:flex;align-items:center;gap:8px;background:#1e2d4a;color:#fff;text-decoration:none;font-family:var(--font);font-size:12px;font-weight:500;padding:8px 14px;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.1);transition:background .2s,transform .2s}
+#connectone-back:hover{background:#2a3f6a;transform:translateX(-2px)}
+#connectone-back svg{width:14px;height:14px;flex-shrink:0}
 </style>
 <a id="connectone-back" href="https://rahmatpambudi-dot.github.io/connectone/" title="Kembali ke ConnectOne Hub">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
