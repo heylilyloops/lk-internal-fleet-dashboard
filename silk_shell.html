@@ -177,6 +177,34 @@ canvas{display:block}
 @media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr)}.site-cards,.prov-grid{grid-template-columns:1fr}.row2{grid-template-columns:1fr}}
 /* scope info badge */
 .scope-note{font-size:9px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-weight:500}
+/* SLA section */
+.sla-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.sla-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden}
+.sla-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.sla-site{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.sla-advantage{font-size:22px;font-weight:800;font-family:var(--mono);color:var(--green);letter-spacing:-.5px}
+.sla-advantage.neg{color:var(--red)}
+.sla-adv-label{font-size:10px;color:var(--muted);margin-top:2px;margin-bottom:10px}
+.sla-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.sla-tbl th{font-size:9px;color:var(--muted);text-transform:uppercase;padding:3px 4px;border-bottom:1px solid var(--border);font-weight:600}
+.sla-tbl td{padding:5px 4px;border-bottom:1px solid #f5f7fa;vertical-align:middle}
+.sla-tbl tr:last-child td{border-bottom:none}
+.sla-tbl tr:hover td{background:var(--bg)}
+.sla-jalur{font-weight:600;color:var(--txt);font-size:11px}
+.sla-int{font-family:var(--mono);color:var(--blue);font-weight:700;text-align:right}
+.sla-ext{font-family:var(--mono);color:var(--muted);text-align:right}
+.sla-delta-pos{font-family:var(--mono);color:var(--green);font-weight:700;text-align:right}
+.sla-delta-neg{font-family:var(--mono);color:var(--red);font-weight:700;text-align:right}
+/* Out-of-scope section */
+.oos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.oos-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;border-left:3px solid var(--yellow)}
+.oos-site{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;color:var(--txt2)}
+.oos-total{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--txt)}
+.oos-sub{font-size:10px;color:var(--muted);margin-bottom:10px}
+.oos-area-list{display:flex;flex-direction:column;gap:5px}
+.oos-area-row{display:flex;justify-content:space-between;align-items:center;font-size:11px}
+.oos-area-name{color:var(--txt2);font-weight:500}
+.oos-area-count{font-family:var(--mono);font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -263,6 +291,9 @@ const SAVING_SCOPE={
   'HCI Cikupa':  ['Jawa Barat','Lampung'],
   'Corp Sidoarjo':['Jawa Timur']
 };
+
+// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow]
+//        0    1    2    3  4    5      6         7      8   9   10
 
 let activeSite='all',activeView='mgmt',CH={};
 let dateFrom='',dateTo='';
@@ -481,6 +512,124 @@ function calcVisibility(rows){
   return result;
 }
 
+// ── SLA ANALYSIS ──────────────────────────────────────────────────
+function calcSLA(rows, site) {
+  // Internal avg LT one way per jalur
+  const intMap = {};
+  rows.filter(r=>r[0]===site).forEach(r=>{
+    const j=r[2], lt=r[10];
+    if(lt===null||lt===undefined||isNaN(lt)) return;
+    if(!intMap[j]) intMap[j]={sum:0,cnt:0,area:r[1]};
+    intMap[j].sum+=lt; intMap[j].cnt++;
+  });
+  // External benchmark
+  const extMap = {};
+  (typeof EXT_LT!=='undefined'?EXT_LT:[]).filter(e=>e.site===site).forEach(e=>{
+    extMap[e.jalur]=e.avg_lt;
+  });
+  // Merge — only jalurs that have both
+  const results=[];
+  Object.entries(intMap).forEach(([j,v])=>{
+    const intAvg=+(v.sum/v.cnt).toFixed(2);
+    const extAvg=extMap[j]||null;
+    const delta=extAvg!==null?+(extAvg-intAvg).toFixed(2):null; // positive = internal faster
+    results.push({jalur:j,area:v.area,intAvg,extAvg,delta});
+  });
+  return results.filter(r=>r.extAvg!==null).sort((a,b)=>b.delta-a.delta);
+}
+
+function renderSLASection(rows) {
+  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  // Overall summary per site
+  let html=`<div class="card" style="margin-bottom:12px">
+    <div class="ctitle">SLA Advantage — Internal vs External
+      <span class="ctitle-badge">Lead Time One Way Int vs Avg Aktual Ext · hari lebih cepat = positif</span>
+    </div>
+    <div class="sla-grid" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
+
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    if(!sr.length){html+=`<div class="sla-card" style="border-top:3px solid ${SCOL[s]}"><div class="sla-site" style="color:${SCOL[s]}">${SSHORT[s]}</div><div style="color:var(--muted);font-size:11px">Tidak ada data</div></div>`;return;}
+    const slaData=calcSLA(rows,s);
+    if(!slaData.length){html+=`<div class="sla-card" style="border-top:3px solid ${SCOL[s]}"><div class="sla-site" style="color:${SCOL[s]}">${SSHORT[s]}</div><div style="color:var(--muted);font-size:11px">Belum ada benchmark ext</div></div>`;return;}
+    // Overall avg delta
+    const avgDelta=+(slaData.reduce((s,r)=>s+r.delta,0)/slaData.length).toFixed(2);
+    const fasterCount=slaData.filter(r=>r.delta>0).length;
+    const col=SCOL[s]||'#266CA9';
+    html+=`<div class="sla-card" style="border-top:3px solid ${col}">
+      <div class="sla-site" style="color:${col}">${SSHORT[s]}</div>
+      <div class="sla-advantage ${avgDelta<0?'neg':''}">${avgDelta>=0?'+':''}${avgDelta} hari</div>
+      <div class="sla-adv-label">${fasterCount}/${slaData.length} jalur lebih cepat vs external</div>
+      <table class="sla-tbl">
+        <thead><tr><th style="text-align:left">Jalur</th><th>Int (hr)</th><th>Ext (hr)</th><th>Δ</th></tr></thead>
+        <tbody>
+        ${slaData.slice(0,8).map(r=>`<tr>
+          <td><div class="sla-jalur">${r.jalur}</div></td>
+          <td class="sla-int">${r.intAvg}</td>
+          <td class="sla-ext">${r.extAvg}</td>
+          <td class="${r.delta>=0?'sla-delta-pos':'sla-delta-neg'}">${r.delta>=0?'+':''}${r.delta}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  });
+  html+=`</div></div>`;
+  return html;
+}
+
+// ── OUT-OF-SCOPE HIGHLIGHT ─────────────────────────────────────────
+function calcOutOfScope(rows) {
+  const result={};
+  NDC.forEach(s=>{
+    const scope=SAVING_SCOPE[s]||[];
+    const oos=rows.filter(r=>r[0]===s&&!scope.includes(r[1]));
+    if(!oos.length){result[s]=null;return;}
+    const areaMap={};
+    oos.forEach(r=>{
+      if(!areaMap[r[1]]) areaMap[r[1]]={trips:0,ci:0};
+      areaMap[r[1]].trips++;
+      areaMap[r[1]].ci+=r[3]||0;
+    });
+    result[s]={
+      total:oos.length,
+      ci:oos.reduce((s,r)=>s+(r[3]||0),0),
+      areas:Object.entries(areaMap).sort((a,b)=>b[1].trips-a[1].trips)
+    };
+  });
+  return result;
+}
+
+function renderOutOfScope(rows) {
+  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const oosData=calcOutOfScope(rows);
+  const hasSites=sitesToShow.filter(s=>oosData[s]&&oosData[s].total>0);
+  if(!hasSites.length) return '';
+
+  let html=`<div class="card" style="margin-bottom:12px">
+    <div class="ctitle">Coverage di Luar Scope Saving
+      <span class="ctitle-badge">area yang tetap dilayani internal · belum ter-capture di saving</span>
+    </div>
+    <div class="oos-grid" style="grid-template-columns:repeat(${Math.min(hasSites.length,4)},1fr)">`;
+
+  hasSites.forEach(s=>{
+    const d=oosData[s];
+    const col=SCOL[s]||'#266CA9';
+    html+=`<div class="oos-card">
+      <div class="oos-site" style="color:${col}">${SSHORT[s]}</div>
+      <div class="oos-total">${d.total.toLocaleString('id-ID')} trip</div>
+      <div class="oos-sub">${fmtM(d.ci)} · di luar scope ${(SAVING_SCOPE[s]||[]).join('+')}  </div>
+      <div class="oos-area-list">
+        ${d.areas.map(([area,v])=>`<div class="oos-area-row">
+          <span class="oos-area-name">${area}</span>
+          <span class="oos-area-count">${v.trips} trip · ${fmtM(v.ci)}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  html+=`</div></div>`;
+  return html;
+}
+
 function initDateRange(){
   const dates=RAW.map(r=>r[7]).sort();
   const minD=dates[0],maxD=dates[dates.length-1];
@@ -668,7 +817,9 @@ function renderManagement(rows,kpi,contrib,tInt,tAll,pct,sav){
   provHTML+='</div></div>';
 
   const contribHTML=renderContribExpandable(rows);
-  document.getElementById('content').innerHTML=kpiHTML+siteHTML+visHTML+chartMonthHTML+chartDayHTML+momHTML+provHTML+contribHTML;
+  const slaHTML=renderSLASection(rows);
+  const oosHTML=renderOutOfScope(rows);
+  document.getElementById('content').innerHTML=kpiHTML+siteHTML+oosHTML+visHTML+chartMonthHTML+chartDayHTML+momHTML+provHTML+slaHTML+contribHTML;
 
   setTimeout(()=>{
     dc('cSav');dc('cTrip');dc('cDay');
