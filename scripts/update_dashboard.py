@@ -20,10 +20,11 @@ GID_EXTERNAL   = 1514192890
 
 # Uppercase lookup — handles any casing from sheet
 SITE_MAP = {
-    'NDC HCI CIKUPA'   : 'HCI Cikupa',
-    'NDC HCI JABABEKA' : 'HCI Jababeka',
-    'NDC SIDOARJO'     : 'Corp Sidoarjo',
-    'NDC AHI JABABEKA' : 'AHI Jababeka',
+    'NDC HCI CIKUPA'    : 'HCI Cikupa',
+    'NDC HCI JABABEKA'  : 'HCI Jababeka',
+    'NDC SIDOARJO'      : 'Corp Sidoarjo',
+    'NDC AHI JABABEKA'  : 'AHI Jababeka',
+    'NDC CORP SIDOARJO' : 'Corp Sidoarjo',  # fix: actual value in sheet
 }
 MONTH_MAP = {}  # tidak dipakai, delivery date diparse langsung
 
