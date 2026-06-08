@@ -64,7 +64,9 @@ for line in int_data[1:]:
     except:
         continue
     if ci is None: continue
-    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm])
+    lt_raw  = line[14].strip() if len(line) > 14 else ''
+    lt_ow   = float(lt_raw) if lt_raw and lt_raw not in ('Lead Time One Way',) else None
+    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow])
 
 print(f"INT parsed: {len(int_rows)} rows")
 
@@ -131,11 +133,40 @@ ext_list_jalur = [
 
 print(f"EXT area entries: {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}")
 
+# ── BUILD EXT_LT: avg lead time per site+jalur ───────────────────
+from collections import defaultdict as dd2
+lt_sum  = dd2(lambda: dd2(lambda: [0, 0]))  # site → jalur → [sum, count]
+
+for line in ext_data[1:]:
+    if not any(line): continue
+    def get_col2(name, fallback):
+        idx = col.get(name, fallback)
+        return line[idx].strip() if idx < len(line) else ''
+    site_raw2 = get_col2('SITE NAME', 0)
+    jalur2    = get_col2('Jalur', 3).title()
+    lt_raw2   = get_col2('Lead Time', 10)
+    site2 = SITE_MAP.get(site_raw2.upper())
+    if not site2 or not jalur2: continue
+    try:
+        lt_val = float(lt_raw2)
+        lt_sum[site2][jalur2][0] += lt_val
+        lt_sum[site2][jalur2][1] += 1
+    except: continue
+
+ext_lt_list = [
+    {"site": s, "jalur": j, "avg_lt": round(v[0]/v[1], 2)}
+    for s, jalurs in lt_sum.items()
+    for j, v in jalurs.items()
+    if v[1] > 0
+]
+print(f"EXT_LT entries: {len(ext_lt_list)}")
+
 # ── BUILD data_block.js ───────────────────────────────────────────
 data_block = (
     'const RAW = '       + json.dumps(int_rows,        ensure_ascii=False) + ';\n' +
     'const EXT_AGG = '   + json.dumps(ext_list_area,   ensure_ascii=False) + ';\n' +
-    'const EXT_JALUR = ' + json.dumps(ext_list_jalur,  ensure_ascii=False) + ';\n'
+    'const EXT_JALUR = ' + json.dumps(ext_list_jalur,  ensure_ascii=False) + ';\n' +
+    'const EXT_LT = '    + json.dumps(ext_lt_list,     ensure_ascii=False) + ';\n'
 )
 
 # ── INJECT KE HTML ────────────────────────────────────────────────
