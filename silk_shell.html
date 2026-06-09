@@ -282,7 +282,7 @@ __DATA_BLOCK__
 
 const NDC=['AHI Jababeka','HCI Jababeka','HCI Cikupa','Corp Sidoarjo'];
 const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7'};
-const SSHORT={'AHI Jababeka':'AHI JBBK','HCI Jababeka':'HCI JBBK','HCI Cikupa':'HCI CKP','Corp Sidoarjo':'Corp SDJ'};
+const SSHORT={'AHI Jababeka':'AHI Jababeka','HCI Jababeka':'HCI Jababeka','HCI Cikupa':'HCI Cikupa','Corp Sidoarjo':'Corp Sidoarjo'};
 const ACOLS=['#1a3a5c','#266CA9','#4a90c4','#6aadde','#a8cde8'];
 const CGREEN='var(--green)',CRED='var(--red)';
 const DAY_LABELS=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
@@ -360,12 +360,11 @@ function calcJalur(rows,site){
     let status='nodata';
     if(pct_ef!==null&&lt_delta!==null){
       const cheaper=pct_ef>=0,faster=lt_delta>=0;
-      if(cheaper&&faster) status='ideal';
-      else if(!cheaper&&faster) status='worth';
-      else if(cheaper&&!faster) status='review';
-      else status='eval';
+      if(cheaper&&faster) status='worthit';
+      else if(!cheaper&&!faster) status='eval';
+      else status='review';
     } else if(pct_ef!==null){
-      status=pct_ef>=0?'ideal_cost':'eval_cost';
+      status=pct_ef>=0?'worthit':'eval';
     }
     return{j:j.j,area:j.area,t:j.t,ci:+ci.toFixed(1),ce:ce!==null?+ce.toFixed(1):null,gap,pct_ef,alert,inScope:j.inScope,lt_int,lt_ext,lt_delta,status};
   }).sort((a,b)=>b.t-a.t);
@@ -483,7 +482,7 @@ function render(){
   document.getElementById('chipPct').className='chip '+(pct>=30?'hi':pct>=15?'neu':'lo');
   document.getElementById('chipSav').textContent=(sav>=0?'Hemat ':'Lebih mahal ')+fmtM(Math.abs(sav));
   document.getElementById('chipSav').className='chip '+(sav>=0?'hi':'lo');
-  document.getElementById('chipSLA').textContent=slaAvg!==null?(slaAvg>=0?'SLA +'+slaAvg+' hr':'SLA '+slaAvg+' hr'):'SLA —';
+  document.getElementById('chipSLA').textContent=slaAvg!==null?(slaAvg>=0?'Unggul +'+slaAvg+' hr':'Unggul '+slaAvg+' hr'):'Unggul —';
   document.getElementById('chipSLA').className='chip '+(slaAvg!==null&&slaAvg>0?'hi':'neu');
   document.getElementById('dateCount').innerHTML=`Filter: <b>${rows.length.toLocaleString('id-ID')}</b> trip · <b>${dateFrom}</b> s/d <b>${dateTo}</b>`;
 
@@ -511,7 +510,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const kpiHTML=`<div class="kpi-row">
     <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi</div></div>
     <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label">Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
-    <div class="kpi c-teal"><div class="kpi-label">SLA Advantage</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
+    <div class="kpi c-teal"><div class="kpi-label">Keunggulan Pengiriman</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
     <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
   </div>`;
 
@@ -561,7 +560,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
           <div style="font-size:9px;color:var(--muted);margin-top:1px">${(SAVING_SCOPE[s]||[]).join('+')}</div>
         </div>
         <div style="background:var(--bg);border-radius:7px;padding:8px 10px">
-          <div style="color:var(--muted);font-size:9px;text-transform:uppercase;font-weight:700;letter-spacing:.4px;margin-bottom:3px">SLA Adv</div>
+          <div style="color:var(--muted);font-size:9px;text-transform:uppercase;font-weight:700;letter-spacing:.4px;margin-bottom:3px">Unggul</div>
           <div style="font-weight:700;color:${slaS!==null&&slaS>0?CGREEN:slaS!==null?CRED:'var(--muted)'};font-size:12px">${slaS!==null?(slaS>=0?'+':'')+slaS+' hr':'—'}</div>
           <div style="font-size:9px;color:var(--muted);margin-top:1px">vs ext avg</div>
         </div>
@@ -577,8 +576,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   siteHTML+='</div>';
 
   // 4. Efisiensi Scorecard per site
-  const statusLabel={'ideal':'IDEAL','worth':'WORTH IT','review':'REVIEW SLA','eval':'EVALUASI','eval_cost':'EVAL COST','ideal_cost':'OK COST','nodata':'—'};
-  const statusClass={'ideal':'sp-ideal','worth':'sp-worth','review':'sp-review','eval':'sp-eval','eval_cost':'sp-eval','ideal_cost':'sp-ideal','nodata':'sp-nodata'};
+  const statusLabel={'worthit':'WORTH IT','review':'REVIEW','eval':'EVALUASI','nodata':'—'};
+  const statusClass={'worthit':'sp-ideal','review':'sp-worth','eval':'sp-eval','nodata':'sp-nodata'};
   let scHTML='';
   sitesToShow.forEach(s=>{
     const sr=rows.filter(r=>r[0]===s);if(!sr.length) return;
@@ -589,9 +588,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       <div class="card-title" style="color:${col}">${s}
         <span class="card-badge">${jalurs.length} jalur · ${sr.length} trip · scope: ${(SAVING_SCOPE[s]||[]).join('+')}</span>
         <span style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap">
-          <span class="status-pill sp-ideal" style="font-size:9px">IDEAL</span>
-          <span class="status-pill sp-worth" style="font-size:9px">WORTH IT</span>
-          <span class="status-pill sp-review" style="font-size:9px">REVIEW SLA</span>
+          <span class="status-pill sp-ideal" style="font-size:9px">WORTH IT</span>
+          <span class="status-pill sp-worth" style="font-size:9px">REVIEW</span>
           <span class="status-pill sp-eval" style="font-size:9px">EVALUASI</span>
         </span>
       </div>
@@ -871,35 +869,35 @@ function renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   sitesToShow.forEach(s=>{
     const sr=rows.filter(r=>r[0]===s);if(!sr.length) return;
     const jalurs=calcJalur(sr,s).filter(j=>j.inScope);
-    const idealJ=jalurs.filter(j=>j.status==='ideal');
+    const worthitJ=jalurs.filter(j=>j.status==='worthit');
+    const reviewJ=jalurs.filter(j=>j.status==='review');
     const evalJ=jalurs.filter(j=>j.status==='eval');
-    const worthJ=jalurs.filter(j=>j.status==='worth');
-    const topIdeal=idealJ.sort((a,b)=>(b.lt_delta||0)-(a.lt_delta||0))[0];
+    const topWorthit=worthitJ.sort((a,b)=>(b.lt_delta||0)-(a.lt_delta||0))[0];
     const worstEval=evalJ.sort((a,b)=>(a.pct_ef||0)-(b.pct_ef||0))[0];
-    const bestWorth=worthJ.sort((a,b)=>(b.lt_delta||0)-(a.lt_delta||0))[0];
+    const topReview=reviewJ.sort((a,b)=>(b.lt_delta||0)-(a.lt_delta||0))[0];
 
-    if(idealJ.length){
+    if(worthitJ.length){
       insights.push({icon:'✅',type:'pos',
-        title:`${SSHORT[s]}: ${idealJ.length} jalur IDEAL — lebih murah sekaligus lebih cepat`,
-        desc:topIdeal?`Jalur terbaik: ${topIdeal.j} — hemat ${topIdeal.gap>=0?'+':''}${topIdeal.gap}Jt dan ${topIdeal.lt_delta>=0?'+':''}${topIdeal.lt_delta}hr lebih cepat dari external. Total ${idealJ.length} jalur dalam posisi ideal.`:`${idealJ.length} jalur internal lebih murah dan lebih cepat dari external.`,
+        title:`${s}: ${worthitJ.length} jalur WORTH IT — lebih murah sekaligus lebih cepat`,
+        desc:topWorthit?`Jalur terbaik: ${topWorthit.j} — hemat ${topWorthit.gap>=0?'+':''}${topWorthit.gap}Jt dan ${topWorthit.lt_delta>=0?'+':''}${topWorthit.lt_delta}hr lebih cepat dari external.`:`${worthitJ.length} jalur internal lebih murah dan lebih cepat dari external.`,
         tag:'PERTAHANKAN'});
     }
-    if(worthJ.length&&bestWorth){
+    if(reviewJ.length&&topReview){
       insights.push({icon:'⚖️',type:'neu',
-        title:`${SSHORT[s]}: ${worthJ.length} jalur WORTH IT — over cost tapi SLA jauh lebih baik`,
-        desc:`${bestWorth.j}: lebih mahal ${Math.abs(bestWorth.gap||0)}Jt vs external, tapi ${bestWorth.lt_delta}hr lebih cepat. Trade-off ini justified dari sisi service level ke customer.`,
-        tag:'JUSTIFIED'});
+        title:`${s}: ${reviewJ.length} jalur REVIEW — perlu dikaji ulang`,
+        desc:`${topReview.j}: ${topReview.lt_delta!==null&&topReview.lt_delta>0?'lebih mahal '+Math.abs(topReview.gap||0)+'Jt tapi '+topReview.lt_delta+'hr lebih cepat':'lebih murah tapi '+Math.abs(topReview.lt_delta||0)+'hr lebih lambat dari external'}.`,
+        tag:'PERLU KAJIAN'});
     }
     if(evalJ.length&&worstEval){
       insights.push({icon:'🔴',type:'neg',
-        title:`${SSHORT[s]}: ${evalJ.length} jalur perlu EVALUASI — over cost dan tidak lebih cepat`,
-        desc:`${worstEval.j}: over cost ${Math.abs(worstEval.pct_ef||0)}%${worstEval.lt_delta!==null?' dan '+Math.abs(worstEval.lt_delta)+'hr lebih lambat dari external':''}.Pertimbangkan switch ke external untuk jalur ini.`,
+        title:`${s}: ${evalJ.length} jalur EVALUASI — lebih mahal dan lebih lambat`,
+        desc:`${worstEval.j}: over cost ${Math.abs(worstEval.pct_ef||0)}%${worstEval.lt_delta!==null?' dan '+Math.abs(worstEval.lt_delta)+'hr lebih lambat dari external':''}. Pertimbangkan switch ke external.`,
         tag:'PERLU REVIEW'});
     }
     const oos=oosData[s];
     if(oos&&oos.total>0){
       insights.push({icon:'🗺️',type:'neu',
-        title:`${SSHORT[s]}: ${oos.total} trip cover ${oos.areas.length} area di luar scope saving`,
+        title:`${s}: ${oos.total} trip cover ${oos.areas.length} area di luar scope saving`,
         desc:`Armada internal melayani ${oos.areas.slice(0,3).map(([a])=>a).join(', ')}${oos.areas.length>3?' dan lainnya':''} senilai ${fmtM(oos.ci)}. Kontribusi ini belum ter-capture dalam kalkulasi saving — utilisasi armada lebih luas dari yang terukur.`,
         tag:'KONTRIBUSI TAMBAHAN'});
     }
@@ -922,12 +920,11 @@ function renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     <div class="card-title">Trade-off Matrix — Cost vs SLA
       <span class="card-badge">jalur in-scope yang punya benchmark · klik jalur untuk detail di Overview</span>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       ${[
-        {q:'IDEAL',desc:'Lebih murah + lebih cepat dari external',cls:'sp-ideal',f:j=>j.status==='ideal'},
-        {q:'WORTH IT',desc:'Over cost tapi SLA lebih baik',cls:'sp-worth',f:j=>j.status==='worth'},
-        {q:'REVIEW SLA',desc:'Lebih murah tapi lebih lambat',cls:'sp-review',f:j=>j.status==='review'},
-        {q:'EVALUASI',desc:'Over cost + SLA tidak lebih baik',cls:'sp-eval',f:j=>j.status==='eval'}
+        {q:'WORTH IT',desc:'Lebih murah + lebih cepat dari external',cls:'sp-ideal',f:j=>j.status==='worthit'},
+        {q:'REVIEW',desc:'Lebih mahal tapi lebih cepat, atau lebih murah tapi lebih lambat',cls:'sp-worth',f:j=>j.status==='review'},
+        {q:'EVALUASI',desc:'Lebih mahal + lebih lambat dari external',cls:'sp-eval',f:j=>j.status==='eval'}
       ].map(q=>{
         const filtered=allJalursAll.filter(q.f);
         return`<div style="background:var(--bg);border-radius:8px;padding:12px 14px">
