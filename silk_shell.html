@@ -596,6 +596,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       <div class="sc-wrap"><table class="sc-table">
         <thead><tr>
           <th style="min-width:140px">Jalur</th>
+          <th class="r">Trip</th>
           <th class="r">Cost Int (Jt)</th><th class="r">Cost Ext (Jt)</th><th class="r">Gap Cost</th>
           <th class="r">LT Int (hr)</th><th class="r">LT Ext (hr)</th><th class="r">Δ SLA</th>
           <th style="text-align:center">Status</th>
@@ -608,6 +609,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
               <div class="sc-area">${j.area}</div>
               <div class="sc-bar-wrap"><div class="sc-bar-fill" style="width:${barW}%;background:${col}"></div></div>
             </td>
+            <td class="scv" style="text-align:right;color:var(--txt2);font-weight:600">${j.t}</td>
             <td class="scv int">${j.ci}</td>
             <td class="scv ext">${j.ce!==null?j.ce:'<span style="color:var(--muted)">—</span>'}</td>
             <td class="${j.gap!==null?(j.gap>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.gap!==null?(j.gap>=0?'+':'')+j.gap+' Jt':'—'}</td>
