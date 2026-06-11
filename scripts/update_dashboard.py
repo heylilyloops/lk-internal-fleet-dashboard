@@ -17,6 +17,7 @@ client = gspread.authorize(creds)
 SPREADSHEET_ID = '1d_AzKPEc6GE_8t2WpND7ECmYK03ytubr7c2fGicKcvk'
 GID_INTERNAL   = 2055243006
 GID_EXTERNAL   = 1514192890
+GID_MASTER_LT  = 963114842
 
 # Uppercase lookup — handles any casing from sheet
 SITE_MAP = {
@@ -34,10 +35,12 @@ spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
 ws_int = spreadsheet.get_worksheet_by_id(GID_INTERNAL)
 ws_ext = spreadsheet.get_worksheet_by_id(GID_EXTERNAL)
+ws_lt  = spreadsheet.get_worksheet_by_id(GID_MASTER_LT)
 
 int_data = ws_int.get_all_values()
 ext_data = ws_ext.get_all_values()
-print(f"Internal rows: {len(int_data)-1}, External rows: {len(ext_data)-1}")
+lt_data  = ws_lt.get_all_values()
+print(f"Internal rows: {len(int_data)-1}, External rows: {len(ext_data)-1}, Master LT rows: {len(lt_data)}")
 
 # ── PARSE INTERNAL ────────────────────────────────────────────────
 int_rows = []
@@ -134,33 +137,41 @@ ext_list_jalur = [
 
 print(f"EXT area entries: {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}")
 
-# ── BUILD EXT_LT: avg lead time per site+jalur ───────────────────
-from collections import defaultdict as dd2
-lt_sum  = dd2(lambda: dd2(lambda: [0, 0]))  # site → jalur → [sum, count]
+# ── BUILD EXT_LT FROM MASTER LEAD TIME ───────────────────────────
+# Origin mapping: Cikarang → AHI Jababeka + HCI Jababeka, Cikupa → HCI Cikupa, Sidoarjo → Corp Sidoarjo
+ORIGIN_SITE_MAP = {
+    'Cikarang' : ['AHI Jababeka', 'HCI Jababeka'],
+    'Cikupa'   : ['HCI Cikupa'],
+    'Sidoarjo' : ['Corp Sidoarjo'],
+    'Cikande'  : ['AHI Jababeka', 'HCI Jababeka', 'HCI Cikupa'],  # fallback
+}
 
-for line in ext_data[1:]:
-    if not any(line): continue
-    def get_col2(name, fallback):
-        idx = col.get(name, fallback)
-        return line[idx].strip() if idx < len(line) else ''
-    site_raw2 = get_col2('SITE NAME', 0)
-    jalur2    = get_col2('Jalur', 3).title()
-    lt_raw2   = get_col2('Lead Time', 10)
-    site2 = SITE_MAP.get(site_raw2.upper())
-    if not site2 or not jalur2: continue
+master_lt_list = []
+for row in lt_data[2:]:  # skip 2 header rows
+    if len(row) < 14: continue
+    moda   = row[5].strip()
+    origin = row[6].strip()
+    city   = row[7].strip()
+    lt_raw = row[13].strip()
+    if not city or not lt_raw: continue
     try:
-        lt_val = float(lt_raw2)
-        lt_sum[site2][jalur2][0] += lt_val
-        lt_sum[site2][jalur2][1] += 1
-    except: continue
+        lt_val = float(lt_raw)
+    except:
+        continue
+    sites = ORIGIN_SITE_MAP.get(origin, [])
+    for site in sites:
+        master_lt_list.append({"site": site, "jalur": city, "avg_lt": lt_val})
 
-ext_lt_list = [
-    {"site": s, "jalur": j, "avg_lt": round(v[0]/v[1], 2)}
-    for s, jalurs in lt_sum.items()
-    for j, v in jalurs.items()
-    if v[1] > 0
-]
-print(f"EXT_LT entries: {len(ext_lt_list)}")
+# Deduplicate — keep first occurrence per site+jalur
+seen = set()
+ext_lt_list = []
+for r in master_lt_list:
+    k = (r['site'], r['jalur'])
+    if k not in seen:
+        seen.add(k)
+        ext_lt_list.append(r)
+
+print(f"EXT_LT from master: {len(ext_lt_list)} entries")
 
 # ── BUILD data_block.js ───────────────────────────────────────────
 data_block = (
