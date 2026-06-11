@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SILK — Support Delivery LK Internal Fleet NDC</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -192,6 +194,21 @@ canvas{display:block}
 .row-jalur-g:hover td{background:var(--bg)}.row-jalur-g.hidden{display:none}
 .jalur-chip{background:var(--border);color:var(--txt2);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;display:inline-block}
 
+/* MAP */
+#silk-map{height:calc(100vh - 165px);min-height:500px;border-radius:10px;z-index:1}
+.map-wrap{border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.map-legend-bar{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.map-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt2);font-weight:500}
+.map-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.leaflet-popup-content-wrapper{border-radius:10px!important;box-shadow:0 4px 20px rgba(0,0,0,.15)!important;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important}
+.leaflet-popup-content{font-size:12px!important;line-height:1.5!important;margin:10px 14px!important}
+.popup-jalur{font-weight:700;font-size:13px;color:#0d2137;margin-bottom:2px}
+.popup-area{font-size:10px;color:#637d9a;margin-bottom:8px}
+.popup-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;font-size:11px}
+.popup-label{color:#637d9a}.popup-val{font-weight:600;color:#0d2137}
+.popup-status{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-top:6px}
+.popup-site{display:inline-block;font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;margin-bottom:6px;color:#fff}
+
 @media(max-width:900px){.kpi-row,.grid4{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -213,6 +230,9 @@ canvas{display:block}
   </button>
   <button class="sb-menu-item" onclick="setMenu('coverage')">
     <span class="sb-menu-icon">🗺️</span>Coverage
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('sebaran')">
+    <span class="sb-menu-icon">📍</span>Sebaran
   </button>
   <button class="sb-menu-item" onclick="setMenu('insight')">
     <span class="sb-menu-icon">💡</span>Insight
@@ -408,7 +428,7 @@ function getScopeLabel(){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,insight:2};
+  const idx={overview:0,coverage:1,sebaran:2,insight:3};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
@@ -501,6 +521,7 @@ function render(){
 
   if(activeMenu==='overview') renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
   else if(activeMenu==='coverage') renderCoverage(rows,contrib,tInt,tAll,pct);
+  else if(activeMenu==='sebaran') renderSebaran(rows);
   else if(activeMenu==='insight') renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
 }
 
@@ -582,6 +603,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   // 4. Efisiensi Scorecard per site
   const statusLabel={'worthit':'WORTH IT','review':'REVIEW','eval':'EVALUASI','nodata':'—'};
   const statusClass={'worthit':'sp-ideal','review':'sp-worth','eval':'sp-eval','nodata':'sp-nodata'};
+  const statusTooltip={'worthit':'Lebih murah + lebih cepat dari external','review':'Lebih mahal tapi lebih cepat, atau lebih murah tapi lebih lambat','eval':'Lebih mahal + lebih lambat dari external','nodata':'Belum ada data benchmark external'};
   let scHTML='';
   sitesToShow.forEach(s=>{
     const sr=rows.filter(r=>r[0]===s);if(!sr.length) return;
@@ -620,7 +642,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
             <td class="scv int">${j.lt_int!==null?j.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
             <td class="scv ext">${j.lt_ext!==null?j.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
             <td class="${j.lt_delta!==null?(j.lt_delta>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.lt_delta!==null?(j.lt_delta>=0?'+':'')+j.lt_delta+' hr':'—'}</td>
-            <td style="text-align:center"><span class="status-pill ${statusClass[j.status]||'sp-nodata'}" style="font-size:9px">${statusLabel[j.status]||'—'}</span></td>
+            <td style="text-align:center"><span class="status-pill ${statusClass[j.status]||'sp-nodata'}" style="font-size:9px;cursor:help" title="${statusTooltip[j.status]||''}">${statusLabel[j.status]||'—'}</span></td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -972,6 +994,142 @@ function renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   </div>`;
 
   document.getElementById('content').innerHTML=insightHTML+matrixHTML;
+}
+
+// ── SEBARAN ──────────────────────────────────────────────────────
+const CITY_COORDS={
+  'Bandung':[-6.9175,107.6191],'Cirebon':[-6.7063,108.5571],'Tasikmalaya':[-7.3274,108.2207],
+  'Sukabumi':[-6.9212,106.9301],'Bogor':[-6.5971,106.806],'Depok':[-6.4025,106.7942],
+  'Bekasi':[-6.2349,107.0022],'Karawang':[-6.3219,107.3381],'Subang':[-6.5739,107.7593],
+  'Purwakarta':[-6.5564,107.4439],'Cianjur':[-6.8196,107.1417],'Garut':[-7.2167,107.9],
+  'Majalengka':[-6.8362,108.2274],'Kuningan':[-6.9761,108.4849],'Indramayu':[-6.3275,108.3242],
+  'Sumedang':[-6.8554,108.1136],'Ciamis':[-7.3297,108.3524],'Pangandaran':[-7.6833,108.65],
+  'Lampung':[-5.45,105.2667],'Bandar Lampung':[-5.45,105.2667],'Metro':[-5.1131,105.3069],
+  'Malang':[-7.9797,112.6304],'Surabaya':[-7.2575,112.7521],'Sidoarjo':[-7.4478,112.7183],
+  'Gresik':[-7.156,112.6522],'Mojokerto':[-7.4703,112.4338],'Jombang':[-7.5479,112.2376],
+  'Kediri':[-7.8165,112.0114],'Blitar':[-8.0956,112.1669],'Tulungagung':[-8.0655,111.9048],
+  'Trenggalek':[-8.049,111.7087],'Madiun':[-7.6298,111.5239],'Ngawi':[-7.4063,111.4427],
+  'Bojonegoro':[-7.1507,111.8817],'Tuban':[-6.8972,112.0502],'Lamongan':[-7.1177,112.4134],
+  'Jember':[-8.1724,113.7017],'Banyuwangi':[-8.2192,114.3691],'Bondowoso':[-7.9126,113.8226],
+  'Situbondo':[-7.7058,114.0088],'Probolinggo':[-7.7543,113.2159],'Pasuruan':[-7.6456,112.9076],
+  'Lumajang':[-8.1299,113.2237],'Pamekasan':[-7.157,113.4696],'Sumenep':[-6.9944,113.8642],
+  'Sampang':[-7.1948,113.244],'Bangkalan':[-7.0427,112.731],
+  'Semarang':[-6.9932,110.4203],'Solo':[-7.5755,110.8243],'Yogyakarta':[-7.7956,110.3695],
+  'Purwokerto':[-7.4242,109.2355],'Cilacap':[-7.7269,109.0152],'Kebumen':[-7.6722,109.6517],
+  'Magelang':[-7.4797,110.2177],'Salatiga':[-7.3306,110.5081],'Kudus':[-6.8052,110.8405],
+  'Pati':[-6.75,111.0333],'Rembang':[-6.7057,111.3408],'Blora':[-6.9622,111.4136],
+  'Pekalongan':[-6.8886,109.6753],'Tegal':[-6.8694,109.1402],'Brebes':[-6.8713,108.9231],
+  'Pemalang':[-6.8938,109.3794],'Batang':[-6.9137,109.7291],'Kendal':[-6.9227,110.199],
+  'Demak':[-6.8926,110.6386],'Jepara':[-6.5889,110.668],'Sragen':[-7.4256,110.9889],
+  'Sukoharjo':[-7.6861,110.838],'Klaten':[-7.706,110.6027],'Wonogiri':[-7.813,110.9218],
+  'Boyolali':[-7.5321,110.599],'Wonosobo':[-7.3593,109.9088],'Temanggung':[-7.3129,110.1717],
+  'Purbalingga':[-7.3895,109.3672],'Banjarnegara':[-7.3903,109.694],'Banyumas':[-7.5107,109.297],
+  'Sleman':[-7.7167,110.35],'Bantul':[-7.8881,110.328],'Gunungkidul':[-7.9647,110.5944],
+  'Bali':[-8.4095,115.1889],'Denpasar':[-8.6705,115.2126],'Mataram':[-8.5833,116.1167],
+  'Lombok':[-8.65,116.325],'Palembang':[-2.9761,104.7754],'Jambi':[-1.6101,103.6131],
+  'Pekanbaru':[0.5071,101.4478],'Padang':[-0.9471,100.4172],'Medan':[3.5952,98.6722],
+  'Banda Aceh':[5.5483,95.3238],'Aceh':[4.6951,96.7494],'Balikpapan':[-1.2654,116.8312],
+  'Samarinda':[-0.5022,117.1536],'Banjarmasin':[-3.3194,114.5908],'Banjarbaru':[-3.4422,114.8312],
+  'Pontianak':[-0.0263,109.3425],'Makassar':[-5.1477,119.4327],'Serang':[-6.1201,106.1503],
+  'Tangerang':[-6.1781,106.6298],'Cilegon':[-6.0025,106.0524],'Banten':[-6.1201,106.1503],
+  'Batam':[1.0456,104.0305],'Bukittinggi':[-0.3065,100.3688],'Ambon':[-3.6954,128.1814],
+  'Purwodadi':[-7.0862,110.9178],'Ungaran':[-7.1342,110.4019],'Cepu':[-7.1437,111.5895],
+  'Solo Raya':[-7.5755,110.8243],'Lampung Selatan':[-5.7000,105.4333],
+};
+
+let silkMap=null;
+
+function renderSebaran(rows){
+  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+
+  // Build per-jalur data grouped by jalur name
+  const jalurMap={};
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    calcJalur(sr,s).forEach(j=>{
+      const key=j.j;
+      if(!jalurMap[key]) jalurMap[key]=[];
+      jalurMap[key].push({...j,site:s});
+    });
+  });
+
+  // Stats summary
+  const total=Object.keys(jalurMap).length;
+  const withCoord=Object.keys(jalurMap).filter(j=>CITY_COORDS[j]).length;
+  const noCoord=total-withCoord;
+
+  // Legend bar
+  const legendHTML=`<div class="map-legend-bar">
+    <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Status:</span>
+    <div class="map-legend-item"><div class="map-dot" style="background:#22a06b"></div>WORTH IT (murah+cepat)</div>
+    <div class="map-legend-item"><div class="map-dot" style="background:#5ba4f5"></div>REVIEW (perlu kajian)</div>
+    <div class="map-legend-item"><div class="map-dot" style="background:#e24b4b"></div>EVALUASI (mahal+lambat)</div>
+    <div class="map-legend-item"><div class="map-dot" style="background:#637d9a"></div>No data benchmark</div>
+    ${activeSite==='all'?`<span style="margin-left:auto;font-size:10px;color:var(--muted)">Warna border = site origin</span>`:''}
+    <span style="font-size:10px;color:var(--muted);margin-left:${activeSite==='all'?'4':'auto'}px">${withCoord}/${total} jalur terpetakan${noCoord>0?' · '+noCoord+' jalur tidak ada koordinat':''}</span>
+  </div>`;
+
+  document.getElementById('content').innerHTML=legendHTML+`<div class="map-wrap"><div id="silk-map"></div></div>`;
+
+  // Init or reset map
+  setTimeout(()=>{
+    if(silkMap){silkMap.remove();silkMap=null;}
+    silkMap=L.map('silk-map',{center:[-2.5,118],zoom:5,zoomControl:true});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap',maxZoom:18
+    }).addTo(silkMap);
+
+    // Status colors
+    const statColor={worthit:'#22a06b',review:'#5ba4f5',eval:'#e24b4b',nodata:'#637d9a'};
+    const statLabel={worthit:'WORTH IT',review:'REVIEW',eval:'EVALUASI',nodata:'No Data'};
+    const statBg={worthit:'#dcfff4',review:'#eff6ff',eval:'#fff1f2',nodata:'#f0f4f9'};
+    const statTxt={worthit:'#065f46',review:'#1d4ed8',eval:'#991b1b',nodata:'#637d9a'};
+
+    Object.entries(jalurMap).forEach(([jalur,entries])=>{
+      const coords=CITY_COORDS[jalur];
+      if(!coords) return;
+
+      // Aggregate if multiple sites
+      const totalTrip=entries.reduce((s,e)=>s+e.t,0);
+      const radius=Math.max(6,Math.min(22,5+Math.sqrt(totalTrip)*1.2));
+
+      // Determine overall status (worst case if multiple sites)
+      const statusPriority={eval:0,review:1,worthit:2,nodata:3};
+      const worstEntry=entries.sort((a,b)=>(statusPriority[a.status]||3)-(statusPriority[b.status]||3))[0];
+      const fillColor=statColor[worstEntry.status]||'#637d9a';
+      const borderColor=activeSite==='all'?SCOL[worstEntry.site]||'#266CA9':SCOL[activeSite]||'#266CA9';
+
+      const marker=L.circleMarker(coords,{
+        radius,
+        fillColor,
+        color:borderColor,
+        weight:2.5,
+        opacity:1,
+        fillOpacity:0.82
+      }).addTo(silkMap);
+
+      // Build popup content
+      let popupHTML=`<div class="popup-jalur">${jalur}</div>`;
+      entries.forEach(e=>{
+        if(activeSite==='all'){
+          popupHTML+=`<div class="popup-site" style="background:${SCOL[e.site]}">${e.site}</div><br>`;
+        }
+        popupHTML+=`<div class="popup-area">${e.area}${!e.inScope?' · <span style="color:#f59e0b">out-scope</span>':''}</div>`;
+        popupHTML+=`<div class="popup-row"><span class="popup-label">Trip</span><span class="popup-val">${e.t}</span></div>`;
+        popupHTML+=`<div class="popup-row"><span class="popup-label">Cost Int</span><span class="popup-val">${e.ci} Jt</span></div>`;
+        popupHTML+=`<div class="popup-row"><span class="popup-label">Cost Ext</span><span class="popup-val">${e.ce!==null?e.ce+' Jt':'—'}</span></div>`;
+        popupHTML+=`<div class="popup-row"><span class="popup-label">Gap Cost</span><span class="popup-val" style="color:${e.gap!==null?(e.gap>=0?'#22a06b':'#e24b4b'):'#637d9a'}">${e.gap!==null?(e.gap>=0?'+':'')+e.gap+' Jt':'—'}</span></div>`;
+        popupHTML+=`<div class="popup-row"><span class="popup-label">LT Int</span><span class="popup-val">${e.lt_int!==null?e.lt_int+' hr':'—'}</span></div>`;
+        popupHTML+=`<div class="popup-row"><span class="popup-label">LT Ext</span><span class="popup-val">${e.lt_ext!==null?e.lt_ext+' hr':'—'}</span></div>`;
+        popupHTML+=`<div class="popup-row"><span class="popup-label">Δ SLA</span><span class="popup-val" style="color:${e.lt_delta!==null?(e.lt_delta>=0?'#22a06b':'#e24b4b'):'#637d9a'}">${e.lt_delta!==null?(e.lt_delta>=0?'+':'')+e.lt_delta+' hr':'—'}</span></div>`;
+        popupHTML+=`<div><span class="popup-status" style="background:${statBg[e.status]||'#f0f4f9'};color:${statTxt[e.status]||'#637d9a'}">${statLabel[e.status]||'—'}</span></div>`;
+        if(entries.length>1) popupHTML+='<hr style="margin:8px 0;border:none;border-top:1px solid #dce6f0">';
+      });
+
+      marker.bindPopup(popupHTML,{maxWidth:220});
+      marker.bindTooltip(`<b>${jalur}</b> · ${totalTrip} trip`,{direction:'top',offset:[0,-4]});
+    });
+  },100);
 }
 
 // INIT
