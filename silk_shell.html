@@ -618,7 +618,33 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
             <td class="${j.lt_delta!==null?(j.lt_delta>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.lt_delta!==null?(j.lt_delta>=0?'+':'')+j.lt_delta+' hr':'—'}</td>
             <td style="text-align:center"><span class="status-pill ${statusClass[j.status]||'sp-nodata'}" style="font-size:9px">${statusLabel[j.status]||'—'}</span></td>
           </tr>`;
-        }).join('')}</tbody>
+        }).join('')}
+        </tbody>
+        <tfoot><tr style="background:var(--bg);border-top:2px solid var(--border2)">
+          ${(()=>{
+            const tTrip=jalurs.reduce((s,j)=>s+j.t,0);
+            const tCI=+(jalurs.reduce((s,j)=>s+j.ci,0)).toFixed(1);
+            const ceJalurs=jalurs.filter(j=>j.ce!==null);
+            const tCE=ceJalurs.length?+(ceJalurs.reduce((s,j)=>s+(j.ce||0),0)).toFixed(1):null;
+            const tGap=tCE!==null?+(tCE-tCI).toFixed(1):null;
+            const ltInts=jalurs.filter(j=>j.lt_int!==null);
+            const ltExts=jalurs.filter(j=>j.lt_ext!==null);
+            const ltDeltas=jalurs.filter(j=>j.lt_delta!==null);
+            const avgLtInt=ltInts.length?+(ltInts.reduce((s,j)=>s+j.lt_int,0)/ltInts.length).toFixed(2):null;
+            const avgLtExt=ltExts.length?+(ltExts.reduce((s,j)=>s+j.lt_ext,0)/ltExts.length).toFixed(2):null;
+            const avgDelta=ltDeltas.length?+(ltDeltas.reduce((s,j)=>s+j.lt_delta,0)/ltDeltas.length).toFixed(2):null;
+            const st='font-weight:700;padding:9px 10px;font-size:11px;border-top:2px solid var(--border2)';
+            return`<td style="${st};color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;font-size:9px">Total / Avg</td>
+            <td style="${st};text-align:right;color:var(--txt)">${tTrip}</td>
+            <td style="${st};text-align:right;color:var(--blue)">${tCI}</td>
+            <td style="${st};text-align:right;color:var(--muted)">${tCE!==null?tCE:'—'}</td>
+            <td style="${st};text-align:right;color:${tGap!==null?(tGap>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${tGap!==null?(tGap>=0?'+':'')+tGap+' Jt':'—'}</td>
+            <td style="${st};text-align:right;color:var(--blue)">${avgLtInt!==null?avgLtInt:'—'}</td>
+            <td style="${st};text-align:right;color:var(--muted)">${avgLtExt!==null?avgLtExt:'—'}</td>
+            <td style="${st};text-align:right;color:${avgDelta!==null?(avgDelta>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${avgDelta!==null?(avgDelta>=0?'+':'')+avgDelta+' hr':'—'}</td>
+            <td></td>`;
+          })()}
+        </tr></tfoot>
       </table></div>
     </div>`;
   });
