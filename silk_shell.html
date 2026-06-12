@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -237,6 +238,9 @@ canvas{display:block}
   <button class="sb-menu-item" onclick="setMenu('insight')">
     <span class="sb-menu-icon">💡</span>Insight
   </button>
+  <button class="sb-menu-item" onclick="setMenu('slide')">
+    <span class="sb-menu-icon">📑</span>Slide
+  </button>
 
   <div class="sb-divider"></div>
   <div class="sb-section">NDC Sites</div>
@@ -424,7 +428,7 @@ function getScopeLabel(){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,sebaran:2,insight:3};
+  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
@@ -519,6 +523,7 @@ function render(){
   else if(activeMenu==='coverage') renderCoverage(rows,contrib,tInt,tAll,pct);
   else if(activeMenu==='sebaran') renderSebaran(rows);
   else if(activeMenu==='insight') renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
+  else if(activeMenu==='slide') renderSlide(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
 }
 
 // ── OVERVIEW ─────────────────────────────────────────────────────
@@ -808,13 +813,37 @@ function renderContribExpandable(rows){
   const areaMap={};
   rows.forEach(r=>{
     const area=r[1],jalur=r[2];
-    if(!areaMap[area]) areaMap[area]={int:0,ci:0,ce:0,ceCnt:0,jalurs:{}};
+    if(!areaMap[area]) areaMap[area]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,jalurs:{}};
     areaMap[area].int++;areaMap[area].ci+=r[3]||0;
     if(r[4]){areaMap[area].ce+=r[4];areaMap[area].ceCnt++;}
-    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0};
+    if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].ltS+=+r[10];areaMap[area].ltN++;}
+    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0};
     areaMap[area].jalurs[jalur].int++;areaMap[area].jalurs[jalur].ci+=r[3]||0;
     if(r[4]){areaMap[area].jalurs[jalur].ce+=r[4];areaMap[area].jalurs[jalur].ceCnt++;}
+    if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].jalurs[jalur].ltS+=+r[10];areaMap[area].jalurs[jalur].ltN++;}
   });
+
+  // Build EXT_LT lookup by area (avg of all jalurs in area) and by jalur
+  const sitesToUse=activeSite==='all'?NDC:[activeSite];
+  const extLtByJalur={};
+  const extLtByArea={};
+  (typeof EXT_LT!=='undefined'?EXT_LT:[]).filter(e=>sitesToUse.includes(e.site)).forEach(e=>{
+    const key=e.jalur;
+    if(!extLtByJalur[key]) extLtByJalur[key]=[];
+    extLtByJalur[key].push(e.avg_lt);
+  });
+  // Build area→avg_lt from EXT_LT via RAW area→jalur mapping
+  const areaJalurMap={};
+  rows.forEach(r=>{
+    if(!areaJalurMap[r[1]]) areaJalurMap[r[1]]=new Set();
+    areaJalurMap[r[1]].add(r[2]);
+  });
+  Object.entries(areaJalurMap).forEach(([area,jalurs])=>{
+    const lts=[];
+    jalurs.forEach(j=>{if(extLtByJalur[j]) lts.push(...extLtByJalur[j]);});
+    if(lts.length) extLtByArea[area]=+(lts.reduce((s,v)=>s+v,0)/lts.length).toFixed(2);
+  });
+
   let ef=EXT_AGG;
   if(activeSite!=='all') ef=ef.filter(e=>e.site===activeSite);
   if(dateFrom) ef=ef.filter(e=>e.date>=dateFrom);
@@ -829,19 +858,26 @@ function renderContribExpandable(rows){
   efj.forEach(e=>{const k=e.area+'||'+e.jalur;extJalurMap[k]=(extJalurMap[k]||0)+e.trips;});
   const allAreas=new Set([...Object.keys(areaMap),...Object.keys(extAreaMap)]);
   const data=[...allAreas].map(area=>{
-    const v=areaMap[area]||{int:0,ci:0,ce:0,ceCnt:0,jalurs:{}};
+    const v=areaMap[area]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,jalurs:{}};
     const jalurNames=new Set([...Object.keys(v.jalurs),...efj.filter(e=>e.area===area).map(e=>e.jalur)]);
     const jalurs=[...jalurNames].map(jname=>{
-      const jv=v.jalurs[jname]||{int:0,ci:0,ce:0,ceCnt:0};
+      const jv=v.jalurs[jname]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0};
       const extKey=area+'||'+jname;
-      return{name:jname,int:jv.int,ext:extJalurMap[extKey]||0,total:jv.int+(extJalurMap[extKey]||0),ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null};
+      const lt_int=jv.ltN>0?+(jv.ltS/jv.ltN).toFixed(2):null;
+      const lt_ext=extLtByJalur[jname]?+(extLtByJalur[jname].reduce((s,v)=>s+v,0)/extLtByJalur[jname].length).toFixed(2):null;
+      const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
+      return{name:jname,int:jv.int,ext:extJalurMap[extKey]||0,total:jv.int+(extJalurMap[extKey]||0),ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta};
     }).sort((a,b)=>b.total-a.total);
-    return{area,int:v.int,ext:extAreaMap[area]||0,total:v.int+(extAreaMap[area]||0),ci:v.ci,ce:v.ceCnt>0?v.ce:null,jalurs};
+    const lt_int_area=v.ltN>0?+(v.ltS/v.ltN).toFixed(2):null;
+    const lt_ext_area=extLtByArea[area]||null;
+    const lt_delta_area=lt_int_area!==null&&lt_ext_area!==null?+(lt_ext_area-lt_int_area).toFixed(2):null;
+    return{area,int:v.int,ext:extAreaMap[area]||0,total:v.int+(extAreaMap[area]||0),ci:v.ci,ce:v.ceCnt>0?v.ce:null,lt_int:lt_int_area,lt_ext:lt_ext_area,lt_delta:lt_delta_area,jalurs};
   }).sort((a,b)=>b.total-a.total);
 
   function fj(v){return v===null?'<span style="color:var(--muted)">—</span>':(v/1e6).toFixed(1);}
   function savPct(ci,ce){if(ce===null||ci===0) return '<span style="color:var(--muted)">—</span>';const s=((ce-ci)/ci*100);return `<span class="${s>=0?'pos':'neg'}">${s>=0?'+':''}${s.toFixed(1)}%</span>`;}
   function pcl(i,t){const p=t?Math.round(i/t*100):0;return{p,cls:p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'};}
+  function fltd(v,isPos){if(v===null) return '<span style="color:var(--muted)">—</span>';return `<span class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${v} hr</span>`;}
 
   let rows_html='';
   data.forEach((a,ai)=>{
@@ -853,6 +889,9 @@ function renderContribExpandable(rows){
       <td style="text-align:right"><span class="pill ${cls}">${p}%</span></td>
       <td style="text-align:right">${fj(a.ci)}</td><td style="text-align:right">${fj(a.ce)}</td>
       <td style="text-align:right">${savPct(a.ci,a.ce)}</td>
+      <td style="text-align:right;color:var(--blue);font-weight:600">${a.lt_int!==null?a.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
+      <td style="text-align:right;color:var(--muted)">${a.lt_ext!==null?a.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
+      <td style="text-align:right">${fltd(a.lt_delta)}</td>
     </tr>`;
     a.jalurs.forEach(j=>{
       const jPct=j.total?Math.round(j.int/j.total*100):0;
@@ -865,6 +904,9 @@ function renderContribExpandable(rows){
         <td style="text-align:right">${j.total>0?`<span class="pill ${jCls}">${jPct}%</span>`:'—'}</td>
         <td style="text-align:right">${fj(j.ci)}</td><td style="text-align:right">${fj(j.ce)}</td>
         <td style="text-align:right">${savPct(j.ci,j.ce)}</td>
+        <td style="text-align:right;color:var(--blue);font-weight:600">${j.lt_int!==null?j.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
+        <td style="text-align:right;color:var(--muted)">${j.lt_ext!==null?j.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
+        <td style="text-align:right">${fltd(j.lt_delta)}</td>
       </tr>`;
     });
   });
@@ -872,11 +914,12 @@ function renderContribExpandable(rows){
     <div class="card-title">Kontribusi Internal per Area
       <span class="card-badge">klik area untuk expand jalur</span>
     </div>
-    <div class="contrib-wrap"><table class="contrib-tbl">
+    <div class="contrib-wrap"><table class="contrib-tbl" style="min-width:900px">
       <thead><tr>
         <th style="min-width:160px;text-align:left">Area / Jalur</th>
         <th>INT Trip</th><th>EXT Trip</th><th>Total</th><th>% INT</th>
         <th>Cost Int (Jt)</th><th>Cost Ext (Jt)</th><th>Savings %</th>
+        <th>LT Int (hr)</th><th>LT Ext (hr)</th><th>Δ SLA</th>
       </tr></thead>
       <tbody>${rows_html}</tbody>
     </table></div>
@@ -1126,6 +1169,259 @@ function renderSebaran(rows){
       marker.bindTooltip(`<b>${jalur}</b> · ${totalTrip} trip`,{direction:'top',offset:[0,-4]});
     });
   },100);
+}
+
+// ── SLIDE ────────────────────────────────────────────────────────
+function buildSlideData(rows,kpi,tInt,tAll,pct,sav){
+  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'—';
+  const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'—';
+  const periode=`${dFrom} s/d ${dTo}`;
+
+  // Per site data
+  const sites=sitesToShow.map(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    if(!sr.length) return null;
+    const sk=calcKpi(sr);
+    const sc=calcContrib(sr);
+    const si=sc.reduce((a,r)=>a+r.int,0);
+    const sa=sc.reduce((a,r)=>a+r.total,0);
+    const sp=sa?Math.round(si/sa*100):0;
+    const scopeAreas=SAVING_SCOPE[s]||[];
+    // unit/day or unit/week
+    const days=dateFrom&&dateTo?Math.max(1,Math.ceil((new Date(dateTo)-new Date(dateFrom))/(1000*60*60*24))):180;
+    const isWeekly=sr.length<30;
+    const unitRate=isWeekly?+(sr.length/(days/7)).toFixed(1):+(sr.length/days).toFixed(1);
+    const unitLabel=isWeekly?'unit/week':'unit/day';
+    // Jalur for SLA
+    const jalurs=calcJalur(sr,s);
+    const slaData=jalurs.filter(j=>j.lt_delta!==null);
+    const slaAvgSite=slaData.length?+(slaData.reduce((a,j)=>a+j.lt_delta,0)/slaData.length).toFixed(2):null;
+    // Scope area breakdown
+    const areaBreakdown=scopeAreas.map(area=>{
+      const aRows=sr.filter(r=>r[1]===area);
+      const aCI=aRows.reduce((s,r)=>s+(r[3]||0),0);
+      const aCE=aRows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
+      const aCECnt=aRows.filter(r=>r[4]).length;
+      const savPct=aCECnt>0&&aCI>0?+((aCE-aCI)/aCI*100).toFixed(1):null;
+      // SLA for area
+      const aJalurs=jalurs.filter(j=>j.area===area&&j.lt_delta!==null);
+      const aSLA=aJalurs.length?+(aJalurs.reduce((s,j)=>s+j.lt_delta,0)/aJalurs.length).toFixed(2):null;
+      // % trip
+      const extTripsArea=EXT_AGG.filter(e=>(activeSite==='all'||e.site===s)&&e.area===area&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
+      const totalArea=aRows.length+extTripsArea;
+      const pctArea=totalArea?Math.round(aRows.length/totalArea*100):0;
+      return{area,intTrip:aRows.length,ci:aCI,ce:aCECnt>0?aCE:null,savPct,sla:aSLA,pct:pctArea};
+    });
+    return{site:s,trips:sr.length,total:sa,sp,unitRate,unitLabel,ci:sk.tCI,ce:sk.tCE,sav:sk.sav,slaAvg:slaAvgSite,areas:areaBreakdown,col:SCOL[s]};
+  }).filter(Boolean);
+
+  // Months count for avg saving
+  const months=[...new Set(rows.map(r=>r[7].slice(0,7)))];
+  const avgMonthlySav=months.length?Math.round(sav/months.length):sav;
+
+  return{periode,sites,totalSav:sav,avgMonthlySav,intTrip:tInt,totalTrip:tAll,pct,months:months.length};
+}
+
+function renderSlide(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
+  const sd=buildSlideData(rows,kpi,tInt,tAll,pct,sav);
+
+  const slidePreviewHTML=`
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
+    <div class="card-title">📑 Generate Slide PPT
+      <span class="card-badge">pptxgenjs · PowerPoint compatible</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg);border-radius:8px;padding:10px 14px">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Periode</div>
+        <div style="font-size:12px;font-weight:600;color:var(--txt)">${sd.periode}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:10px 14px">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Konten</div>
+        <div style="font-size:12px;font-weight:600;color:var(--txt)">1 Slide Summary — Support Delivery LK</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="generatePPT()" style="display:flex;align-items:center;gap:8px;background:#1d5a91;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)">
+        📥 Download PPT
+      </button>
+      <button onclick="presentSlide()" style="display:flex;align-items:center;gap:8px;background:var(--purple);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)">
+        🖥️ Present
+      </button>
+    </div>
+  </div>
+
+  <div style="background:#1a1a2e;border-radius:12px;padding:28px 32px;aspect-ratio:16/9;max-width:100%;position:relative;overflow:hidden" id="slide-preview">
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.12)">
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Kawan Lama Group</div>
+        <div style="font-size:18px;font-weight:700;color:#fff;letter-spacing:-.3px">Support Delivery Luar Kota NDC</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">Internal Fleet Per Site · Saving Cost Breakdown · ${sd.periode}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px">Total Saving</div>
+        <div style="font-size:22px;font-weight:800;color:${sd.totalSav>=0?'#00c49a':'#e24b4b'};font-family:monospace">${sd.totalSav>=0?'+':''}${fmtM(sd.totalSav)}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">Avg ${fmtM(sd.avgMonthlySav)}/bln · ${fmt(sd.intTrip)}/${fmt(sd.totalTrip)} trip (${sd.pct}%)</div>
+      </div>
+    </div>
+
+    <!-- Site Cards -->
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(sd.sites.length,2)},1fr);gap:12px">
+      ${sd.sites.map(s=>`
+      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-left:3px solid ${s.col};border-radius:8px;padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${s.col}">${s.site}</div>
+            <div style="font-size:13px;font-weight:700;color:#fff;margin-top:2px">${fmt(s.trips)}/${fmt(s.total)} Trip <span style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400">(${s.unitRate} ${s.unitLabel})</span></div>
+          </div>
+          <div style="font-size:18px;font-weight:800;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.08);color:${s.sp>=30?'#00c49a':s.sp>=15?'#5ba4f5':'#e24b4b'}">${s.sp}%</div>
+        </div>
+        <div style="display:grid;grid-template-columns:${s.areas.length>1?'repeat('+s.areas.length+',1fr)':'1fr'};gap:6px">
+          ${s.areas.map(a=>`
+          <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:7px 10px">
+            <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:600;text-transform:uppercase;margin-bottom:5px">${a.area}</div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+              <span style="font-size:10px;color:rgba(255,255,255,.4)">SLA</span>
+              <span style="font-size:10px;font-weight:700;color:${a.sla!==null?(a.sla>=0?'#00c49a':'#e24b4b'):'rgba(255,255,255,.3)'}">${a.sla!==null?(a.sla>=0?'+':'')+a.sla+' Day':'—'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+              <span style="font-size:10px;color:rgba(255,255,255,.4)">% Trip</span>
+              <span style="font-size:10px;font-weight:700;color:#fff">${a.pct}%</span>
+            </div>
+            <div style="height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:5px">
+              <div style="height:3px;background:${s.col};border-radius:2px;width:${a.pct}%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-size:10px;color:rgba(255,255,255,.4)">% Saving</span>
+              <span style="font-size:10px;font-weight:700;color:${a.savPct!==null?(a.savPct>=0?'#00c49a':'#e24b4b'):'rgba(255,255,255,.3)'}">${a.savPct!==null?(a.savPct>=0?'+':'')+a.savPct+'%':'—'}</span>
+            </div>
+          </div>`).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08);font-size:9px;color:rgba(255,255,255,.3)">
+          <span>Int: ${fmtM(s.ci)}</span>
+          <span>Ext: ${s.ce>0?fmtM(s.ce):'—'}</span>
+          <span>Saving: <b style="color:${s.sav>=0?'#00c49a':'#e24b4b'}">${s.sav>=0?'+':''}${fmtM(s.sav)}</b></span>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+
+  document.getElementById('content').innerHTML=slidePreviewHTML;
+}
+
+window._slideData=null;
+
+function generatePPT(){
+  const rows=getRows();
+  const kpi=calcKpi(rows);
+  const contrib=calcContrib(rows);
+  const tInt=contrib.reduce((s,r)=>s+r.int,0);
+  const tAll=contrib.reduce((s,r)=>s+r.total,0);
+  const pct=tAll?Math.round(tInt/tAll*100):0;
+  const sav=kpi.sav;
+  const sd=buildSlideData(rows,kpi,tInt,tAll,pct,sav);
+
+  const pptx=new PptxGenJS();
+  pptx.layout='LAYOUT_WIDE';
+  const slide=pptx.addSlide();
+
+  // Background
+  slide.background={color:'1a1a2e'};
+
+  // Header
+  slide.addText('Kawan Lama Group',{x:0.4,y:0.25,w:6,h:0.25,fontSize:9,color:'888888',fontFace:'Helvetica Neue',bold:false});
+  slide.addText('Support Delivery Luar Kota NDC',{x:0.4,y:0.5,w:8,h:0.45,fontSize:20,color:'FFFFFF',fontFace:'Helvetica Neue',bold:true});
+  slide.addText(`Internal Fleet Per Site · Saving Cost Breakdown · ${sd.periode}`,{x:0.4,y:0.95,w:9,h:0.25,fontSize:9,color:'888888',fontFace:'Helvetica Neue'});
+
+  // Total saving box
+  slide.addText('TOTAL SAVING',{x:10.5,y:0.3,w:2.8,h:0.2,fontSize:8,color:'888888',fontFace:'Helvetica Neue',align:'right'});
+  slide.addText(`${sd.totalSav>=0?'+':''}${fmtM(sd.totalSav)}`,{x:10.5,y:0.48,w:2.8,h:0.4,fontSize:22,color:sd.totalSav>=0?'00c49a':'e24b4b',fontFace:'Helvetica Neue',bold:true,align:'right'});
+  slide.addText(`Avg ${fmtM(sd.avgMonthlySav)}/bln · ${fmt(sd.intTrip)}/${fmt(sd.totalTrip)} trip (${sd.pct}%)`,{x:10.5,y:0.88,w:2.8,h:0.2,fontSize:8,color:'888888',fontFace:'Helvetica Neue',align:'right'});
+
+  // Divider
+  slide.addShape(pptx.shapes.RECTANGLE,{x:0.4,y:1.1,w:12.8,h:0.02,fill:{color:'333355'}});
+
+  // Site cards — 2x2 grid
+  const cols=2,rows2=Math.ceil(sd.sites.length/cols);
+  const cardW=6.2,cardH=rows2>1?2.4:4.8,gapX=0.15,gapY=0.15;
+  const startY=1.2;
+
+  sd.sites.forEach((s,i)=>{
+    const col=i%cols,row=Math.floor(i/cols);
+    const x=0.4+col*(cardW+gapX);
+    const y=startY+row*(cardH+gapY);
+    const col_hex=s.col.replace('#','');
+
+    // Card background
+    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE,{x,y,w:cardW,h:cardH,fill:{color:'252540'},line:{color:'333355',w:1},rectRadius:0.08});
+    // Left accent
+    slide.addShape(pptx.shapes.RECTANGLE,{x,y:y+0.05,w:0.04,h:cardH-0.1,fill:{color:col_hex}});
+
+    // Site name + trip
+    slide.addText(s.site.toUpperCase(),{x:x+0.15,y:y+0.1,w:4,h:0.2,fontSize:9,color:col_hex,fontFace:'Helvetica Neue',bold:true});
+    slide.addText(`${fmt(s.trips)}/${fmt(s.total)} Trip  (${s.unitRate} ${s.unitLabel})`,{x:x+0.15,y:y+0.3,w:4,h:0.25,fontSize:12,color:'FFFFFF',fontFace:'Helvetica Neue',bold:true});
+
+    // % badge
+    const pctColor=s.sp>=30?'00c49a':s.sp>=15?'5ba4f5':'e24b4b';
+    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE,{x:x+cardW-1,y:y+0.1,w:0.85,h:0.42,fill:{color:'333355'},rectRadius:0.05});
+    slide.addText(`${s.sp}%`,{x:x+cardW-1,y:y+0.12,w:0.85,h:0.38,fontSize:16,color:pctColor,fontFace:'Helvetica Neue',bold:true,align:'center',valign:'middle'});
+
+    // Area breakdown
+    const areaW=(cardW-0.3)/Math.max(s.areas.length,1);
+    s.areas.forEach((a,ai)=>{
+      const ax=x+0.15+ai*areaW;
+      const ay=y+0.62;
+      const aH=cardH-0.85;
+
+      slide.addShape(pptx.shapes.ROUNDED_RECTANGLE,{x:ax,y:ay,w:areaW-0.05,h:aH,fill:{color:'1e1e35'},rectRadius:0.05});
+      slide.addText(a.area.toUpperCase(),{x:ax+0.08,y:ay+0.08,w:areaW-0.2,h:0.18,fontSize:7.5,color:'888888',fontFace:'Helvetica Neue',bold:true});
+
+      // SLA
+      const slaColor=a.sla!==null?(a.sla>=0?'00c49a':'e24b4b'):'666666';
+      const slaText=a.sla!==null?(a.sla>=0?'+':'')+a.sla+' Day':'—';
+      slide.addText('SLA',{x:ax+0.08,y:ay+0.28,w:0.6,h:0.18,fontSize:8,color:'888888',fontFace:'Helvetica Neue'});
+      slide.addText(slaText,{x:ax+0.08,y:ay+0.28,w:areaW-0.2,h:0.18,fontSize:8,color:slaColor,fontFace:'Helvetica Neue',bold:true,align:'right'});
+
+      // % Trip
+      slide.addText('% Trip',{x:ax+0.08,y:ay+0.47,w:0.6,h:0.18,fontSize:8,color:'888888',fontFace:'Helvetica Neue'});
+      slide.addText(`${a.pct}%`,{x:ax+0.08,y:ay+0.47,w:areaW-0.2,h:0.18,fontSize:8,color:'FFFFFF',fontFace:'Helvetica Neue',bold:true,align:'right'});
+
+      // Progress bar
+      slide.addShape(pptx.shapes.RECTANGLE,{x:ax+0.08,y:ay+0.66,w:areaW-0.2,h:0.04,fill:{color:'333355'}});
+      if(a.pct>0) slide.addShape(pptx.shapes.RECTANGLE,{x:ax+0.08,y:ay+0.66,w:(areaW-0.2)*a.pct/100,h:0.04,fill:{color:col_hex}});
+
+      // % Saving
+      const savColor=a.savPct!==null?(a.savPct>=0?'00c49a':'e24b4b'):'666666';
+      const savText=a.savPct!==null?(a.savPct>=0?'+':'')+a.savPct+'%':'—';
+      slide.addText('% Saving',{x:ax+0.08,y:ay+0.72,w:0.6,h:0.18,fontSize:8,color:'888888',fontFace:'Helvetica Neue'});
+      slide.addText(savText,{x:ax+0.08,y:ay+0.72,w:areaW-0.2,h:0.18,fontSize:8,color:savColor,fontFace:'Helvetica Neue',bold:true,align:'right'});
+    });
+
+    // Footer cost
+    const footerY=y+cardH-0.25;
+    slide.addShape(pptx.shapes.RECTANGLE,{x:x+0.15,y:footerY-0.05,w:cardW-0.3,h:0.01,fill:{color:'333355'}});
+    slide.addText(`Int: ${fmtM(s.ci)}`,{x:x+0.15,y:footerY,w:1.8,h:0.18,fontSize:8,color:'888888',fontFace:'Helvetica Neue'});
+    slide.addText(`Ext: ${s.ce>0?fmtM(s.ce):'—'}`,{x:x+2,y:footerY,w:1.8,h:0.18,fontSize:8,color:'888888',fontFace:'Helvetica Neue',align:'center'});
+    const savColor2=s.sav>=0?'00c49a':'e24b4b';
+    slide.addText(`Saving: ${s.sav>=0?'+':''}${fmtM(s.sav)}`,{x:x+0.15,y:footerY,w:cardW-0.3,h:0.18,fontSize:8,color:savColor2,fontFace:'Helvetica Neue',bold:true,align:'right'});
+  });
+
+  const fname=`SILK_Summary_${dateFrom||'all'}_${dateTo||'all'}.pptx`;
+  pptx.writeFile({fileName:fname}).then(()=>console.log('PPT saved'));
+}
+
+function presentSlide(){
+  const preview=document.getElementById('slide-preview');
+  if(!preview) return;
+  const clone=preview.cloneNode(true);
+  clone.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:#1a1a2e;border-radius:0;padding:5vw 6vw;aspect-ratio:unset;z-index:99999;overflow:auto;max-width:unset';
+  const closeBtn=document.createElement('button');
+  closeBtn.textContent='✕ Tutup';
+  closeBtn.style.cssText='position:fixed;top:16px;right:16px;z-index:100000;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:Helvetica Neue,sans-serif';
+  closeBtn.onclick=()=>{document.body.removeChild(clone);document.body.removeChild(closeBtn);};
+  document.body.appendChild(clone);
+  document.body.appendChild(closeBtn);
 }
 
 // INIT
