@@ -571,8 +571,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
         <div>
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${SCOL[s]}">${SSHORT[s]}</div>
-          <div style="font-size:20px;font-weight:700;color:var(--txt);margin-top:2px;letter-spacing:-.3px">${fmt(sr.length)}</div>
-          <div style="font-size:10px;color:var(--muted)">trip internal</div>
+          <div style="font-size:20px;font-weight:700;color:var(--txt);margin-top:2px;letter-spacing:-.3px">${fmt(sr.length)}<span style="font-size:13px;color:var(--muted);font-weight:500">/${fmt(sa)}</span></div>
+          <div style="font-size:10px;color:var(--muted)">trip internal / total</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:20px;font-weight:700;padding:4px 10px;border-radius:8px;${pctCls}">${sp}%</div>
