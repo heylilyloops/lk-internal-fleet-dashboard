@@ -63,7 +63,14 @@ for line in int_data[1:]:
         ce = float(ce_raw) if ce_raw else None
         do_val = int(float(do_raw)) if do_raw else 0
         cbm = float(cbm_raw) if cbm_raw else 0.0
-        del_date = datetime.strptime(del_date_raw, '%m/%d/%Y').strftime('%Y-%m-%d')
+        del_date = None
+        for fmt_str in ('%m/%d/%Y', '%d-%b-%Y', '%d/%m/%Y', '%Y-%m-%d'):
+            try:
+                del_date = datetime.strptime(del_date_raw, fmt_str).strftime('%Y-%m-%d')
+                break
+            except:
+                continue
+        if not del_date: continue
     except:
         continue
     if ci is None: continue
