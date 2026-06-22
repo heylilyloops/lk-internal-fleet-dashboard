@@ -48,7 +48,6 @@ for line in int_data[1:]:
     if len(line) < 13: continue
     site = line[0].strip()
     if not site or site == 'Site': continue
-    if 'Tamora' in site or 'Tallo' in site: continue
     area  = line[2].strip()
     jalur = line[3].strip()
     ci_raw = line[4].strip().replace(',','')
