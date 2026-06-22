@@ -265,7 +265,16 @@ canvas{display:block}
     <span class="sb-badge" id="badge-Corp Sidoarjo">—</span>
   </button>
 
-  <div class="sb-info">
+  <div class="sb-divider"></div>
+  <div class="sb-section">RDC Sites</div>
+  <button class="sb-site-item" data-site="Corp Tamora" onclick="navTo('Corp Tamora')">
+    <span class="sb-dot" style="background:#e879f9"></span>Corp Tamora
+    <span class="sb-badge" id="badge-Corp Tamora">—</span>
+  </button>
+  <button class="sb-site-item" data-site="Corp Tallo" onclick="navTo('Corp Tallo')">
+    <span class="sb-dot" style="background:#fb923c"></span>Corp Tallo
+    <span class="sb-badge" id="badge-Corp Tallo">—</span>
+  </button>
     Data: Jan–Jun 2026<br>
     Raw: <span id="infoRows">—</span> trips<br>
     <span style="color:rgba(255,255,255,.1)">v3.0 · Kawan Lama Group</span>
@@ -305,8 +314,10 @@ canvas{display:block}
 __DATA_BLOCK__
 
 const NDC=['AHI Jababeka','HCI Jababeka','HCI Cikupa','Corp Sidoarjo'];
-const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7'};
-const SSHORT={'AHI Jababeka':'AHI Jababeka','HCI Jababeka':'HCI Jababeka','HCI Cikupa':'HCI Cikupa','Corp Sidoarjo':'Corp Sidoarjo'};
+const RDC=['Corp Tamora','Corp Tallo'];
+const ALL_SITES=[...NDC,...RDC];
+const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7','Corp Tamora':'#e879f9','Corp Tallo':'#fb923c'};
+const SSHORT={'AHI Jababeka':'AHI Jababeka','HCI Jababeka':'HCI Jababeka','HCI Cikupa':'HCI Cikupa','Corp Sidoarjo':'Corp Sidoarjo','Corp Tamora':'Corp Tamora','Corp Tallo':'Corp Tallo'};
 const ACOLS=['#1a3a5c','#266CA9','#4a90c4','#6aadde','#a8cde8'];
 const CGREEN='var(--green)',CRED='var(--red)';
 const DAY_LABELS=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
@@ -314,7 +325,9 @@ const SAVING_SCOPE={
   'AHI Jababeka':['Jawa Barat','Lampung'],
   'HCI Jababeka':['Jawa Barat','Lampung'],
   'HCI Cikupa':  ['Jawa Barat','Lampung'],
-  'Corp Sidoarjo':['Jawa Timur']
+  'Corp Sidoarjo':['Jawa Timur'],
+  'Corp Tamora':  ['Sumatera Utara'],
+  'Corp Tallo':   ['Sulawesi Selatan']
 };
 // RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow]
 //        0    1    2    3  4    5      6         7      8   9   10
@@ -395,7 +408,7 @@ function calcJalur(rows,site){
 }
 
 function calcSLAAvg(rows){
-  const sitesToUse=activeSite==='all'?NDC:[activeSite];
+  const sitesToUse=activeSite==='all'?ALL_SITES:[activeSite];
   let total=0,cnt=0;
   sitesToUse.forEach(s=>{
     calcJalur(rows.filter(r=>r[0]===s),s).forEach(j=>{
@@ -407,7 +420,7 @@ function calcSLAAvg(rows){
 
 function calcOutOfScope(rows){
   const result={};
-  NDC.forEach(s=>{
+  ALL_SITES.forEach(s=>{
     const scope=SAVING_SCOPE[s]||[];
     const oos=rows.filter(r=>r[0]===s&&!scope.includes(r[1]));
     if(!oos.length){result[s]=null;return;}
@@ -510,7 +523,7 @@ function render(){
   document.getElementById('chipSLA').className='chip '+(slaAvg!==null&&slaAvg>0?'hi':'neu');
   document.getElementById('dateCount').innerHTML=`Filter: <b>${rows.length.toLocaleString('id-ID')}</b> trip · <b>${dateFrom}</b> s/d <b>${dateTo}</b>`;
 
-  NDC.forEach(s=>{
+  ALL_SITES.forEach(s=>{
     const sr=RAW.filter(r=>r[0]===s&&r[7]>=dateFrom&&r[7]<=dateTo);
     const el=document.getElementById('badge-'+s);if(el) el.textContent=sr.length||'—';
   });
@@ -528,7 +541,7 @@ function render(){
 
 // ── OVERVIEW ─────────────────────────────────────────────────────
 function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
-  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
   const scopeLabel=getScopeLabel();
   const cpdo=kpi.tDO>0?kpi.tCI/kpi.tDO:0;
 
@@ -542,7 +555,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
   // 2. Alert banners
   const jalurAll=activeSite==='all'
-    ?NDC.flatMap(s=>calcJalur(rows.filter(r=>r[0]===s),s).map(j=>({...j,site:s})))
+    ?ALL_SITES.flatMap(s=>calcJalur(rows.filter(r=>r[0]===s),s).map(j=>({...j,site:s})))
     :calcJalur(rows,activeSite).map(j=>({...j,site:activeSite}));
   const kritis=jalurAll.filter(j=>j.alert==='kritis');
   const warn=jalurAll.filter(j=>j.alert==='warning');
@@ -556,12 +569,16 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     const sr=rows.filter(r=>r[0]===s);
     if(!sr.length){siteHTML+=`<div class="card"><div style="color:${SCOL[s]};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">${SSHORT[s]}</div><div class="no-data" style="padding:12px 0;font-size:11px">No data</div></div>`;return;}
     const sk=calcKpi(sr);
-    const sc=calcContrib(sr);
     const scopeAreas_s=SAVING_SCOPE[s]||[];
-    const scScope=sc.filter(r=>scopeAreas_s.includes(r.area));
-    const si=scScope.reduce((a,r)=>a+r.int,0);
-    const sa=scScope.reduce((a,r)=>a+r.total,0);
+    // Kontribusi hanya scope area
+    const si=sr.filter(r=>scopeAreas_s.includes(r[1])).length;
+    let extScope=EXT_AGG.filter(e=>e.site===s&&scopeAreas_s.includes(e.area));
+    if(dateFrom) extScope=extScope.filter(e=>e.date>=dateFrom);
+    if(dateTo)   extScope=extScope.filter(e=>e.date<=dateTo);
+    const extScopeTrips=extScope.reduce((s,e)=>s+e.trips,0);
+    const sa=si+extScopeTrips;
     const sp=sa?Math.round(si/sa*100):0;
+    const sc=calcContrib(sr);
     const jalurs=calcJalur(sr,s);
     const critC=jalurs.filter(j=>j.alert==='kritis').length;
     const warnC=jalurs.filter(j=>j.alert==='warning').length;
@@ -733,18 +750,22 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
 // ── COVERAGE ─────────────────────────────────────────────────────
 function renderCoverage(rows,contrib,tInt,tAll,pct){
-  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
   const oosData=calcOutOfScope(rows);
 
   let covHTML='';
   sitesToShow.forEach(s=>{
     const sr=rows.filter(r=>r[0]===s);if(!sr.length) return;
-    const sc=calcContrib(sr);
     const scopeAreas_s=SAVING_SCOPE[s]||[];
-    const scScope=sc.filter(r=>scopeAreas_s.includes(r.area));
-    const si=scScope.reduce((a,r)=>a+r.int,0);
-    const sa=scScope.reduce((a,r)=>a+r.total,0);
+    // Kontribusi hanya scope area
+    const si=sr.filter(r=>scopeAreas_s.includes(r[1])).length;
+    let extScope=EXT_AGG.filter(e=>e.site===s&&scopeAreas_s.includes(e.area));
+    if(dateFrom) extScope=extScope.filter(e=>e.date>=dateFrom);
+    if(dateTo)   extScope=extScope.filter(e=>e.date<=dateTo);
+    const extScopeTrips=extScope.reduce((s,e)=>s+e.trips,0);
+    const sa=si+extScopeTrips;
     const sp=sa?Math.round(si/sa*100):0;
+    const sc=calcContrib(sr);
     const pctCls=sp>=30?'background:#dcfff4;color:#065f46':sp>=15?'background:#eff6ff;color:#1d4ed8':'background:#fff1f2;color:#991b1b';
     const col=SCOL[s];
     const scopeAreas=SAVING_SCOPE[s]||[];
@@ -828,7 +849,7 @@ function renderContribExpandable(rows){
   });
 
   // Build EXT_LT lookup by area (avg of all jalurs in area) and by jalur
-  const sitesToUse=activeSite==='all'?NDC:[activeSite];
+  const sitesToUse=activeSite==='all'?ALL_SITES:[activeSite];
   const extLtByJalur={};
   const extLtByArea={};
   (typeof EXT_LT!=='undefined'?EXT_LT:[]).filter(e=>sitesToUse.includes(e.site)).forEach(e=>{
@@ -940,7 +961,7 @@ function toggleContrib(ai){
 
 // ── INSIGHT ──────────────────────────────────────────────────────
 function renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
-  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
   const oosData=calcOutOfScope(rows);
   const insights=[];
 
@@ -1083,7 +1104,7 @@ const CITY_COORDS={
 let silkMap=null;
 
 function renderSebaran(rows){
-  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
 
   // Build per-jalur data grouped by jalur name
   const jalurMap={};
@@ -1177,7 +1198,7 @@ function renderSebaran(rows){
 
 // ── SLIDE ────────────────────────────────────────────────────────
 function buildSlideData(rows,kpi,tInt,tAll,pct,sav){
-  const sitesToShow=activeSite==='all'?NDC:[activeSite];
+  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
   const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'—';
   const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'—';
   const periode=`${dFrom} s/d ${dTo}`;
@@ -1187,12 +1208,16 @@ function buildSlideData(rows,kpi,tInt,tAll,pct,sav){
     const sr=rows.filter(r=>r[0]===s);
     if(!sr.length) return null;
     const sk=calcKpi(sr);
-    const sc=calcContrib(sr);
     const scopeAreas_s=SAVING_SCOPE[s]||[];
-    const scScope=sc.filter(r=>scopeAreas_s.includes(r.area));
-    const si=scScope.reduce((a,r)=>a+r.int,0);
-    const sa=scScope.reduce((a,r)=>a+r.total,0);
+    // Kontribusi hanya scope area
+    const si=sr.filter(r=>scopeAreas_s.includes(r[1])).length;
+    let extScope=EXT_AGG.filter(e=>e.site===s&&scopeAreas_s.includes(e.area));
+    if(dateFrom) extScope=extScope.filter(e=>e.date>=dateFrom);
+    if(dateTo)   extScope=extScope.filter(e=>e.date<=dateTo);
+    const extScopeTrips=extScope.reduce((s,e)=>s+e.trips,0);
+    const sa=si+extScopeTrips;
     const sp=sa?Math.round(si/sa*100):0;
+    const sc=calcContrib(sr);
     const scopeAreas=SAVING_SCOPE[s]||[];
     // unit/day or unit/week
     const days=dateFrom&&dateTo?Math.max(1,Math.ceil((new Date(dateTo)-new Date(dateFrom))/(1000*60*60*24))):180;
