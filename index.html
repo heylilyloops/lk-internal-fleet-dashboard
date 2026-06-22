@@ -1491,10 +1491,12 @@ function calcCostSite(rows, site){
   const pSewa = avgAll?+(avgSewa/avgAll*100).toFixed(1):0;
   const pCI   = avgAll?+(avgCI/avgAll*100).toFixed(1):0;
 
-  const gapAllin  = avgCE - avgAll;
-  const verdict   = avgCE===0?'nodata': gapAllin>=0?'hemat_internal':'hemat_reduce';
+  const costArmada = avgUJP + avgMPP + avgSewa;
+  const saving     = avgCE - avgCI;
+  const netBenefit = saving - costArmada;
+  const verdict    = avgCE===0?'nodata': netBenefit>=0?'worth_it':'reduce';
 
-  return{site,months,trips:scope.length,avgCI,avgCE,avgUJP,avgMPP,avgSewa,avgAll,pCI,pUJP,pMPP,pSewa,gapAllin,verdict,col:SCOL[site]};
+  return{site,months,trips:scope.length,avgCI,avgCE,avgUJP,avgMPP,avgSewa,costArmada,saving,netBenefit,pCI,pUJP,pMPP,pSewa,verdict,col:SCOL[site]};
 }
 
 function renderCostAnalysis(rows){
@@ -1519,23 +1521,39 @@ function renderCostAnalysis(rows){
   const pSewatot = totalAvgAll?+(totalAvgSewa/totalAvgAll*100).toFixed(1):0;
   const pCItot   = totalAvgAll?+(totalAvgCI/totalAvgAll*100).toFixed(1):0;
 
+  const totalCostArmada = totalAvgUJP + totalAvgMPP + totalAvgSewa;
+  const totalSaving     = totalAvgCE - totalAvgCI;
+  const netBenefit      = totalSaving - totalCostArmada;
+  const pUJPtot2  = totalCostArmada?+(totalAvgUJP/totalCostArmada*100).toFixed(1):0;
+  const pMPPtot2  = totalCostArmada?+(totalAvgMPP/totalCostArmada*100).toFixed(1):0;
+  const pSewatot2 = totalCostArmada?+(totalAvgSewa/totalCostArmada*100).toFixed(1):0;
+
   const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
-    <div class="kpi c-orange"><div class="kpi-label">Total All-in / Bln</div><div class="kpi-value">${fmtM(totalAvgAll)}</div><div class="kpi-sub">Cost Kirim + UJP + MPP + Sewa</div></div>
-    <div class="kpi c-blue"><div class="kpi-label">Benchmark External / Bln</div><div class="kpi-value">${totalAvgCE>0?fmtM(totalAvgCE):'—'}</div><div class="kpi-sub">scope area only</div></div>
-    <div class="kpi c-${totalGap>=0?'green':'red'}"><div class="kpi-label">Gap All-in vs External</div><div class="kpi-value" style="color:${totalGap>=0?CGREEN:CRED}">${totalAvgCE>0?(totalGap>=0?'+':'')+fmtM(totalGap):'—'}</div><div class="kpi-sub">${totalGap>=0?'Hemat pakai internal':'Hemat reduce armada'}</div></div>
-    <div class="kpi c-purple"><div class="kpi-label">Komposisi Cost All-in</div>
-      <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
-        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Cost Kirim</span><span style="font-weight:700;color:var(--blue)">${pCItot}%</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">UJP</span><span style="font-weight:700;color:var(--orange)">${pUJPtot}%</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">MPP</span><span style="font-weight:700;color:var(--teal)">${pMPPtot}%</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Sewa Armada</span><span style="font-weight:700;color:var(--purple)">${pSewatot}%</span></div>
-      </div>
+    <div class="kpi c-orange">
+      <div class="kpi-label">Total UJP</div>
+      <div class="kpi-value">${fmtM(totalAvgUJP)}</div>
+      <div class="kpi-sub">${pUJPtot2}% dari Total Cost Armada</div>
+    </div>
+    <div class="kpi c-teal">
+      <div class="kpi-label">Total Sewa Armada</div>
+      <div class="kpi-value">${fmtM(totalAvgSewa)}</div>
+      <div class="kpi-sub">${pSewatot2}% dari Total Cost Armada</div>
+    </div>
+    <div class="kpi c-purple">
+      <div class="kpi-label">Total MPP</div>
+      <div class="kpi-value">${fmtM(totalAvgMPP)}</div>
+      <div class="kpi-sub">${pMPPtot2}% dari Total Cost Armada</div>
+    </div>
+    <div class="kpi c-${netBenefit>=0?'green':'red'}">
+      <div class="kpi-label">Net Benefit</div>
+      <div class="kpi-value" style="color:${netBenefit>=0?CGREEN:CRED}">${totalAvgCE>0?(netBenefit>=0?'+':'')+fmtM(netBenefit):'—'}</div>
+      <div class="kpi-sub">${totalAvgCE>0?`Saving ${fmtM(totalSaving)} − Cost Armada ${fmtM(totalCostArmada)}`:'Belum ada benchmark ext'}</div>
     </div>
   </div>`;
 
   // Breakdown table per site
-  const verdictLabel = {hemat_internal:'HEMAT INTERNAL', hemat_reduce:'HEMAT REDUCE ARMADA', nodata:'NO BENCHMARK'};
-  const verdictClass = {hemat_internal:'sp-ideal', hemat_reduce:'sp-eval', nodata:'sp-nodata'};
+  const verdictLabel = {worth_it:'WORTH IT', reduce:'REDUCE ARMADA', nodata:'NO BENCHMARK'};
+  const verdictClass = {worth_it:'sp-ideal', reduce:'sp-eval', nodata:'sp-nodata'};
 
   const tableHTML=`<div class="card mb12">
     <div class="card-title">Breakdown Cost per Site
@@ -1548,7 +1566,7 @@ function renderCostAnalysis(rows){
         <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--orange);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">UJP</th>
         <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--teal);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">MPP</th>
         <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--purple);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Sewa Armada</th>
-        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--txt);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Total All-in</th>
+        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--txt);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Total Cost Armada</th>
         <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Ext Benchmark</th>
         <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Gap</th>
         <th style="text-align:center;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Verdict</th>
@@ -1569,9 +1587,9 @@ function renderCostAnalysis(rows){
           <td style="text-align:right;padding:9px 10px;color:var(--orange);font-weight:600">${d.avgUJP>0?fmtM(d.avgUJP):'<span style="color:var(--muted)">—</span>'}</td>
           <td style="text-align:right;padding:9px 10px;color:var(--teal);font-weight:600">${d.avgMPP>0?fmtM(d.avgMPP):'<span style="color:var(--muted)">—</span>'}</td>
           <td style="text-align:right;padding:9px 10px;color:var(--purple);font-weight:600">${d.avgSewa>0?fmtM(d.avgSewa):'<span style="color:var(--muted)">—</span>'}</td>
-          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--txt)">${fmtM(d.avgAll)}</td>
-          <td style="text-align:right;padding:9px 10px;color:var(--muted)">${d.avgCE>0?fmtM(d.avgCE):'—'}</td>
-          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${d.gapAllin>=0?CGREEN:CRED}">${d.avgCE>0?(d.gapAllin>=0?'+':'')+fmtM(d.gapAllin):'—'}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--txt)">${fmtM(d.costArmada)}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:600;color:${d.saving>=0?CGREEN:CRED}">${d.avgCE>0?(d.saving>=0?'+':'')+fmtM(d.saving):'—'}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${d.netBenefit>=0?CGREEN:CRED}">${d.avgCE>0?(d.netBenefit>=0?'+':'')+fmtM(d.netBenefit):'—'}</td>
           <td style="text-align:center;padding:9px 10px"><span class="status-pill ${verdictClass[d.verdict]}" style="font-size:9px">${verdictLabel[d.verdict]}</span></td>
         </tr>`).join('')}
         <tr style="background:var(--bg);border-top:2px solid var(--border2)">
@@ -1580,9 +1598,9 @@ function renderCostAnalysis(rows){
           <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--orange)">${fmtM(totalAvgUJP)}</td>
           <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--teal)">${fmtM(totalAvgMPP)}</td>
           <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--purple)">${fmtM(totalAvgSewa)}</td>
-          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--txt)">${fmtM(totalAvgAll)}</td>
-          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--muted)">${totalAvgCE>0?fmtM(totalAvgCE):'—'}</td>
-          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${totalGap>=0?CGREEN:CRED}">${totalAvgCE>0?(totalGap>=0?'+':'')+fmtM(totalGap):'—'}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--txt)">${fmtM(totalCostArmada)}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${totalSaving>=0?CGREEN:CRED}">${totalAvgCE>0?(totalSaving>=0?'+':'')+fmtM(totalSaving):'—'}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${netBenefit>=0?CGREEN:CRED}">${totalAvgCE>0?(netBenefit>=0?'+':'')+fmtM(netBenefit):'—'}</td>
           <td></td>
         </tr>
       </tbody>
@@ -1605,8 +1623,8 @@ function renderCostAnalysis(rows){
       <div style="position:relative;height:220px"><canvas id="cCostStack"></canvas></div>
     </div>
     <div class="card" style="margin-bottom:0">
-      <div class="card-title">Komposisi Cost All-in
-        <span class="card-badge">% terhadap total all-in</span>
+      <div class="card-title">Komposisi Cost Armada
+        <span class="card-badge">% UJP vs MPP vs Sewa terhadap Total Cost Armada</span>
       </div>
       <div style="position:relative;height:220px"><canvas id="cCostDonut"></canvas></div>
     </div>
@@ -1617,10 +1635,10 @@ function renderCostAnalysis(rows){
     <div class="card-title">Break-even Analysis — Internal All-in vs Reduce Armada</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${siteData.map(d=>{
-        const icon = d.verdict==='hemat_internal'?'✅':d.verdict==='hemat_reduce'?'🔴':'⚪';
-        const desc = d.verdict==='hemat_internal'
-          ? `All-in internal (${fmtM(d.avgAll)}/bln) masih lebih hemat dari external (${fmtM(d.avgCE)}/bln). Selisih ${fmtM(d.gapAllin)}/bln. Pertahankan armada internal.`
-          : d.verdict==='hemat_reduce'
+        const icon = d.verdict==='worth_it'?'✅':d.verdict==='reduce'?'🔴':'⚪';
+        const desc = d.verdict==='worth_it'
+          ? `Saving ${fmtM(d.saving)}/bln lebih besar dari Cost Armada ${fmtM(d.costArmada)}/bln. Net benefit ${fmtM(d.netBenefit)}/bln. Pertahankan armada internal.`
+          : d.verdict==='reduce'
           ? `All-in internal (${fmtM(d.avgAll)}/bln) lebih mahal dari external (${fmtM(d.avgCE)}/bln). Selisih ${fmtM(Math.abs(d.gapAllin))}/bln. Pertimbangkan reduce armada dan alihkan ke external.`
           : `Belum ada benchmark external untuk ${d.site}. Tidak dapat membandingkan.`;
         return`<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg);border-radius:8px;border-left:3px solid ${d.col}">
@@ -1666,14 +1684,14 @@ function renderCostAnalysis(rows){
     CH['cCostDonut']=new Chart(document.getElementById('cCostDonut'),{
       type:'doughnut',
       data:{
-        labels:['Cost Kirim','UJP','MPP','Sewa Armada'],
+        labels:['UJP','MPP','Sewa Armada'],
         datasets:[{
-          data:[+totalAvgCI.toFixed(0),+totalAvgUJP.toFixed(0),+totalAvgMPP.toFixed(0),+totalAvgSewa.toFixed(0)],
-          backgroundColor:['rgba(38,108,169,.8)','rgba(245,166,35,.8)','rgba(0,196,154,.8)','rgba(139,108,247,.8)'],
+          data:[+totalAvgUJP.toFixed(0),+totalAvgMPP.toFixed(0),+totalAvgSewa.toFixed(0)],
+          backgroundColor:['rgba(245,166,35,.85)','rgba(0,196,154,.85)','rgba(139,108,247,.85)'],
           borderWidth:2,borderColor:'#fff'
         }]
       },
-      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>`${c.label}: ${fmtM(c.raw)} (${(c.raw/[totalAvgCI,totalAvgUJP,totalAvgMPP,totalAvgSewa].reduce((a,b)=>a+b,0)*100).toFixed(1)}%)`}}}}
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>{const tot=totalAvgUJP+totalAvgMPP+totalAvgSewa;return `${c.label}: ${fmtM(c.raw)} (${(c.raw/tot*100).toFixed(1)}%)`;}}}}}
     });
   },50);
 }
