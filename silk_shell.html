@@ -241,6 +241,9 @@ canvas{display:block}
   <button class="sb-menu-item" onclick="setMenu('slide')">
     <span class="sb-menu-icon">📑</span>Slide
   </button>
+  <button class="sb-menu-item" onclick="setMenu('costanalysis')">
+    <span class="sb-menu-icon">💰</span>Cost Analysis
+  </button>
 
   <div class="sb-divider"></div>
   <div class="sb-section">NDC Sites</div>
@@ -331,8 +334,8 @@ const SAVING_SCOPE={
   'Corp Tamora':  ['Sumatera Utara'],
   'Corp Tallo':   ['Sulawesi Selatan']
 };
-// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow]
-//        0    1    2    3  4    5      6         7      8   9   10
+// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa]
+//        0    1    2    3  4    5      6         7      8   9   10   11   12   13
 
 let activeSite='all', activeMenu='overview', CH={};
 let dateFrom='', dateTo='';
@@ -443,7 +446,7 @@ function getScopeLabel(){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4};
+  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
@@ -539,6 +542,7 @@ function render(){
   else if(activeMenu==='sebaran') renderSebaran(rows);
   else if(activeMenu==='insight') renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
   else if(activeMenu==='slide') renderSlide(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
+  else if(activeMenu==='costanalysis') renderCostAnalysis(rows);
 }
 
 // ── OVERVIEW ─────────────────────────────────────────────────────
@@ -1455,6 +1459,219 @@ function presentSlide(){
   closeBtn.onclick=()=>{document.body.removeChild(clone);document.body.removeChild(closeBtn);};
   document.body.appendChild(clone);
   document.body.appendChild(closeBtn);
+}
+
+// ── COST ANALYSIS INTERNAL ───────────────────────────────────────
+function calcCostSite(rows, site){
+  const sr = rows.filter(r=>r[0]===site);
+  const scopeAreas = SAVING_SCOPE[site]||[];
+  const scope = sr.filter(r=>scopeAreas.includes(r[1]));
+  const months = [...new Set(sr.map(r=>r[7].slice(0,7)))].length||1;
+
+  const sumCI   = scope.reduce((s,r)=>s+(r[3]||0),0);
+  const sumCE   = scope.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
+  const sumUJP  = scope.reduce((s,r)=>s+(r[11]||0),0);
+  const sumMPP  = scope.reduce((s,r)=>s+(r[12]||0),0);
+  const sumSewa = scope.reduce((s,r)=>s+(r[13]||0),0);
+  const sumAll  = sumCI+sumUJP+sumMPP+sumSewa;
+
+  const avgCI   = sumCI/months;
+  const avgCE   = sumCE/months;
+  const avgUJP  = sumUJP/months;
+  const avgMPP  = sumMPP/months;
+  const avgSewa = sumSewa/months;
+  const avgAll  = sumAll/months;
+
+  const pUJP  = avgAll?+(avgUJP/avgAll*100).toFixed(1):0;
+  const pMPP  = avgAll?+(avgMPP/avgAll*100).toFixed(1):0;
+  const pSewa = avgAll?+(avgSewa/avgAll*100).toFixed(1):0;
+  const pCI   = avgAll?+(avgCI/avgAll*100).toFixed(1):0;
+
+  const gapAllin  = avgCE - avgAll;
+  const verdict   = avgCE===0?'nodata': gapAllin>=0?'hemat_internal':'hemat_reduce';
+
+  return{site,months,trips:scope.length,avgCI,avgCE,avgUJP,avgMPP,avgSewa,avgAll,pCI,pUJP,pMPP,pSewa,gapAllin,verdict,col:SCOL[site]};
+}
+
+function renderCostAnalysis(rows){
+  const sitesToShow = activeSite==='all'?ALL_SITES:[activeSite];
+  const siteData = sitesToShow.map(s=>calcCostSite(rows,s)).filter(d=>d.trips>0);
+
+  if(!siteData.length){
+    document.getElementById('content').innerHTML=`<div class="no-data">Tidak ada data untuk filter yang dipilih.</div>`;
+    return;
+  }
+
+  // Overall KPI
+  const totalAvgAll  = siteData.reduce((s,d)=>s+d.avgAll,0);
+  const totalAvgCE   = siteData.reduce((s,d)=>s+d.avgCE,0);
+  const totalAvgUJP  = siteData.reduce((s,d)=>s+d.avgUJP,0);
+  const totalAvgMPP  = siteData.reduce((s,d)=>s+d.avgMPP,0);
+  const totalAvgSewa = siteData.reduce((s,d)=>s+d.avgSewa,0);
+  const totalAvgCI   = siteData.reduce((s,d)=>s+d.avgCI,0);
+  const totalGap     = totalAvgCE - totalAvgAll;
+  const pUJPtot  = totalAvgAll?+(totalAvgUJP/totalAvgAll*100).toFixed(1):0;
+  const pMPPtot  = totalAvgAll?+(totalAvgMPP/totalAvgAll*100).toFixed(1):0;
+  const pSewatot = totalAvgAll?+(totalAvgSewa/totalAvgAll*100).toFixed(1):0;
+  const pCItot   = totalAvgAll?+(totalAvgCI/totalAvgAll*100).toFixed(1):0;
+
+  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi c-orange"><div class="kpi-label">Total All-in / Bln</div><div class="kpi-value">${fmtM(totalAvgAll)}</div><div class="kpi-sub">Cost Kirim + UJP + MPP + Sewa</div></div>
+    <div class="kpi c-blue"><div class="kpi-label">Benchmark External / Bln</div><div class="kpi-value">${totalAvgCE>0?fmtM(totalAvgCE):'—'}</div><div class="kpi-sub">scope area only</div></div>
+    <div class="kpi c-${totalGap>=0?'green':'red'}"><div class="kpi-label">Gap All-in vs External</div><div class="kpi-value" style="color:${totalGap>=0?CGREEN:CRED}">${totalAvgCE>0?(totalGap>=0?'+':'')+fmtM(totalGap):'—'}</div><div class="kpi-sub">${totalGap>=0?'Hemat pakai internal':'Hemat reduce armada'}</div></div>
+    <div class="kpi c-purple"><div class="kpi-label">Komposisi Cost All-in</div>
+      <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Cost Kirim</span><span style="font-weight:700;color:var(--blue)">${pCItot}%</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">UJP</span><span style="font-weight:700;color:var(--orange)">${pUJPtot}%</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">MPP</span><span style="font-weight:700;color:var(--teal)">${pMPPtot}%</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Sewa Armada</span><span style="font-weight:700;color:var(--purple)">${pSewatot}%</span></div>
+      </div>
+    </div>
+  </div>`;
+
+  // Breakdown table per site
+  const verdictLabel = {hemat_internal:'HEMAT INTERNAL', hemat_reduce:'HEMAT REDUCE ARMADA', nodata:'NO BENCHMARK'};
+  const verdictClass = {hemat_internal:'sp-ideal', hemat_reduce:'sp-eval', nodata:'sp-nodata'};
+
+  const tableHTML=`<div class="card mb12">
+    <div class="card-title">Breakdown Cost per Site
+      <span class="card-badge">rata-rata per bulan · scope area only</span>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:800px;font-size:12px">
+      <thead><tr style="background:var(--bg)">
+        <th style="text-align:left;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Site</th>
+        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Cost Kirim</th>
+        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--orange);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">UJP</th>
+        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--teal);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">MPP</th>
+        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--purple);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Sewa Armada</th>
+        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--txt);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Total All-in</th>
+        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Ext Benchmark</th>
+        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Gap</th>
+        <th style="text-align:center;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Verdict</th>
+      </tr></thead>
+      <tbody>
+        ${siteData.map(d=>`<tr style="border-bottom:1px solid #f0f4f9">
+          <td style="padding:9px 10px">
+            <div style="font-weight:700;color:${d.col};font-size:11px">${d.site}</div>
+            <div style="font-size:10px;color:var(--muted)">${d.trips} trip · ${d.months} bln</div>
+            <div style="display:flex;gap:2px;margin-top:5px;height:5px;border-radius:3px;overflow:hidden;width:100px">
+              <div style="background:var(--blue);width:${d.pCI}%"></div>
+              <div style="background:var(--orange);width:${d.pUJP}%"></div>
+              <div style="background:var(--teal);width:${d.pMPP}%"></div>
+              <div style="background:var(--purple);width:${d.pSewa}%"></div>
+            </div>
+          </td>
+          <td style="text-align:right;padding:9px 10px;font-weight:600;color:var(--blue)">${fmtM(d.avgCI)}</td>
+          <td style="text-align:right;padding:9px 10px;color:var(--orange);font-weight:600">${d.avgUJP>0?fmtM(d.avgUJP):'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="text-align:right;padding:9px 10px;color:var(--teal);font-weight:600">${d.avgMPP>0?fmtM(d.avgMPP):'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="text-align:right;padding:9px 10px;color:var(--purple);font-weight:600">${d.avgSewa>0?fmtM(d.avgSewa):'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--txt)">${fmtM(d.avgAll)}</td>
+          <td style="text-align:right;padding:9px 10px;color:var(--muted)">${d.avgCE>0?fmtM(d.avgCE):'—'}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${d.gapAllin>=0?CGREEN:CRED}">${d.avgCE>0?(d.gapAllin>=0?'+':'')+fmtM(d.gapAllin):'—'}</td>
+          <td style="text-align:center;padding:9px 10px"><span class="status-pill ${verdictClass[d.verdict]}" style="font-size:9px">${verdictLabel[d.verdict]}</span></td>
+        </tr>`).join('')}
+        <tr style="background:var(--bg);border-top:2px solid var(--border2)">
+          <td style="padding:9px 10px;font-weight:700;font-size:10px;color:var(--txt2);text-transform:uppercase">Total / Avg</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--blue)">${fmtM(totalAvgCI)}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--orange)">${fmtM(totalAvgUJP)}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--teal)">${fmtM(totalAvgMPP)}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--purple)">${fmtM(totalAvgSewa)}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--txt)">${fmtM(totalAvgAll)}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--muted)">${totalAvgCE>0?fmtM(totalAvgCE):'—'}</td>
+          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${totalGap>=0?CGREEN:CRED}">${totalAvgCE>0?(totalGap>=0?'+':'')+fmtM(totalGap):'—'}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table></div>
+  </div>`;
+
+  // Stacked bar chart
+  const chartHTML=`<div class="grid2 mb12">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Cost All-in vs External per Site
+        <span class="card-badge">avg per bulan · Jt Rp</span>
+      </div>
+      <div class="leg">
+        <div class="li"><div class="ls" style="background:var(--blue)"></div>Cost Kirim</div>
+        <div class="li"><div class="ls" style="background:var(--orange)"></div>UJP</div>
+        <div class="li"><div class="ls" style="background:var(--teal)"></div>MPP</div>
+        <div class="li"><div class="ls" style="background:var(--purple)"></div>Sewa Armada</div>
+        <div class="li"><div class="ls" style="background:#333;border:1px dashed #999"></div>Ext Benchmark</div>
+      </div>
+      <div style="position:relative;height:220px"><canvas id="cCostStack"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Komposisi Cost All-in
+        <span class="card-badge">% terhadap total all-in</span>
+      </div>
+      <div style="position:relative;height:220px"><canvas id="cCostDonut"></canvas></div>
+    </div>
+  </div>`;
+
+  // Break-even insight
+  const insightHTML=`<div class="card mb12">
+    <div class="card-title">Break-even Analysis — Internal All-in vs Reduce Armada</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${siteData.map(d=>{
+        const icon = d.verdict==='hemat_internal'?'✅':d.verdict==='hemat_reduce'?'🔴':'⚪';
+        const desc = d.verdict==='hemat_internal'
+          ? `All-in internal (${fmtM(d.avgAll)}/bln) masih lebih hemat dari external (${fmtM(d.avgCE)}/bln). Selisih ${fmtM(d.gapAllin)}/bln. Pertahankan armada internal.`
+          : d.verdict==='hemat_reduce'
+          ? `All-in internal (${fmtM(d.avgAll)}/bln) lebih mahal dari external (${fmtM(d.avgCE)}/bln). Selisih ${fmtM(Math.abs(d.gapAllin))}/bln. Pertimbangkan reduce armada dan alihkan ke external.`
+          : `Belum ada benchmark external untuk ${d.site}. Tidak dapat membandingkan.`;
+        return`<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg);border-radius:8px;border-left:3px solid ${d.col}">
+          <span style="font-size:16px;flex-shrink:0">${icon}</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:${d.col};margin-bottom:3px">${d.site}</div>
+            <div style="font-size:11px;color:var(--txt2);line-height:1.5">${desc}</div>
+            ${d.verdict!=='nodata'?`<div style="display:flex;gap:8px;margin-top:6px;font-size:10px;flex-wrap:wrap">
+              <span style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 8px">Cost Kirim: ${d.pCI}%</span>
+              <span style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--orange)">UJP: ${d.pUJP}%</span>
+              <span style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--teal)">MPP: ${d.pMPP}%</span>
+              <span style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--purple)">Sewa: ${d.pSewa}%</span>
+            </div>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  document.getElementById('content').innerHTML=kpiHTML+tableHTML+chartHTML+insightHTML;
+
+  // Render charts
+  setTimeout(()=>{
+    dc('cCostStack');dc('cCostDonut');
+    const labels=siteData.map(d=>d.site.replace('Corp ','').replace(' Jababeka',' JBBK'));
+
+    CH['cCostStack']=new Chart(document.getElementById('cCostStack'),{
+      type:'bar',
+      data:{
+        labels,
+        datasets:[
+          {label:'Cost Kirim',data:siteData.map(d=>+(d.avgCI/1e6).toFixed(1)),backgroundColor:'rgba(38,108,169,.8)',stack:'int'},
+          {label:'UJP',data:siteData.map(d=>+(d.avgUJP/1e6).toFixed(1)),backgroundColor:'rgba(245,166,35,.8)',stack:'int'},
+          {label:'MPP',data:siteData.map(d=>+(d.avgMPP/1e6).toFixed(1)),backgroundColor:'rgba(0,196,154,.8)',stack:'int'},
+          {label:'Sewa Armada',data:siteData.map(d=>+(d.avgSewa/1e6).toFixed(1)),backgroundColor:'rgba(139,108,247,.8)',stack:'int'},
+          {label:'Ext Benchmark',data:siteData.map(d=>d.avgCE>0?+(d.avgCE/1e6).toFixed(1):null),type:'bar',backgroundColor:'rgba(99,125,154,.25)',borderColor:'rgba(99,125,154,.6)',borderWidth:2,stack:'ext'},
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y} Jt`}}},scales:{x:{ticks:{color:'#637d9a',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:10},callback:v=>v+'Jt'},grid:{color:'rgba(0,0,0,.05)'}}}}
+    });
+
+    // Donut — total composition
+    CH['cCostDonut']=new Chart(document.getElementById('cCostDonut'),{
+      type:'doughnut',
+      data:{
+        labels:['Cost Kirim','UJP','MPP','Sewa Armada'],
+        datasets:[{
+          data:[+totalAvgCI.toFixed(0),+totalAvgUJP.toFixed(0),+totalAvgMPP.toFixed(0),+totalAvgSewa.toFixed(0)],
+          backgroundColor:['rgba(38,108,169,.8)','rgba(245,166,35,.8)','rgba(0,196,154,.8)','rgba(139,108,247,.8)'],
+          borderWidth:2,borderColor:'#fff'
+        }]
+      },
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>`${c.label}: ${fmtM(c.raw)} (${(c.raw/[totalAvgCI,totalAvgUJP,totalAvgMPP,totalAvgSewa].reduce((a,b)=>a+b,0)*100).toFixed(1)}%)`}}}}
+    });
+  },50);
 }
 
 // INIT
