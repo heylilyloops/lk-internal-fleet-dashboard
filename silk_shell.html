@@ -552,11 +552,23 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const cpdo=kpi.tDO>0?kpi.tCI/kpi.tDO:0;
 
   // 1. KPI Row
-  const kpiHTML=`<div class="kpi-row">
+  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(7,1fr)">
     <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi</div></div>
     <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label">Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
     <div class="kpi c-teal"><div class="kpi-label">Keunggulan Pengiriman</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
     <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
+    ${(()=>{
+      const tUJP=rows.reduce((s,r)=>s+(r[11]||0),0);
+      const tMPP=rows.reduce((s,r)=>s+(r[12]||0),0);
+      const tSewa=rows.reduce((s,r)=>s+(r[13]||0),0);
+      const tArm=tUJP+tMPP+tSewa||1;
+      const pUJP=+(tUJP/tArm*100).toFixed(1);
+      const pMPP=+(tMPP/tArm*100).toFixed(1);
+      const pSewa=+(tSewa/tArm*100).toFixed(1);
+      return`<div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${pUJP}% dari Total Cost Armada</div></div>
+    <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${pMPP}% dari Total Cost Armada</div></div>
+    <div class="kpi c-purple"><div class="kpi-label">Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${pSewa}% dari Total Cost Armada</div></div>`;
+    })()}
   </div>`;
 
   // 2. Alert banners
@@ -1473,19 +1485,16 @@ function calcCostSite(rows, site){
   const sumUJP  = scope.reduce((s,r)=>s+(r[11]||0),0);
   const sumMPP  = scope.reduce((s,r)=>s+(r[12]||0),0);
   const sumSewa = scope.reduce((s,r)=>s+(r[13]||0),0);
-  const sumAll  = sumCI+sumUJP+sumMPP+sumSewa;
-
   const avgCI   = sumCI/months;
   const avgCE   = sumCE/months;
   const avgUJP  = sumUJP/months;
   const avgMPP  = sumMPP/months;
   const avgSewa = sumSewa/months;
-  const avgAll  = sumAll/months;
 
-  const pUJP  = avgAll?+(avgUJP/avgAll*100).toFixed(1):0;
-  const pMPP  = avgAll?+(avgMPP/avgAll*100).toFixed(1):0;
-  const pSewa = avgAll?+(avgSewa/avgAll*100).toFixed(1):0;
-  const pCI   = avgAll?+(avgCI/avgAll*100).toFixed(1):0;
+  const pUJP  = costArmada?+(avgUJP/costArmada*100).toFixed(1):0;
+  const pMPP  = costArmada?+(avgMPP/costArmada*100).toFixed(1):0;
+  const pSewa = costArmada?+(avgSewa/costArmada*100).toFixed(1):0;
+  const pCI   = avgCI?100:0;
 
   const costArmada = avgUJP + avgMPP + avgSewa;
   const saving     = avgCE - avgCI;
@@ -1505,17 +1514,11 @@ function renderCostAnalysis(rows){
   }
 
   // Overall KPI
-  const totalAvgAll  = siteData.reduce((s,d)=>s+d.avgAll,0);
   const totalAvgCE   = siteData.reduce((s,d)=>s+d.avgCE,0);
   const totalAvgUJP  = siteData.reduce((s,d)=>s+d.avgUJP,0);
   const totalAvgMPP  = siteData.reduce((s,d)=>s+d.avgMPP,0);
   const totalAvgSewa = siteData.reduce((s,d)=>s+d.avgSewa,0);
   const totalAvgCI   = siteData.reduce((s,d)=>s+d.avgCI,0);
-  const totalGap     = totalAvgCE - totalAvgAll;
-  const pUJPtot  = totalAvgAll?+(totalAvgUJP/totalAvgAll*100).toFixed(1):0;
-  const pMPPtot  = totalAvgAll?+(totalAvgMPP/totalAvgAll*100).toFixed(1):0;
-  const pSewatot = totalAvgAll?+(totalAvgSewa/totalAvgAll*100).toFixed(1):0;
-  const pCItot   = totalAvgAll?+(totalAvgCI/totalAvgAll*100).toFixed(1):0;
 
   const totalCostArmada = totalAvgUJP + totalAvgMPP + totalAvgSewa;
   const totalSaving     = totalAvgCE - totalAvgCI;
@@ -1635,7 +1638,7 @@ function renderCostAnalysis(rows){
         const desc = d.verdict==='worth_it'
           ? `Saving ${fmtM(d.saving)}/bln lebih besar dari Cost Armada ${fmtM(d.costArmada)}/bln. Net benefit ${fmtM(d.netBenefit)}/bln. Pertahankan armada internal.`
           : d.verdict==='reduce'
-          ? `All-in internal (${fmtM(d.avgAll)}/bln) lebih mahal dari external (${fmtM(d.avgCE)}/bln). Selisih ${fmtM(Math.abs(d.gapAllin))}/bln. Pertimbangkan reduce armada dan alihkan ke external.`
+          ? `Saving ${fmtM(d.saving)}/bln lebih kecil dari Cost Armada ${fmtM(d.costArmada)}/bln. Net ${fmtM(d.netBenefit)}/bln. Pertimbangkan reduce armada dan alihkan ke external.`
           : `Belum ada benchmark external untuk ${d.site}. Tidak dapat membandingkan.`;
         return`<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg);border-radius:8px;border-left:3px solid ${d.col}">
           <span style="font-size:16px;flex-shrink:0">${icon}</span>
