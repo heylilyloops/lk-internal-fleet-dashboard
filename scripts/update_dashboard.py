@@ -76,7 +76,13 @@ for line in int_data[1:]:
     if ci is None: continue
     lt_raw  = line[14].strip() if len(line) > 14 else ''
     lt_ow   = float(lt_raw) if lt_raw and lt_raw not in ('Lead Time One Way',) else None
-    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow])
+    ujp_raw  = line[15].strip().replace(',','') if len(line) > 15 else ''
+    mpp_raw  = line[16].strip().replace(',','') if len(line) > 16 else ''
+    sewa_raw = line[17].strip().replace(',','') if len(line) > 17 else ''
+    ujp  = float(ujp_raw)  if ujp_raw  else None
+    mpp  = float(mpp_raw)  if mpp_raw  else None
+    sewa = float(sewa_raw) if sewa_raw else None
+    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa])
 
 print(f"INT parsed: {len(int_rows)} rows")
 
