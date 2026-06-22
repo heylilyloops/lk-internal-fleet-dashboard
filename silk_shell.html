@@ -264,6 +264,14 @@ canvas{display:block}
     <span class="sb-dot" style="background:#8b6cf7"></span>Corp Sidoarjo
     <span class="sb-badge" id="badge-Corp Sidoarjo">—</span>
   </button>
+  <button class="sb-site-item" data-site="Corp Tamora" onclick="navTo('Corp Tamora')">
+    <span class="sb-dot" style="background:#e8857a"></span>Corp Tamora
+    <span class="sb-badge" id="badge-Corp Tamora">—</span>
+  </button>
+  <button class="sb-site-item" data-site="Corp Tallo" onclick="navTo('Corp Tallo')">
+    <span class="sb-dot" style="background:#4fc97c"></span>Corp Tallo
+    <span class="sb-badge" id="badge-Corp Tallo">—</span>
+  </button>
 
   <div class="sb-info">
     Data: Jan–Jun 2026<br>
@@ -304,9 +312,9 @@ canvas{display:block}
 <script>
 __DATA_BLOCK__
 
-const NDC=['AHI Jababeka','HCI Jababeka','HCI Cikupa','Corp Sidoarjo'];
-const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7'};
-const SSHORT={'AHI Jababeka':'AHI Jababeka','HCI Jababeka':'HCI Jababeka','HCI Cikupa':'HCI Cikupa','Corp Sidoarjo':'Corp Sidoarjo'};
+const NDC=['AHI Jababeka','HCI Jababeka','HCI Cikupa','Corp Sidoarjo','Corp Tamora','Corp Tallo'];
+const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7','Corp Tamora':'#e8857a','Corp Tallo':'#4fc97c'};
+const SSHORT={'AHI Jababeka':'AHI Jababeka','HCI Jababeka':'HCI Jababeka','HCI Cikupa':'HCI Cikupa','Corp Sidoarjo':'Corp Sidoarjo','Corp Tamora':'Corp Tamora','Corp Tallo':'Corp Tallo'};
 const ACOLS=['#1a3a5c','#266CA9','#4a90c4','#6aadde','#a8cde8'];
 const CGREEN='var(--green)',CRED='var(--red)';
 const DAY_LABELS=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
@@ -314,7 +322,9 @@ const SAVING_SCOPE={
   'AHI Jababeka':['Jawa Barat','Lampung'],
   'HCI Jababeka':['Jawa Barat','Lampung'],
   'HCI Cikupa':  ['Jawa Barat','Lampung'],
-  'Corp Sidoarjo':['Jawa Timur']
+  'Corp Sidoarjo':['Jawa Timur'],
+  'Corp Tamora':['Sumatera Utara'],
+  'Corp Tallo':['Sulawesi Tengah']
 };
 // RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow]
 //        0    1    2    3  4    5      6         7      8   9   10
@@ -1074,6 +1084,10 @@ const CITY_COORDS={
   'Batam':[1.0456,104.0305],'Bukittinggi':[-0.3065,100.3688],'Ambon':[-3.6954,128.1814],
   'Purwodadi':[-7.0862,110.9178],'Ungaran':[-7.1342,110.4019],'Cepu':[-7.1437,111.5895],
   'Solo Raya':[-7.5755,110.8243],'Lampung Selatan':[-5.7000,105.4333],
+  'Pematangsiantar':[-2.9595,99.0687],'Asahan':[2.9833,99.6167],'Simalungun':[2.95,99.05],
+  'Toba':[2.3833,99.0667],'Langkat':[3.75,98.45],'Tapanuli':[2.0167,98.9667],
+  'Dairi':[2.7333,98.3167],'Rantau Parapat':[2.1,99.85],'Palu':[-0.8917,119.8707],
+  'Aceh Tamiang':[4.2667,98.0],
 };
 
 let silkMap=null;
@@ -1342,10 +1356,14 @@ function generatePPT(){
   // Divider
   slide.addShape(pptx.shapes.RECTANGLE,{x:0.4,y:1.1,w:12.8,h:0.02,fill:{color:'333355'}});
 
-  // Site cards — 2x2 grid
-  const cols=2,rows2=Math.ceil(sd.sites.length/cols);
-  const cardW=6.2,cardH=rows2>1?2.4:4.8,gapX=0.15,gapY=0.15;
+  // Site cards — adaptive grid (2 cols for <=4 sites, 3 cols for 5-6 sites)
+  const cols=sd.sites.length>4?3:2;
+  const rows2=Math.ceil(sd.sites.length/cols);
+  const totalW=12.8,gapX=0.15,gapY=0.15;
+  const cardW=(totalW-(cols-1)*gapX)/cols;
   const startY=1.2;
+  const availH=7.1-startY; // leave bottom margin
+  const cardH=Math.min(rows2>1?(availH-(rows2-1)*gapY)/rows2:4.8, rows2>1?2.4:4.8);
 
   sd.sites.forEach((s,i)=>{
     const col=i%cols,row=Math.floor(i/cols);
