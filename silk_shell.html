@@ -860,10 +860,11 @@ function renderContribExpandable(rows){
     areaMap[area].int++;areaMap[area].ci+=r[3]||0;
     if(r[4]){areaMap[area].ce+=r[4];areaMap[area].ceCnt++;}
     if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].ltS+=+r[10];areaMap[area].ltN++;}
-    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0};
+    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,intCbm:0};
     areaMap[area].jalurs[jalur].int++;areaMap[area].jalurs[jalur].ci+=r[3]||0;
     if(r[4]){areaMap[area].jalurs[jalur].ce+=r[4];areaMap[area].jalurs[jalur].ceCnt++;}
     if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].jalurs[jalur].ltS+=+r[10];areaMap[area].jalurs[jalur].ltN++;}
+    areaMap[area].jalurs[jalur].intCbm+=(r[9]||0);
   });
 
   // Build EXT_LT lookup by area (avg of all jalurs in area) and by jalur
@@ -892,13 +893,18 @@ function renderContribExpandable(rows){
   if(dateFrom) ef=ef.filter(e=>e.date>=dateFrom);
   if(dateTo)   ef=ef.filter(e=>e.date<=dateTo);
   const extAreaMap={};
-  ef.forEach(e=>{extAreaMap[e.area]=(extAreaMap[e.area]||0)+e.trips;});
+  ef.forEach(e=>{if(!extAreaMap[e.area]) extAreaMap[e.area]={trips:0,cbm:0};
+    extAreaMap[e.area].trips+=e.trips;
+    extAreaMap[e.area].cbm+=(e.cbm||0);});
   let efj=EXT_JALUR;
   if(activeSite!=='all') efj=efj.filter(e=>e.site===activeSite);
   if(dateFrom) efj=efj.filter(e=>e.date>=dateFrom);
   if(dateTo)   efj=efj.filter(e=>e.date<=dateTo);
   const extJalurMap={};
-  efj.forEach(e=>{const k=e.area+'||'+e.jalur;extJalurMap[k]=(extJalurMap[k]||0)+e.trips;});
+  efj.forEach(e=>{const k=e.area+'||'+e.jalur;
+    if(!extJalurMap[k]) extJalurMap[k]={trips:0,cbm:0};
+    extJalurMap[k].trips+=(e.trips||0);
+    extJalurMap[k].cbm+=(e.cbm||0);});
   const allAreas=new Set([...Object.keys(areaMap),...Object.keys(extAreaMap)]);
   const data=[...allAreas].map(area=>{
     const v=areaMap[area]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,jalurs:{}};
@@ -906,15 +912,17 @@ function renderContribExpandable(rows){
     const jalurs=[...jalurNames].map(jname=>{
       const jv=v.jalurs[jname]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0};
       const extKey=area+'||'+jname;
+      const extJalurV=extJalurMap[extKey]||{trips:0,cbm:0};
       const lt_int=jv.ltN>0?+(jv.ltS/jv.ltN).toFixed(2):null;
       const lt_ext=extLtByJalur[jname]?+(extLtByJalur[jname].reduce((s,v)=>s+v,0)/extLtByJalur[jname].length).toFixed(2):null;
       const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
-      return{name:jname,int:jv.int,ext:extJalurMap[extKey]||0,total:jv.int+(extJalurMap[extKey]||0),ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta};
+      return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta};
     }).sort((a,b)=>b.total-a.total);
     const lt_int_area=v.ltN>0?+(v.ltS/v.ltN).toFixed(2):null;
     const lt_ext_area=extLtByArea[area]||null;
     const lt_delta_area=lt_int_area!==null&&lt_ext_area!==null?+(lt_ext_area-lt_int_area).toFixed(2):null;
-    return{area,int:v.int,ext:extAreaMap[area]||0,total:v.int+(extAreaMap[area]||0),ci:v.ci,ce:v.ceCnt>0?v.ce:null,lt_int:lt_int_area,lt_ext:lt_ext_area,lt_delta:lt_delta_area,jalurs};
+    const extAreaV=extAreaMap[area]||{trips:0,cbm:0};
+    return{area,int:v.int,ext:extAreaV.trips,extCbm:extAreaV.cbm,total:v.int+extAreaV.trips,ci:v.ci,ce:v.ceCnt>0?v.ce:null,lt_int:lt_int_area,lt_ext:lt_ext_area,lt_delta:lt_delta_area,jalurs};
   }).sort((a,b)=>b.total-a.total);
 
   function fj(v){return v===null?'<span style="color:var(--muted)">—</span>':(v/1e6).toFixed(1);}
@@ -930,6 +938,10 @@ function renderContribExpandable(rows){
       <td style="text-align:right">${fmt(a.int)}</td><td style="text-align:right">${fmt(a.ext)}</td>
       <td style="text-align:right">${fmt(a.total)}</td>
       <td style="text-align:right"><span class="pill ${cls}">${p}%</span></td>
+      <td style="text-align:right;color:var(--blue);font-weight:600">${a.int>0?(a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0).toFixed(1):'—'}</td>
+      <td style="text-align:right;color:var(--muted)">${a.extCbm>0?a.extCbm.toFixed(1):'—'}</td>
+      <td style="text-align:right">${((a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0)+a.extCbm).toFixed(1)}</td>
+      ${(()=>{const tCbm=(a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0)+a.extCbm;const pCbm=tCbm>0?Math.round((a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0)/tCbm*100):0;const cls2=pCbm>=50?'phi':pCbm>=25?'pmi':pCbm>=10?'plo':'pvlo';return`<td style="text-align:right"><span class="pill ${cls2}">${pCbm}%</span></td>`;})()}
       <td style="text-align:right">${fj(a.ci)}</td><td style="text-align:right">${fj(a.ce)}</td>
       <td style="text-align:right">${savPct(a.ci,a.ce)}</td>
       <td style="text-align:right;color:var(--blue);font-weight:600">${a.lt_int!==null?a.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
@@ -945,6 +957,10 @@ function renderContribExpandable(rows){
         <td style="text-align:right">${j.ext>0?fmt(j.ext):'<span style="color:var(--muted)">—</span>'}</td>
         <td style="text-align:right">${fmt(j.total)}</td>
         <td style="text-align:right">${j.total>0?`<span class="pill ${jCls}">${jPct}%</span>`:'—'}</td>
+        <td style="text-align:right;color:var(--blue);font-weight:600">${j.intCbm>0?j.intCbm.toFixed(1):'—'}</td>
+        <td style="text-align:right;color:var(--muted)">${j.extCbm>0?j.extCbm.toFixed(1):'—'}</td>
+        <td style="text-align:right">${(j.intCbm+j.extCbm).toFixed(1)}</td>
+        ${(()=>{const tCbm=j.intCbm+j.extCbm;const pCbm=tCbm>0?Math.round(j.intCbm/tCbm*100):0;const cls2=pCbm>=50?'phi':pCbm>=25?'pmi':pCbm>=10?'plo':'pvlo';return`<td style="text-align:right">${tCbm>0?`<span class="pill ${cls2}">${pCbm}%</span>`:'—'}</td>`;})()}
         <td style="text-align:right">${fj(j.ci)}</td><td style="text-align:right">${fj(j.ce)}</td>
         <td style="text-align:right">${savPct(j.ci,j.ce)}</td>
         <td style="text-align:right;color:var(--blue);font-weight:600">${j.lt_int!==null?j.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
@@ -957,10 +973,11 @@ function renderContribExpandable(rows){
     <div class="card-title">Kontribusi Internal per Area
       <span class="card-badge">klik area untuk expand jalur</span>
     </div>
-    <div class="contrib-wrap"><table class="contrib-tbl" style="min-width:900px">
+    <div class="contrib-wrap"><table class="contrib-tbl" style="min-width:1100px">
       <thead><tr>
         <th style="min-width:160px;text-align:left">Area / Jalur</th>
         <th>INT Trip</th><th>EXT Trip</th><th>Total</th><th>% INT</th>
+        <th>INT CBM</th><th>EXT CBM</th><th>Total CBM</th><th>% CBM</th>
         <th>Cost Int (Jt)</th><th>Cost Ext (Jt)</th><th>Savings %</th>
         <th>LT Int (hr)</th><th>LT Ext (hr)</th><th>Δ SLA</th>
       </tr></thead>
