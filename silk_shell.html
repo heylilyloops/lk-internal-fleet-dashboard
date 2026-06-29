@@ -919,7 +919,7 @@ function renderContribExpandable(rows){
     const v=areaMap[area]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,jalurs:{}};
     const jalurNames=new Set([...Object.keys(v.jalurs),...efj.filter(e=>e.area===area).map(e=>e.jalur)]);
     const jalurs=[...jalurNames].map(jname=>{
-      const jv=v.jalurs[jname]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0};
+      const jv=v.jalurs[jname]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,intCbm:0,armadas:{}};
       const extKey=area+'||'+jname;
       const extJalurV=extJalurMap[extKey]||{trips:0,cbm:0};
       const lt_int=jv.ltN>0?+(jv.ltS/jv.ltN).toFixed(2):null;
