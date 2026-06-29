@@ -193,6 +193,9 @@ canvas{display:block}
 .toggle-ch.open{transform:rotate(90deg)}
 .row-jalur-g td{background:var(--surface)}.row-jalur-g td:first-child{padding-left:30px}
 .row-jalur-g:hover td{background:var(--bg)}.row-jalur-g.hidden{display:none}
+.row-armada-g td{background:#fafbff}.row-armada-g td:first-child{padding-left:52px}
+.row-armada-g:hover td{background:#f5f7fc}.row-armada-g.hidden{display:none}
+.armada-chip{background:#e8f0fe;color:#1e40af;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;display:inline-block}
 .jalur-chip{background:var(--border);color:var(--txt2);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;display:inline-block}
 
 /* MAP */
@@ -860,11 +863,17 @@ function renderContribExpandable(rows){
     areaMap[area].int++;areaMap[area].ci+=r[3]||0;
     if(r[4]){areaMap[area].ce+=r[4];areaMap[area].ceCnt++;}
     if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].ltS+=+r[10];areaMap[area].ltN++;}
-    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,intCbm:0};
+    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,intCbm:0,armadas:{}};
     areaMap[area].jalurs[jalur].int++;areaMap[area].jalurs[jalur].ci+=r[3]||0;
     if(r[4]){areaMap[area].jalurs[jalur].ce+=r[4];areaMap[area].jalurs[jalur].ceCnt++;}
     if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].jalurs[jalur].ltS+=+r[10];areaMap[area].jalurs[jalur].ltN++;}
     areaMap[area].jalurs[jalur].intCbm+=(r[9]||0);
+    const arm=r[5]||'Unknown';
+    if(!areaMap[area].jalurs[jalur].armadas[arm]) areaMap[area].jalurs[jalur].armadas[arm]={int:0,ci:0,ce:0,ceCnt:0,intCbm:0};
+    areaMap[area].jalurs[jalur].armadas[arm].int++;
+    areaMap[area].jalurs[jalur].armadas[arm].ci+=r[3]||0;
+    areaMap[area].jalurs[jalur].armadas[arm].intCbm+=(r[9]||0);
+    if(r[4]){areaMap[area].jalurs[jalur].armadas[arm].ce+=r[4];areaMap[area].jalurs[jalur].armadas[arm].ceCnt++;}
   });
 
   // Build EXT_LT lookup by area (avg of all jalurs in area) and by jalur
@@ -916,7 +925,8 @@ function renderContribExpandable(rows){
       const lt_int=jv.ltN>0?+(jv.ltS/jv.ltN).toFixed(2):null;
       const lt_ext=extLtByJalur[jname]?+(extLtByJalur[jname].reduce((s,v)=>s+v,0)/extLtByJalur[jname].length).toFixed(2):null;
       const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
-      return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta};
+      const armadaList=Object.entries(jv.armadas||{}).map(([arm,av])=>({arm,int:av.int,ci:av.ci,ce:av.ceCnt>0?av.ce:null,intCbm:av.intCbm||0})).sort((a,b)=>b.int-a.int);
+      return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta,armadas:armadaList};
     }).sort((a,b)=>b.total-a.total);
     const lt_int_area=v.ltN>0?+(v.ltS/v.ltN).toFixed(2):null;
     const lt_ext_area=extLtByArea[area]||null;
@@ -948,11 +958,13 @@ function renderContribExpandable(rows){
       <td style="text-align:right;color:var(--muted)">${a.lt_ext!==null?a.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
       <td style="text-align:right">${fltd(a.lt_delta)}</td>
     </tr>`;
-    a.jalurs.forEach(j=>{
+    a.jalurs.forEach((j,ji)=>{
       const jPct=j.total?Math.round(j.int/j.total*100):0;
       const jCls=jPct>=50?'phi':jPct>=25?'pmi':jPct>=10?'plo':'pvlo';
-      rows_html+=`<tr class="row-jalur-g hidden" data-cg="${ai}">
-        <td><span class="jalur-chip">${j.name}</span></td>
+      const jKey=`${ai}-${ji}`;
+      const hasArmada=j.armadas&&j.armadas.length>0;
+      rows_html+=`<tr class="row-jalur-g hidden" data-cg="${ai}" ${hasArmada?`onclick="toggleArmada('${jKey}')" style="cursor:pointer"`:''}">
+        <td><div class="area-cell-inner">${hasArmada?`<span class="toggle-ch" id="tcha-${jKey}">›</span>`:\'<span style="width:13px;display:inline-block"></span>\'}<span class="jalur-chip">${j.name}</span></div></td>
         <td style="text-align:right">${fmt(j.int)}</td>
         <td style="text-align:right">${j.ext>0?fmt(j.ext):'<span style="color:var(--muted)">—</span>'}</td>
         <td style="text-align:right">${fmt(j.total)}</td>
@@ -967,6 +979,27 @@ function renderContribExpandable(rows){
         <td style="text-align:right;color:var(--muted)">${j.lt_ext!==null?j.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
         <td style="text-align:right">${fltd(j.lt_delta)}</td>
       </tr>`;
+      // Armada sub-rows
+      if(hasArmada){
+        j.armadas.forEach(arm=>{
+          const aSavPct=arm.ce&&arm.ci?+((arm.ce-arm.ci)/arm.ci*100).toFixed(1):null;
+          rows_html+=`<tr class="row-armada-g hidden" data-ag="${jKey}">
+            <td><span class="armada-chip">${arm.arm}</span></td>
+            <td style="text-align:right;font-size:11px">${fmt(arm.int)}</td>
+            <td style="text-align:right;color:var(--muted);font-size:11px">—</td>
+            <td style="text-align:right;font-size:11px">${fmt(arm.int)}</td>
+            <td style="text-align:right">—</td>
+            <td style="text-align:right;color:var(--blue);font-size:11px">${arm.intCbm>0?arm.intCbm.toFixed(1):'—'}</td>
+            <td style="text-align:right;color:var(--muted);font-size:11px">—</td>
+            <td style="text-align:right;font-size:11px">${arm.intCbm>0?arm.intCbm.toFixed(1):'—'}</td>
+            <td>—</td>
+            <td style="text-align:right;color:var(--blue);font-size:11px">${fj(arm.ci)}</td>
+            <td style="text-align:right;color:var(--muted);font-size:11px">${arm.ce?fj(arm.ce):'—'}</td>
+            <td style="text-align:right;font-size:11px">${aSavPct!==null?`<span class="${aSavPct>=0?'pos':'neg'}">${aSavPct>=0?'+':''} ${aSavPct}%</span>`:'—'}</td>
+            <td colspan="3"></td>
+          </tr>`;
+        });
+      }
     });
   });
   return`<div class="card mb12">
@@ -989,6 +1022,20 @@ function renderContribExpandable(rows){
 function toggleContrib(ai){
   const rows=document.querySelectorAll('[data-cg="'+ai+'"]');
   const icon=document.getElementById('tch-'+ai);
+  const isOpen=icon.classList.contains('open');
+  rows.forEach(r=>r.classList.toggle('hidden',isOpen));
+  icon.classList.toggle('open',!isOpen);
+  // Close all armada rows when area closes
+  if(!isOpen===false){
+    document.querySelectorAll('.row-armada-g').forEach(r=>r.classList.add('hidden'));
+    document.querySelectorAll('.toggle-ch[id^="tcha-"]').forEach(i=>i.classList.remove('open'));
+  }
+}
+
+function toggleArmada(jKey){
+  const rows=document.querySelectorAll('[data-ag="'+jKey+'"]');
+  const icon=document.getElementById('tcha-'+jKey);
+  if(!icon) return;
   const isOpen=icon.classList.contains('open');
   rows.forEach(r=>r.classList.toggle('hidden',isOpen));
   icon.classList.toggle('open',!isOpen);
