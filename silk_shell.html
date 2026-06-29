@@ -963,6 +963,995 @@ function renderContribExpandable(rows){
       const jCls=jPct>=50?'phi':jPct>=25?'pmi':jPct>=10?'plo':'pvlo';
       const jKey=`${ai}-${ji}`;
       const hasArmada=j.armadas&&j.armadas.length>0;
+      const onclickAttr=hasArmada?' onclick="toggleArmada(\''+jKey+'\')" style="cursor:pointer"':'';
+      const toggleIcon=hasArmada?'<span class="toggle-ch" id="tcha-'+jKey+'">›</span>':'<span style="width:13px;display:inline-block"></span>';
+      const jPctHtml=j.total>0?'<span class="pill '+jCls+'">'+jPct+'%</span>':'—';
+      const jCbmTotal=j.intCbm+j.extCbm;
+      const jPctCbm=jCbmTotal>0?Math.round(j.intCbm/jCbmTotal*100):0;
+      const jCbmCls=jPctCbm>=50?'phi':jPctCbm>=25?'pmi':jPctCbm>=10?'plo':'pvlo';
+      const jCbmPill=jCbmTotal>0?'<span class="pill '+jCbmCls+'">'+jPctCbm+'%</span>':'—';
+      rows_html+='<tr class="row-jalur-g hidden" data-cg="'+ai+'"'+onclickAttr+'>'
+        +'<td><div class="area-cell-inner">'+toggleIcon+'<span class="jalur-chip">'+j.name+'</span></div></td>'
+        +'<td style="text-align:right">'+fmt(j.int)+'</td>'
+        +'<td style="text-align:right">'+(j.ext>0?fmt(j.ext):'<span style="color:var(--muted)">—</span>')+'</td>'
+        +'<td style="text-align:right">'+fmt(j.total)+'</td>'
+        +'<td style="text-align:right">'+jPctHtml+'</td>'
+        +'<td style="text-align:right;color:var(--blue);font-weight:600">'+(j.intCbm>0?j.intCbm.toFixed(1):'—')+'</td>'
+        +'<td style="text-align:right;color:var(--muted)">'+(j.extCbm>0?j.extCbm.toFixed(1):'—')+'</td>'
+        +'<td style="text-align:right">'+jCbmTotal.toFixed(1)+'</td>'
+        +'<td style="text-align:right">'+jCbmPill+'</td>'
+        +'<td style="text-align:right">'+fj(j.ci)+'</td>'
+        +'<td style="text-align:right">'+fj(j.ce)+'</td>'
+        +'<td style="text-align:right">'+savPct(j.ci,j.ce)+'</td>'
+        +'<td style="text-align:right;color:var(--blue);font-weight:600">'+(j.lt_int!==null?j.lt_int:'<span style="color:var(--muted)">—</span>')+'</td>'
+        +'<td style="text-align:right;color:var(--muted)">'+(j.lt_ext!==null?j.lt_ext:'<span style="color:var(--muted)">—</span>')+'</td>'
+        +'<td style="text-align:right">'+fltd(j.lt_delta)+'</td>'
+        +'</tr>';
+l>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SILK — Support Delivery LK Internal Fleet NDC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sw:220px;
+  --navy:#0b1c36;--navy2:#112240;
+  --blue:#266CA9;--blue2:#1d5a91;
+  --bg:#f0f4f9;--surface:#fff;
+  --muted:#637d9a;--border:#dce6f0;--border2:#c5d8ec;
+  --txt:#0d2137;--txt2:#3a5472;
+  --teal:#00c49a;--orange:#f5a623;--cyan:#5ba4f5;
+  --green:#22a06b;--red:#e24b4b;--yellow:#f59e0b;--purple:#8b6cf7;
+  --font:'Helvetica Neue',Helvetica,Arial,sans-serif;
+  --mono:'Courier New',Courier,monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);display:flex;height:100vh;overflow:hidden;font-size:13px}
+
+/* SIDEBAR */
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;height:100vh;overflow-y:auto}
+.sb::-webkit-scrollbar{width:3px}.sb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.sb-logo{padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.sb-icon{width:32px;height:32px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;letter-spacing:-.5px;flex-shrink:0}
+.sb-brand-name{font-size:12px;font-weight:700;color:#fff;letter-spacing:.2px}
+.sb-brand-sub{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;margin-top:1px;line-height:1.4}
+.sb-section{padding:14px 14px 5px;font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.2px}
+.sb-menu-item{display:flex;align-items:center;gap:9px;padding:9px 14px;cursor:pointer;color:rgba(255,255,255,.5);font-size:12px;font-weight:500;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all .15s}
+.sb-menu-item:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.05)}
+.sb-menu-item.active{color:#fff;background:rgba(38,108,169,.25);border-left-color:var(--blue)}
+.sb-menu-icon{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.sb-site-item{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;color:rgba(255,255,255,.45);font-size:11.5px;font-weight:400;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all .15s}
+.sb-site-item:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.04)}
+.sb-site-item.active{color:#fff;background:rgba(255,255,255,.07);border-left-color:var(--blue)}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sb-badge{margin-left:auto;font-size:9.5px;padding:1px 6px;border-radius:8px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.35)}
+.sb-site-item.active .sb-badge{background:rgba(38,108,169,.35);color:rgba(255,255,255,.75)}
+.sb-divider{height:1px;background:rgba(255,255,255,.06);margin:5px 12px}
+.sb-info{padding:10px 14px 14px;font-size:10px;color:rgba(255,255,255,.2);line-height:1.7;margin-top:auto}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px}
+.topbar-title{font-size:14px;font-weight:700;color:var(--txt);letter-spacing:-.2px}
+.topbar-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:6px}
+.chip{background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:4px 10px;font-size:11px;color:var(--txt2);font-weight:500;white-space:nowrap}
+.chip.hi{background:#dcfff4;border-color:#86efcb;color:#065f46}
+.chip.lo{background:#fff1f2;border-color:#fca5a5;color:#991b1b}
+.chip.neu{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+
+/* DATE BAR */
+.date-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:7px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+.date-label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+.date-inputs{display:flex;align-items:center;gap:6px}
+.date-input-wrap{display:flex;flex-direction:column;gap:2px}
+.date-input-wrap label{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+input[type=date]{background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--txt);font-family:var(--font);cursor:pointer;outline:none;font-weight:400}
+input[type=date]:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(38,108,169,.15)}
+.date-sep{font-size:11px;color:var(--muted);padding:0 2px;margin-top:12px}
+.date-quick{display:flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px}
+.dq{padding:3px 9px;border-radius:5px;font-size:11px;cursor:pointer;color:var(--muted);font-weight:500;border:none;background:transparent;transition:all .14s;white-space:nowrap}
+.dq:hover{color:var(--txt);background:rgba(0,0,0,.04)}
+.dq.active{background:var(--surface);color:var(--blue);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.date-count{font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.date-count b{color:var(--txt2)}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:16px 20px 28px}
+.content::-webkit-scrollbar{width:5px}.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
+.card-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-badge{font-size:9px;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
+.mb12{margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;position:relative;overflow:hidden;transition:box-shadow .15s}
+.kpi:hover{box-shadow:0 2px 12px rgba(38,108,169,.1)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.c-blue::before{background:var(--blue)}.kpi.c-teal::before{background:var(--teal)}
+.kpi.c-orange::before{background:var(--orange)}.kpi.c-purple::before{background:var(--purple)}
+.kpi.c-green::before{background:var(--green)}.kpi.c-red::before{background:var(--red)}
+.kpi.c-cyan::before{background:var(--cyan)}.kpi.c-yellow::before{background:var(--yellow)}
+.kpi-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:700}
+.kpi-value{font-size:22px;font-weight:700;color:var(--txt);line-height:1;letter-spacing:-.5px}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* STATUS PILLS */
+.status-pill{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block;white-space:nowrap}
+.sp-ideal{background:#dcfff4;color:#065f46}
+.sp-worth{background:#eff6ff;color:#1d4ed8}
+.sp-review{background:#fff7ed;color:#92400e}
+.sp-eval{background:#fff1f2;color:#991b1b}
+.sp-nodata{background:var(--bg);color:var(--muted)}
+
+/* SCORECARD TABLE */
+.sc-wrap{overflow-x:auto}
+.sc-table{width:100%;border-collapse:collapse;min-width:720px}
+.sc-table th{font-size:9px;color:var(--muted);text-transform:uppercase;padding:6px 10px;text-align:right;border-bottom:2px solid var(--border);font-weight:700;background:var(--bg);white-space:nowrap}
+.sc-table th:first-child{text-align:left}
+.sc-table td{padding:8px 10px;border-bottom:1px solid #f0f4f9;vertical-align:middle}
+.sc-table tr:last-child td{border-bottom:none}
+.sc-table tr:hover td{background:#fafbfd}
+.sc-jalur{font-weight:700;font-size:12px;color:var(--txt)}
+.sc-area{font-size:10px;color:var(--muted);margin-top:1px}
+.sc-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:4px;width:70px}
+.sc-bar-fill{height:3px;border-radius:2px}
+.scv{font-size:11.5px;text-align:right}
+.scv.int{color:var(--blue);font-weight:700}
+.scv.ext{color:var(--muted)}
+.sc-pos{font-size:11px;color:var(--green);font-weight:700;text-align:right}
+.sc-neg{font-size:11px;color:var(--red);font-weight:700;text-align:right}
+.sc-neu{font-size:11px;color:var(--muted);text-align:right}
+
+/* ALERT */
+.alert-banner{border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px}
+.alert-banner.eval{background:#fff1f2;border:1px solid #fca5a5}
+.alert-banner.mon{background:#fff7ed;border:1px solid #fed7aa}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.alert-content{flex:1}
+.alert-title{font-size:11px;font-weight:700;color:#991b1b;margin-bottom:4px}
+.alert-banner.mon .alert-title{color:#92400e}
+.alert-items{display:flex;flex-wrap:wrap;gap:5px}
+.alert-tag{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:500}
+.alert-tag.kritis{background:#fee2e2;color:#991b1b}
+.alert-tag.warning{background:#ffedd5;color:#92400e}
+
+/* INSIGHT */
+.insight-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.insight-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px}
+.insight-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.insight-body{flex:1}
+.insight-title{font-size:12px;font-weight:700;color:var(--txt);margin-bottom:3px}
+.insight-desc{font-size:11px;color:var(--txt2);line-height:1.55}
+.insight-tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+.it-pos{background:#dcfff4;color:#065f46}
+.it-neg{background:#fff1f2;color:#991b1b}
+.it-neu{background:#eff6ff;color:#1d4ed8}
+.it-warn{background:#fff7ed;color:#92400e}
+
+/* COVERAGE */
+.cov-area-item{background:var(--bg);border-radius:8px;padding:10px 12px}
+.cov-area-bar-track{height:4px;background:var(--border2);border-radius:2px;margin:5px 0}
+.cov-area-bar-fill{height:4px;border-radius:2px}
+
+/* OOS */
+.oos-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:11px;padding:14px 16px}
+.oos-area-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f5f7fa;font-size:11px}
+.oos-area-row:last-child{border-bottom:none}
+
+/* MISC */
+.mono{font-size:11px}
+.pos{color:var(--green);font-weight:700}.neg{color:var(--red);font-weight:700}
+.pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:9px;display:inline-block}
+.phi{background:#dbeeff;color:#1e40af}.pmi{background:#dcfce7;color:#166534}
+.plo{background:#fff7ed;color:#92400e}.pvlo{background:#fff1f2;color:#991b1b}
+.no-data{padding:40px;text-align:center;color:var(--muted);font-size:12px}
+canvas{display:block}
+.leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.ls{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* MOM TABLE */
+.mom-table{width:100%;border-collapse:collapse;font-size:12px}
+.mom-table th{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 8px;text-align:right;border-bottom:1px solid var(--border);font-weight:700}
+.mom-table th:first-child{text-align:left}
+.mom-table td{padding:7px 8px;border-bottom:1px solid #f0f4f9;vertical-align:middle}
+.mom-table tr:last-child td{border-bottom:none}
+.mom-table tr:hover td{background:var(--bg)}
+
+/* CONTRIB TABLE */
+.contrib-wrap{overflow-x:auto}
+.contrib-tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:680px}
+.contrib-tbl th{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:5px 10px;text-align:right;border-bottom:1px solid var(--border);font-weight:700;white-space:nowrap;background:var(--bg)}
+.contrib-tbl th:first-child{text-align:left}
+.contrib-tbl td{padding:6px 10px;border-bottom:.5px solid #f0f4f9;vertical-align:middle}
+.row-area-g{cursor:pointer}.row-area-g td{background:var(--bg);font-weight:700}
+.row-area-g:hover td{filter:brightness(.97)}
+.area-cell-inner{display:flex;align-items:center;gap:8px}
+.toggle-ch{font-size:13px;color:var(--muted);transition:transform .18s;display:inline-block;line-height:1;flex-shrink:0}
+.toggle-ch.open{transform:rotate(90deg)}
+.row-jalur-g td{background:var(--surface)}.row-jalur-g td:first-child{padding-left:30px}
+.row-jalur-g:hover td{background:var(--bg)}.row-jalur-g.hidden{display:none}
+.row-armada-g td{background:#fafbff}.row-armada-g td:first-child{padding-left:52px}
+.row-armada-g:hover td{background:#f5f7fc}.row-armada-g.hidden{display:none}
+.armada-chip{background:#e8f0fe;color:#1e40af;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;display:inline-block}
+.jalur-chip{background:var(--border);color:var(--txt2);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;display:inline-block}
+
+/* MAP */
+#silk-map{height:calc(100vh - 165px);min-height:500px;border-radius:10px;z-index:1}
+.map-wrap{border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.map-legend-bar{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.map-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt2);font-weight:500}
+.map-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.leaflet-popup-content-wrapper{border-radius:10px!important;box-shadow:0 4px 20px rgba(0,0,0,.15)!important;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important}
+.leaflet-popup-content{font-size:12px!important;line-height:1.5!important;margin:10px 14px!important}
+.popup-jalur{font-weight:700;font-size:13px;color:#0d2137;margin-bottom:2px}
+.popup-area{font-size:10px;color:#637d9a;margin-bottom:8px}
+.popup-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;font-size:11px}
+.popup-label{color:#637d9a}.popup-val{font-weight:600;color:#0d2137}
+.popup-status{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-top:6px}
+.popup-site{display:inline-block;font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;margin-bottom:6px;color:#fff}
+
+@media(max-width:900px){.kpi-row,.grid4{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="sb-icon">SILK</div>
+    <div>
+      <div class="sb-brand-name">SILK Dashboard</div>
+      <div class="sb-brand-sub">Internal Fleet NDC · Corp</div>
+    </div>
+  </div>
+
+  <div class="sb-section">Menu</div>
+  <button class="sb-menu-item active" onclick="setMenu('overview')">
+    <span class="sb-menu-icon">📊</span>Overview
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('coverage')">
+    <span class="sb-menu-icon">🗺️</span>Coverage
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('sebaran')">
+    <span class="sb-menu-icon">📍</span>Sebaran
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('insight')">
+    <span class="sb-menu-icon">💡</span>Insight
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('slide')">
+    <span class="sb-menu-icon">📑</span>Slide
+  </button>
+  <button class="sb-menu-item" onclick="setMenu('costanalysis')">
+    <span class="sb-menu-icon">💰</span>Cost Analysis
+  </button>
+
+  <div class="sb-divider"></div>
+  <div class="sb-section">NDC Sites</div>
+  <button class="sb-site-item active" data-site="all" onclick="navTo('all')">
+    <span class="sb-dot" style="background:#266CA9"></span>Semua NDC
+    <span class="sb-badge" id="badge-all">—</span>
+  </button>
+  <button class="sb-site-item" data-site="AHI Jababeka" onclick="navTo('AHI Jababeka')">
+    <span class="sb-dot" style="background:#f5a623"></span>AHI Jababeka
+    <span class="sb-badge" id="badge-AHI Jababeka">—</span>
+  </button>
+  <button class="sb-site-item" data-site="HCI Jababeka" onclick="navTo('HCI Jababeka')">
+    <span class="sb-dot" style="background:#5ba4f5"></span>HCI Jababeka
+    <span class="sb-badge" id="badge-HCI Jababeka">—</span>
+  </button>
+  <button class="sb-site-item" data-site="HCI Cikupa" onclick="navTo('HCI Cikupa')">
+    <span class="sb-dot" style="background:#00c49a"></span>HCI Cikupa
+    <span class="sb-badge" id="badge-HCI Cikupa">—</span>
+  </button>
+  <button class="sb-site-item" data-site="Corp Sidoarjo" onclick="navTo('Corp Sidoarjo')">
+    <span class="sb-dot" style="background:#8b6cf7"></span>Corp Sidoarjo
+    <span class="sb-badge" id="badge-Corp Sidoarjo">—</span>
+  </button>
+
+  <div class="sb-divider"></div>
+  <div class="sb-section">RDC Sites</div>
+  <button class="sb-site-item" data-site="Corp Tamora" onclick="navTo('Corp Tamora')">
+    <span class="sb-dot" style="background:#e879f9"></span>Corp Tamora
+    <span class="sb-badge" id="badge-Corp Tamora">—</span>
+  </button>
+  <button class="sb-site-item" data-site="Corp Tallo" onclick="navTo('Corp Tallo')">
+    <span class="sb-dot" style="background:#fb923c"></span>Corp Tallo
+    <span class="sb-badge" id="badge-Corp Tallo">—</span>
+  </button>
+
+  <div class="sb-info">
+    Data: Jan–Jun 2026<br>
+    Raw: <span id="infoRows">—</span> trips<br>
+    <span style="color:rgba(255,255,255,.1)">v3.0 · Kawan Lama Group</span>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="mainTitle">Overview — Semua NDC</div>
+      <div class="topbar-sub" id="mainSub">Monitoring armada internal luar kota</div>
+    </div>
+    <div class="topbar-right">
+      <span class="chip neu" id="chipTrip">—</span>
+      <span class="chip" id="chipPct">—</span>
+      <span class="chip" id="chipSav">—</span>
+      <span class="chip neu" id="chipSLA">—</span>
+    </div>
+  </div>
+
+  <div class="date-bar">
+    <div class="date-label">Delivery Date</div>
+    <div class="date-inputs">
+      <div class="date-input-wrap"><label>Dari</label><input type="date" id="dateFrom" onchange="onDateChange()"></div>
+      <div class="date-sep">→</div>
+      <div class="date-input-wrap"><label>Sampai</label><input type="date" id="dateTo" onchange="onDateChange()"></div>
+    </div>
+    <div class="date-quick" id="quickBtns"></div>
+    <div class="date-count" id="dateCount"></div>
+  </div>
+
+  <div class="content" id="content"></div>
+</div>
+
+<script>
+__DATA_BLOCK__
+
+const NDC=['AHI Jababeka','HCI Jababeka','HCI Cikupa','Corp Sidoarjo'];
+const RDC=['Corp Tamora','Corp Tallo'];
+const ALL_SITES=[...NDC,...RDC];
+const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7','Corp Tamora':'#e879f9','Corp Tallo':'#fb923c'};
+const SSHORT={'AHI Jababeka':'AHI Jababeka','HCI Jababeka':'HCI Jababeka','HCI Cikupa':'HCI Cikupa','Corp Sidoarjo':'Corp Sidoarjo','Corp Tamora':'Corp Tamora','Corp Tallo':'Corp Tallo'};
+const ACOLS=['#1a3a5c','#266CA9','#4a90c4','#6aadde','#a8cde8'];
+const CGREEN='var(--green)',CRED='var(--red)';
+const DAY_LABELS=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+const SAVING_SCOPE={
+  'AHI Jababeka':['Jawa Barat','Lampung'],
+  'HCI Jababeka':['Jawa Barat','Lampung'],
+  'HCI Cikupa':  ['Jawa Barat','Lampung'],
+  'Corp Sidoarjo':['Jawa Timur'],
+  'Corp Tamora':  ['Sumatera Utara'],
+  'Corp Tallo':   ['Sulawesi Selatan']
+};
+// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa]
+//        0    1    2    3  4    5      6         7      8   9   10   11   12   13
+
+let activeSite='all', activeMenu='overview', CH={};
+let dateFrom='', dateTo='';
+
+// HELPERS
+function fmt(n){return Math.round(n).toLocaleString('id-ID')}
+function fmtJt(n){const a=Math.abs(n);return(n<0?'-':'')+(a>=1e9?(a/1e9).toFixed(2)+' M':(a>=1e6?(a/1e6).toFixed(1)+' Jt':(a/1e3).toFixed(0)+' Rb'))}
+function fmtM(v){return fmtJt(v)}
+function pc(p){return p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'}
+function dc(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
+function isScopeRow(r){const s=SAVING_SCOPE[r[0]];return s?s.includes(r[1]):false;}
+
+function getRows(){
+  let rows=RAW;
+  if(activeSite!=='all') rows=rows.filter(r=>r[0]===activeSite);
+  if(dateFrom) rows=rows.filter(r=>r[7]>=dateFrom);
+  if(dateTo)   rows=rows.filter(r=>r[7]<=dateTo);
+  return rows;
+}
+
+function calcKpi(rows){
+  const tCI=rows.reduce((s,r)=>s+(r[3]||0),0);
+  const tCE=rows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
+  const tDO=rows.reduce((s,r)=>s+(r[8]||0),0);
+  const tCBM=rows.reduce((s,r)=>s+(r[9]||0),0);
+  const scopeRows=rows.filter(r=>isScopeRow(r));
+  const tCI_s=scopeRows.reduce((s,r)=>s+(r[3]||0),0);
+  const tCE_s=scopeRows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
+  return{trips:rows.length,tCI,tCE,tDO,tCBM,sav:tCE_s-tCI_s,tCI_s,tCE_s};
+}
+
+function calcContrib(rows){
+  const intMap={};
+  rows.forEach(r=>{if(!intMap[r[1]]) intMap[r[1]]=0;intMap[r[1]]++;});
+  let ef=EXT_AGG;
+  if(activeSite!=='all') ef=ef.filter(e=>e.site===activeSite);
+  if(dateFrom) ef=ef.filter(e=>e.date>=dateFrom);
+  if(dateTo)   ef=ef.filter(e=>e.date<=dateTo);
+  const extMap={};
+  ef.forEach(e=>{extMap[e.area]=(extMap[e.area]||0)+e.trips;});
+  const areas=new Set([...Object.keys(intMap),...Object.keys(extMap)]);
+  return[...areas].map(a=>({area:a,int:intMap[a]||0,ext:extMap[a]||0,total:(intMap[a]||0)+(extMap[a]||0)})).sort((a,b)=>b.total-a.total);
+}
+
+function calcJalur(rows,site){
+  const map={};
+  const scopeAreas=SAVING_SCOPE[site]||[];
+  rows.forEach(r=>{
+    const k=r[2];
+    if(!map[k]) map[k]={j:r[2],area:r[1],t:0,ci:0,ce:0,ceC:0,ltS:0,ltN:0,inScope:scopeAreas.includes(r[1])};
+    map[k].t++;map[k].ci+=r[3]||0;map[k].ce+=r[4]||0;
+    if(r[4]) map[k].ceC++;
+    if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){map[k].ltS+=+r[10];map[k].ltN++;}
+  });
+  return Object.values(map).map(j=>{
+    const ci=j.ci/1e6, ce=j.ceC>0?j.ce/1e6:null;
+    const gap=ce!==null?+(ce-ci).toFixed(1):null;
+    const pct_ef=ce&&ci?+((ce-ci)/ci*100).toFixed(1):null;
+    const alert=j.inScope&&pct_ef!==null?(pct_ef<-15?'kritis':pct_ef<0?'warning':null):null;
+    const lt_int=j.ltN>0?+(j.ltS/j.ltN).toFixed(2):null;
+    const extLT=(typeof EXT_LT!=='undefined'?EXT_LT:[]).find(e=>e.site===site&&e.jalur===j.j);
+    const lt_ext=extLT?extLT.avg_lt:null;
+    const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
+    let status='nodata';
+    if(pct_ef!==null&&lt_delta!==null){
+      const cheaper=pct_ef>=0,faster=lt_delta>=0;
+      if(cheaper&&faster) status='worthit';
+      else if(!cheaper&&!faster) status='eval';
+      else status='review';
+    } else if(pct_ef!==null){
+      status=pct_ef>=0?'worthit':'eval';
+    }
+    return{j:j.j,area:j.area,t:j.t,ci:+ci.toFixed(1),ce:ce!==null?+ce.toFixed(1):null,gap,pct_ef,alert,inScope:j.inScope,lt_int,lt_ext,lt_delta,status};
+  }).sort((a,b)=>b.t-a.t);
+}
+
+function calcSLAAvg(rows){
+  const sitesToUse=activeSite==='all'?ALL_SITES:[activeSite];
+  let total=0,cnt=0;
+  sitesToUse.forEach(s=>{
+    calcJalur(rows.filter(r=>r[0]===s),s).forEach(j=>{
+      if(j.lt_delta!==null){total+=j.lt_delta;cnt++;}
+    });
+  });
+  return cnt>0?+(total/cnt).toFixed(2):null;
+}
+
+function calcOutOfScope(rows){
+  const result={};
+  ALL_SITES.forEach(s=>{
+    const scope=SAVING_SCOPE[s]||[];
+    const oos=rows.filter(r=>r[0]===s&&!scope.includes(r[1]));
+    if(!oos.length){result[s]=null;return;}
+    const areaMap={};
+    oos.forEach(r=>{if(!areaMap[r[1]]) areaMap[r[1]]={trips:0,ci:0};areaMap[r[1]].trips++;areaMap[r[1]].ci+=r[3]||0;});
+    result[s]={total:oos.length,ci:oos.reduce((s,r)=>s+(r[3]||0),0),areas:Object.entries(areaMap).sort((a,b)=>b[1].trips-a[1].trips)};
+  });
+  return result;
+}
+
+function getScopeLabel(){
+  if(activeSite==='all') return 'Jabar+Lampung (JKT) · Jatim (SDJ)';
+  const sc=SAVING_SCOPE[activeSite];
+  return sc?sc.join(' + '):'semua area';
+}
+
+// NAVIGATION
+function setMenu(menu){
+  activeMenu=menu;
+  document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
+  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5};
+  const btns=document.querySelectorAll('.sb-menu-item');
+  if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
+  render();
+}
+
+function navTo(s){
+  activeSite=s;
+  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.toggle('active',el.dataset.site===s));
+  render();
+}
+
+// DATE
+function initDateRange(){
+  const dates=RAW.map(r=>r[7]).sort();
+  const minD=dates[0],maxD=dates[dates.length-1];
+  dateFrom=minD;dateTo=maxD;
+  ['dateFrom','dateTo'].forEach(id=>{document.getElementById(id).min=minD;document.getElementById(id).max=maxD;});
+  document.getElementById('dateFrom').value=minD;
+  document.getElementById('dateTo').value=maxD;
+  document.getElementById('infoRows').textContent=RAW.length.toLocaleString('id-ID');
+  buildQuickBtns(minD,maxD);
+}
+
+function buildQuickBtns(minD,maxD){
+  const months=[...new Set(RAW.map(r=>r[7].slice(0,7)))].sort();
+  const MNAMES={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'Mei','06':'Jun'};
+  const today=new Date().toISOString().slice(0,10);
+  const curMonth=today.slice(0,7);
+  const mtdFirst=curMonth+'-01';
+  let html=`<button class="dq active" id="dq-all" onclick="setQuick('all','${minD}','${maxD}')">Semua</button>`;
+  html+=`<button class="dq" id="dq-mtd" onclick="setQuick('mtd','${mtdFirst}','${today}')">MTD</button>`;
+  months.forEach(m=>{
+    const[yr,mo]=m.split('-');
+    const label=MNAMES[mo]||mo;
+    const first=m+'-01';
+    const last=new Date(+yr,+mo,0).toISOString().slice(0,10);
+    html+=`<button class="dq" id="dq-${m}" onclick="setQuick('${m}','${first}','${last}')">${label}</button>`;
+  });
+  document.getElementById('quickBtns').innerHTML=html;
+}
+
+function setQuick(key,from,to){
+  dateFrom=from;dateTo=to;
+  document.getElementById('dateFrom').value=from;
+  document.getElementById('dateTo').value=to;
+  document.querySelectorAll('.dq').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('dq-'+key);if(btn) btn.classList.add('active');
+  render();
+}
+function onDateChange(){
+  dateFrom=document.getElementById('dateFrom').value;
+  dateTo=document.getElementById('dateTo').value;
+  document.querySelectorAll('.dq').forEach(b=>b.classList.remove('active'));
+  render();
+}
+
+// MAIN RENDER
+function render(){
+  const rows=getRows();
+  const kpi=calcKpi(rows);
+  const contrib=calcContrib(rows);
+  const tInt=contrib.reduce((s,r)=>s+r.int,0);
+  const tAll=contrib.reduce((s,r)=>s+r.total,0);
+  const pct=tAll?Math.round(tInt/tAll*100):0;
+  const slaAvg=calcSLAAvg(rows);
+  const sav=kpi.sav;
+
+  const menuLabels={overview:'Overview',coverage:'Coverage',insight:'Insight'};
+  document.getElementById('mainTitle').textContent=(activeSite==='all'?'Semua NDC':activeSite)+' — '+menuLabels[activeMenu];
+  const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
+  const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
+  document.getElementById('mainSub').textContent=`${dFrom} – ${dTo} · Armada internal luar kota`;
+  document.getElementById('chipTrip').textContent=fmt(rows.length)+' trip';
+  document.getElementById('chipPct').textContent=pct+'% internal';
+  document.getElementById('chipPct').className='chip '+(pct>=30?'hi':pct>=15?'neu':'lo');
+  document.getElementById('chipSav').textContent=(sav>=0?'Hemat ':'Lebih mahal ')+fmtM(Math.abs(sav));
+  document.getElementById('chipSav').className='chip '+(sav>=0?'hi':'lo');
+  document.getElementById('chipSLA').textContent=slaAvg!==null?(slaAvg>=0?'Unggul +'+slaAvg+' hr':'Unggul '+slaAvg+' hr'):'Unggul —';
+  document.getElementById('chipSLA').className='chip '+(slaAvg!==null&&slaAvg>0?'hi':'neu');
+  document.getElementById('dateCount').innerHTML=`Filter: <b>${rows.length.toLocaleString('id-ID')}</b> trip · <b>${dateFrom}</b> s/d <b>${dateTo}</b>`;
+
+  ALL_SITES.forEach(s=>{
+    const sr=RAW.filter(r=>r[0]===s&&r[7]>=dateFrom&&r[7]<=dateTo);
+    const el=document.getElementById('badge-'+s);if(el) el.textContent=sr.length||'—';
+  });
+  const elAll=document.getElementById('badge-all');
+  if(elAll) elAll.textContent=RAW.filter(r=>r[7]>=dateFrom&&r[7]<=dateTo).length||'—';
+
+  if(rows.length===0){document.getElementById('content').innerHTML=`<div class="no-data">Tidak ada data untuk range tanggal yang dipilih.</div>`;return;}
+
+  if(activeMenu==='overview') renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
+  else if(activeMenu==='coverage') renderCoverage(rows,contrib,tInt,tAll,pct);
+  else if(activeMenu==='sebaran') renderSebaran(rows);
+  else if(activeMenu==='insight') renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
+  else if(activeMenu==='slide') renderSlide(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
+  else if(activeMenu==='costanalysis') renderCostAnalysis(rows);
+}
+
+// ── OVERVIEW ─────────────────────────────────────────────────────
+function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
+  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
+  const scopeLabel=getScopeLabel();
+  const cpdo=kpi.tDO>0?kpi.tCI/kpi.tDO:0;
+
+  // 1. KPI Row
+  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(7,1fr)">
+    <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi</div></div>
+    <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label">Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
+    <div class="kpi c-teal"><div class="kpi-label">Keunggulan Pengiriman</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
+    <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
+    ${(()=>{
+      const tUJP=rows.reduce((s,r)=>s+(r[11]||0),0);
+      const tMPP=rows.reduce((s,r)=>s+(r[12]||0),0);
+      const tSewa=rows.reduce((s,r)=>s+(r[13]||0),0);
+      const tArm=tUJP+tMPP+tSewa||1;
+      const pUJP=+(tUJP/tArm*100).toFixed(1);
+      const pMPP=+(tMPP/tArm*100).toFixed(1);
+      const pSewa=+(tSewa/tArm*100).toFixed(1);
+      return`<div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${pUJP}% dari Total Cost Armada</div></div>
+    <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${pMPP}% dari Total Cost Armada</div></div>
+    <div class="kpi c-purple"><div class="kpi-label">Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${pSewa}% dari Total Cost Armada</div></div>`;
+    })()}
+  </div>`;
+
+  // 2. Alert banners
+  const jalurAll=activeSite==='all'
+    ?ALL_SITES.flatMap(s=>calcJalur(rows.filter(r=>r[0]===s),s).map(j=>({...j,site:s})))
+    :calcJalur(rows,activeSite).map(j=>({...j,site:activeSite}));
+  const kritis=jalurAll.filter(j=>j.alert==='kritis');
+  const warn=jalurAll.filter(j=>j.alert==='warning');
+  let alertHTML='';
+  if(kritis.length) alertHTML+=`<div class="alert-banner eval"><span class="alert-icon">🔴</span><div class="alert-content"><div class="alert-title">EVALUASI — Cost internal >15% di atas benchmark eksternal</div><div class="alert-items">${kritis.map(j=>`<span class="alert-tag kritis">${SSHORT[j.site]} · ${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
+  if(warn.length) alertHTML+=`<div class="alert-banner mon"><span class="alert-icon">🟡</span><div class="alert-content"><div class="alert-title">MONITORING — Cost internal melebihi benchmark eksternal</div><div class="alert-items">${warn.map(j=>`<span class="alert-tag warning">${SSHORT[j.site]} · ${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
+
+  // 3. Site cards
+  let siteHTML=`<div class="grid4" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    if(!sr.length){siteHTML+=`<div class="card"><div style="color:${SCOL[s]};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">${SSHORT[s]}</div><div class="no-data" style="padding:12px 0;font-size:11px">No data</div></div>`;return;}
+    const sk=calcKpi(sr);
+    const scopeAreas_s=SAVING_SCOPE[s]||[];
+    // Kontribusi hanya scope area
+    const si=sr.filter(r=>scopeAreas_s.includes(r[1])).length;
+    let extScope=EXT_AGG.filter(e=>e.site===s&&scopeAreas_s.includes(e.area));
+    if(dateFrom) extScope=extScope.filter(e=>e.date>=dateFrom);
+    if(dateTo)   extScope=extScope.filter(e=>e.date<=dateTo);
+    const extScopeTrips=extScope.reduce((s,e)=>s+e.trips,0);
+    const sa=si+extScopeTrips;
+    const sp=sa?Math.round(si/sa*100):0;
+    const sc=calcContrib(sr);
+    const jalurs=calcJalur(sr,s);
+    const critC=jalurs.filter(j=>j.alert==='kritis').length;
+    const warnC=jalurs.filter(j=>j.alert==='warning').length;
+    const slaD=jalurs.filter(j=>j.lt_delta!==null);
+    const slaS=slaD.length?+(slaD.reduce((a,j)=>a+j.lt_delta,0)/slaD.length).toFixed(2):null;
+    const pctCls=sp>=30?'background:#dcfff4;color:#065f46':sp>=15?'background:#eff6ff;color:#1d4ed8':'background:#fff1f2;color:#991b1b';
+    const alertBadge=critC?`<span class="status-pill sp-eval" style="font-size:9px">${critC} EVALUASI</span>`:warnC?`<span class="status-pill sp-review" style="font-size:9px">${warnC} MONITORING</span>`:'';
+    siteHTML+=`<div class="card" style="border-top:3px solid ${SCOL[s]}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${SCOL[s]}">${SSHORT[s]}</div>
+          <div style="font-size:20px;font-weight:700;color:var(--txt);margin-top:2px;letter-spacing:-.3px">${fmt(sr.length)}<span style="font-size:13px;color:var(--muted);font-weight:500">/${fmt(sa)}</span></div>
+          <div style="font-size:10px;color:var(--muted)">trip internal / total</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:700;padding:4px 10px;border-radius:8px;${pctCls}">${sp}%</div>
+          <div style="margin-top:4px">${alertBadge}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <div style="background:var(--bg);border-radius:7px;padding:8px 10px">
+          <div style="color:var(--muted);font-size:9px;text-transform:uppercase;font-weight:700;letter-spacing:.4px;margin-bottom:3px">Savings</div>
+          <div style="font-weight:700;color:${sk.sav>=0?CGREEN:CRED};font-size:12px">${sk.sav>=0?'+':''}${fmtM(sk.sav)}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">${(SAVING_SCOPE[s]||[]).join('+')}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:7px;padding:8px 10px">
+          <div style="color:var(--muted);font-size:9px;text-transform:uppercase;font-weight:700;letter-spacing:.4px;margin-bottom:3px">Unggul</div>
+          <div style="font-weight:700;color:${slaS!==null&&slaS>0?CGREEN:slaS!==null?CRED:'var(--muted)'};font-size:12px">${slaS!==null?(slaS>=0?'+':'')+slaS+' hr':'—'}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">vs ext avg</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">
+        <span>Jalur: <b style="color:var(--txt2)">${jalurs.length}</b></span>
+        <span>CBM: <b style="color:var(--txt2)">${sk.tCBM.toFixed(0)}</b></span>
+        <span>DO: <b style="color:var(--txt2)">${fmt(sk.tDO)}</b></span>
+        <span>Cost Int: <b style="color:var(--txt2)">${fmtM(sk.tCI)}</b></span>
+      </div>
+    </div>`;
+  });
+  siteHTML+='</div>';
+
+  // 4. Efisiensi Scorecard per site
+  const statusLabel={'worthit':'WORTH IT','review':'REVIEW','eval':'EVALUASI','nodata':'—'};
+  const statusClass={'worthit':'sp-ideal','review':'sp-worth','eval':'sp-eval','nodata':'sp-nodata'};
+  const statusTooltip={'worthit':'Lebih murah + lebih cepat dari external','review':'Lebih mahal tapi lebih cepat, atau lebih murah tapi lebih lambat','eval':'Lebih mahal + lebih lambat dari external','nodata':'Belum ada data benchmark external'};
+  let scHTML='';
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);if(!sr.length) return;
+    const jalurs=calcJalur(sr,s);
+    const col=SCOL[s];
+    const maxCI=jalurs.reduce((m,j)=>Math.max(m,j.ci),1);
+    scHTML+=`<div class="card mb12">
+      <div class="card-title" style="color:${col}">${s}
+        <span class="card-badge">${jalurs.length} jalur · ${sr.length} trip · scope: ${(SAVING_SCOPE[s]||[]).join('+')}</span>
+        <span style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap">
+          <span class="status-pill sp-ideal" style="font-size:9px">WORTH IT</span>
+          <span class="status-pill sp-worth" style="font-size:9px">REVIEW</span>
+          <span class="status-pill sp-eval" style="font-size:9px">EVALUASI</span>
+        </span>
+      </div>
+      <div class="sc-wrap"><table class="sc-table">
+        <thead><tr>
+          <th style="min-width:140px">Jalur</th>
+          <th class="r">Trip</th>
+          <th class="r">Cost Int (Jt)</th><th class="r">Cost Ext (Jt)</th><th class="r">Gap Cost</th>
+          <th class="r">LT Int (hr)</th><th class="r">LT Ext (hr)</th><th class="r">Δ SLA</th>
+          <th style="text-align:center">Status</th>
+        </tr></thead>
+        <tbody>${jalurs.map(j=>{
+          const barW=Math.round(j.ci/maxCI*100);
+          return`<tr style="${!j.inScope?'opacity:.65':''}">
+            <td>
+              <div class="sc-jalur">${j.j}${!j.inScope?'<span style="font-size:9px;color:var(--muted);margin-left:4px;font-weight:400">out-scope</span>':''}</div>
+              <div class="sc-area">${j.area}</div>
+              <div class="sc-bar-wrap"><div class="sc-bar-fill" style="width:${barW}%;background:${col}"></div></div>
+            </td>
+            <td class="scv" style="text-align:right;color:var(--txt2);font-weight:600">${j.t}</td>
+            <td class="scv int">${j.ci}</td>
+            <td class="scv ext">${j.ce!==null?j.ce:'<span style="color:var(--muted)">—</span>'}</td>
+            <td class="${j.gap!==null?(j.gap>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.gap!==null?(j.gap>=0?'+':'')+j.gap+' Jt':'—'}</td>
+            <td class="scv int">${j.lt_int!==null?j.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
+            <td class="scv ext">${j.lt_ext!==null?j.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
+            <td class="${j.lt_delta!==null?(j.lt_delta>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.lt_delta!==null?(j.lt_delta>=0?'+':'')+j.lt_delta+' hr':'—'}</td>
+            <td style="text-align:center"><span class="status-pill ${statusClass[j.status]||'sp-nodata'}" style="font-size:9px;cursor:help" title="${statusTooltip[j.status]||''}">${statusLabel[j.status]||'—'}</span></td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+        <tfoot><tr style="background:var(--bg);border-top:2px solid var(--border2)">
+          ${(()=>{
+            const tTrip=jalurs.reduce((s,j)=>s+j.t,0);
+            const tCI=+(jalurs.reduce((s,j)=>s+j.ci,0)).toFixed(1);
+            const ceJalurs=jalurs.filter(j=>j.ce!==null);
+            const tCE=ceJalurs.length?+(ceJalurs.reduce((s,j)=>s+(j.ce||0),0)).toFixed(1):null;
+            const tGap=tCE!==null?+(tCE-tCI).toFixed(1):null;
+            const ltInts=jalurs.filter(j=>j.lt_int!==null);
+            const ltExts=jalurs.filter(j=>j.lt_ext!==null);
+            const ltDeltas=jalurs.filter(j=>j.lt_delta!==null);
+            const avgLtInt=ltInts.length?+(ltInts.reduce((s,j)=>s+j.lt_int,0)/ltInts.length).toFixed(2):null;
+            const avgLtExt=ltExts.length?+(ltExts.reduce((s,j)=>s+j.lt_ext,0)/ltExts.length).toFixed(2):null;
+            const avgDelta=ltDeltas.length?+(ltDeltas.reduce((s,j)=>s+j.lt_delta,0)/ltDeltas.length).toFixed(2):null;
+            const st='font-weight:700;padding:9px 10px;font-size:11px;border-top:2px solid var(--border2)';
+            return`<td style="${st};color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;font-size:9px">Total / Avg</td>
+            <td style="${st};text-align:right;color:var(--txt)">${tTrip}</td>
+            <td style="${st};text-align:right;color:var(--blue)">${tCI}</td>
+            <td style="${st};text-align:right;color:var(--muted)">${tCE!==null?tCE:'—'}</td>
+            <td style="${st};text-align:right;color:${tGap!==null?(tGap>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${tGap!==null?(tGap>=0?'+':'')+tGap+' Jt':'—'}</td>
+            <td style="${st};text-align:right;color:var(--blue)">${avgLtInt!==null?avgLtInt:'—'}</td>
+            <td style="${st};text-align:right;color:var(--muted)">${avgLtExt!==null?avgLtExt:'—'}</td>
+            <td style="${st};text-align:right;color:${avgDelta!==null?(avgDelta>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${avgDelta!==null?(avgDelta>=0?'+':'')+avgDelta+' hr':'—'}</td>
+            <td></td>`;
+          })()}
+        </tr></tfoot>
+      </table></div>
+    </div>`;
+  });
+
+  // 5. Charts trend
+  const byMonth={};
+  rows.forEach(r=>{
+    const m=r[7].slice(0,7);
+    if(!byMonth[m]) byMonth[m]={trips:0,ci:0,ci_s:0,ce_s:0,ceS_n:0};
+    byMonth[m].trips++;byMonth[m].ci+=r[3]||0;
+    if(isScopeRow(r)){byMonth[m].ci_s+=r[3]||0;if(r[4]){byMonth[m].ce_s+=r[4];byMonth[m].ceS_n++;}}
+  });
+  const months=Object.keys(byMonth).sort();
+  const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei','2026-06':'Jun'};
+  const momRows=months.map((m,i)=>{
+    const d=byMonth[m];
+    const sv=d.ceS_n>0?(d.ce_s-d.ci_s)/1e6:0;
+    const prev=i>0?byMonth[months[i-1]]:null;
+    return{m:MLBL[m]||m,trips:d.trips,sav:+sv.toFixed(1),prevTrips:prev?.trips,ci:+(d.ci/1e6).toFixed(1)};
+  });
+
+  const chartsHTML=`<div class="grid2 mb12">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Savings per Bulan <span class="card-badge">scope area · Jt Rp</span></div>
+      <div style="position:relative;height:155px"><canvas id="cSav"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Trip Internal per Bulan</div>
+      <div style="position:relative;height:155px"><canvas id="cTrip"></canvas></div>
+    </div>
+  </div>`;
+
+  // 6. MoM table
+  const momHTML=`<div class="card mb12">
+    <div class="card-title">Month-over-Month <span class="card-badge">savings = scope area</span></div>
+    <table class="mom-table">
+      <thead><tr><th>Bulan</th><th>Trip</th><th>MoM</th><th>Cost Int (Jt)</th><th>Savings Scope (Jt)</th></tr></thead>
+      <tbody>${momRows.map(m=>`<tr>
+        <td style="font-weight:700">${m.m}</td>
+        <td style="text-align:right">${fmt(m.trips)}</td>
+        <td style="text-align:right">${m.prevTrips!=null?`<span class="${m.trips>=m.prevTrips?'pos':'neg'}">${m.trips>=m.prevTrips?'▲':'▼'}${Math.abs(m.trips-m.prevTrips)}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+        <td style="text-align:right">${m.ci}</td>
+        <td style="text-align:right;color:${m.sav>=0?CGREEN:CRED};font-weight:700">${m.sav>=0?'+':''}${m.sav}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`;
+
+  document.getElementById('content').innerHTML=kpiHTML+alertHTML+siteHTML+scHTML+chartsHTML+momHTML;
+
+  setTimeout(()=>{
+    dc('cSav');dc('cTrip');
+    const savColors=momRows.map(m=>m.sav>=0?'rgba(34,160,107,.75)':'rgba(226,75,75,.75)');
+    CH['cSav']=new Chart(document.getElementById('cSav'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.sav),backgroundColor:savColors,borderColor:momRows.map(m=>m.sav>=0?'#22a06b':'#e24b4b'),borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y>=0?'Hemat':'Lebih mahal'}: ${Math.abs(c.parsed.y).toFixed(1)} Jt`}}},scales:{x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'},callback:v=>v+'Jt'},grid:{color:'rgba(0,0,0,.05)'}}}}});
+    CH['cTrip']=new Chart(document.getElementById('cTrip'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.trips),backgroundColor:'#266CA9',borderRadius:5,borderColor:'#1d5a91',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{color:'rgba(0,0,0,.05)'}}}}});
+  },30);
+}
+
+// ── COVERAGE ─────────────────────────────────────────────────────
+function renderCoverage(rows,contrib,tInt,tAll,pct){
+  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
+  const oosData=calcOutOfScope(rows);
+
+  let covHTML='';
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);if(!sr.length) return;
+    const scopeAreas_s=SAVING_SCOPE[s]||[];
+    // Kontribusi hanya scope area
+    const si=sr.filter(r=>scopeAreas_s.includes(r[1])).length;
+    let extScope=EXT_AGG.filter(e=>e.site===s&&scopeAreas_s.includes(e.area));
+    if(dateFrom) extScope=extScope.filter(e=>e.date>=dateFrom);
+    if(dateTo)   extScope=extScope.filter(e=>e.date<=dateTo);
+    const extScopeTrips=extScope.reduce((s,e)=>s+e.trips,0);
+    const sa=si+extScopeTrips;
+    const sp=sa?Math.round(si/sa*100):0;
+    const sc=calcContrib(sr);
+    const pctCls=sp>=30?'background:#dcfff4;color:#065f46':sp>=15?'background:#eff6ff;color:#1d4ed8':'background:#fff1f2;color:#991b1b';
+    const col=SCOL[s];
+    const scopeAreas=SAVING_SCOPE[s]||[];
+    const scopeData=sc.filter(r=>scopeAreas.includes(r.area));
+    const maxTotal=scopeData.reduce((m,r)=>Math.max(m,r.total),1);
+
+    covHTML+=`<div class="card mb12">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${col}">${SSHORT[s]}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Scope: ${scopeAreas.join(' + ')}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:700;padding:4px 12px;border-radius:8px;${pctCls}">${sp}%</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">${fmt(si)} int / ${fmt(sa)} total</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(scopeData.length,3)},1fr);gap:8px">
+        ${scopeData.map(r=>{
+          const p=r.total?Math.round(r.int/r.total*100):0;
+          const barW=Math.round(r.total/maxTotal*100);
+          const pCls=p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo';
+          return`<div class="cov-area-item">
+            <div style="font-size:11px;font-weight:700;color:var(--txt);margin-bottom:4px">${r.area}</div>
+            <div class="cov-area-bar-track"><div class="cov-area-bar-fill" style="width:${Math.round(r.int/Math.max(r.total,1)*barW)}%;background:${col}"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+              <span>Int: <b style="color:${col}">${fmt(r.int)}</b></span>
+              <span>Ext: <b>${fmt(r.ext)}</b></span>
+              <span><span class="pill ${pCls}">${p}%</span></span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  // OOS
+  const oosSites=sitesToShow.filter(s=>oosData[s]&&oosData[s].total>0);
+  let oosHTML='';
+  if(oosSites.length){
+    oosHTML=`<div class="card mb12">
+      <div class="card-title">Coverage di Luar Scope Saving
+        <span class="card-badge">tetap dilayani internal · kontribusi belum ter-capture di saving</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(oosSites.length,3)},1fr);gap:10px">
+      ${oosSites.map(s=>{
+        const d=oosData[s];const col=SCOL[s];
+        return`<div class="oos-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${col}">${SSHORT[s]}</div>
+            <div style="font-size:18px;font-weight:700">${d.total} <span style="font-size:11px;font-weight:400;color:var(--muted)">trip</span></div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${fmtM(d.ci)} · di luar ${(SAVING_SCOPE[s]||[]).join('+')}</div>
+          ${d.areas.map(([area,v])=>`<div class="oos-area-row">
+            <span style="color:var(--txt2);font-weight:500">${area}</span>
+            <span style="font-size:10px;color:var(--muted)">${v.trips} trip · ${fmtM(v.ci)}</span>
+          </div>`).join('')}
+        </div>`;
+      }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Kontribusi expandable
+  const contribHTML=renderContribExpandable(rows);
+  document.getElementById('content').innerHTML=covHTML+oosHTML+contribHTML;
+}
+
+function renderContribExpandable(rows){
+  const areaMap={};
+  rows.forEach(r=>{
+    const area=r[1],jalur=r[2];
+    if(!areaMap[area]) areaMap[area]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,jalurs:{}};
+    areaMap[area].int++;areaMap[area].ci+=r[3]||0;
+    if(r[4]){areaMap[area].ce+=r[4];areaMap[area].ceCnt++;}
+    if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].ltS+=+r[10];areaMap[area].ltN++;}
+    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,intCbm:0,armadas:{}};
+    areaMap[area].jalurs[jalur].int++;areaMap[area].jalurs[jalur].ci+=r[3]||0;
+    if(r[4]){areaMap[area].jalurs[jalur].ce+=r[4];areaMap[area].jalurs[jalur].ceCnt++;}
+    if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].jalurs[jalur].ltS+=+r[10];areaMap[area].jalurs[jalur].ltN++;}
+    areaMap[area].jalurs[jalur].intCbm+=(r[9]||0);
+    const arm=r[5]||'Unknown';
+    if(!areaMap[area].jalurs[jalur].armadas[arm]) areaMap[area].jalurs[jalur].armadas[arm]={int:0,ci:0,ce:0,ceCnt:0,intCbm:0};
+    areaMap[area].jalurs[jalur].armadas[arm].int++;
+    areaMap[area].jalurs[jalur].armadas[arm].ci+=r[3]||0;
+    areaMap[area].jalurs[jalur].armadas[arm].intCbm+=(r[9]||0);
+    if(r[4]){areaMap[area].jalurs[jalur].armadas[arm].ce+=r[4];areaMap[area].jalurs[jalur].armadas[arm].ceCnt++;}
+  });
+
+  // Build EXT_LT lookup by area (avg of all jalurs in area) and by jalur
+  const sitesToUse=activeSite==='all'?ALL_SITES:[activeSite];
+  const extLtByJalur={};
+  const extLtByArea={};
+  (typeof EXT_LT!=='undefined'?EXT_LT:[]).filter(e=>sitesToUse.includes(e.site)).forEach(e=>{
+    const key=e.jalur;
+    if(!extLtByJalur[key]) extLtByJalur[key]=[];
+    extLtByJalur[key].push(e.avg_lt);
+  });
+  // Build area→avg_lt from EXT_LT via RAW area→jalur mapping
+  const areaJalurMap={};
+  rows.forEach(r=>{
+    if(!areaJalurMap[r[1]]) areaJalurMap[r[1]]=new Set();
+    areaJalurMap[r[1]].add(r[2]);
+  });
+  Object.entries(areaJalurMap).forEach(([area,jalurs])=>{
+    const lts=[];
+    jalurs.forEach(j=>{if(extLtByJalur[j]) lts.push(...extLtByJalur[j]);});
+    if(lts.length) extLtByArea[area]=+(lts.reduce((s,v)=>s+v,0)/lts.length).toFixed(2);
+  });
+
+  let ef=EXT_AGG;
+  if(activeSite!=='all') ef=ef.filter(e=>e.site===activeSite);
+  if(dateFrom) ef=ef.filter(e=>e.date>=dateFrom);
+  if(dateTo)   ef=ef.filter(e=>e.date<=dateTo);
+  const extAreaMap={};
+  ef.forEach(e=>{if(!extAreaMap[e.area]) extAreaMap[e.area]={trips:0,cbm:0};
+    extAreaMap[e.area].trips+=e.trips;
+    extAreaMap[e.area].cbm+=(e.cbm||0);});
+  let efj=EXT_JALUR;
+  if(activeSite!=='all') efj=efj.filter(e=>e.site===activeSite);
+  if(dateFrom) efj=efj.filter(e=>e.date>=dateFrom);
+  if(dateTo)   efj=efj.filter(e=>e.date<=dateTo);
+  const extJalurMap={};
+  efj.forEach(e=>{const k=e.area+'||'+e.jalur;
+    if(!extJalurMap[k]) extJalurMap[k]={trips:0,cbm:0};
+    extJalurMap[k].trips+=(e.trips||0);
+    extJalurMap[k].cbm+=(e.cbm||0);});
+  const allAreas=new Set([...Object.keys(areaMap),...Object.keys(extAreaMap)]);
+  const data=[...allAreas].map(area=>{
+    const v=areaMap[area]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,jalurs:{}};
+    const jalurNames=new Set([...Object.keys(v.jalurs),...efj.filter(e=>e.area===area).map(e=>e.jalur)]);
+    const jalurs=[...jalurNames].map(jname=>{
+      const jv=v.jalurs[jname]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0};
+      const extKey=area+'||'+jname;
+      const extJalurV=extJalurMap[extKey]||{trips:0,cbm:0};
+      const lt_int=jv.ltN>0?+(jv.ltS/jv.ltN).toFixed(2):null;
+      const lt_ext=extLtByJalur[jname]?+(extLtByJalur[jname].reduce((s,v)=>s+v,0)/extLtByJalur[jname].length).toFixed(2):null;
+      const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
+      const armadaList=Object.entries(jv.armadas||{}).map(([arm,av])=>({arm,int:av.int,ci:av.ci,ce:av.ceCnt>0?av.ce:null,intCbm:av.intCbm||0})).sort((a,b)=>b.int-a.int);
+      return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta,armadas:armadaList};
+    }).sort((a,b)=>b.total-a.total);
+    const lt_int_area=v.ltN>0?+(v.ltS/v.ltN).toFixed(2):null;
+    const lt_ext_area=extLtByArea[area]||null;
+    const lt_delta_area=lt_int_area!==null&&lt_ext_area!==null?+(lt_ext_area-lt_int_area).toFixed(2):null;
+    const extAreaV=extAreaMap[area]||{trips:0,cbm:0};
+    return{area,int:v.int,ext:extAreaV.trips,extCbm:extAreaV.cbm,total:v.int+extAreaV.trips,ci:v.ci,ce:v.ceCnt>0?v.ce:null,lt_int:lt_int_area,lt_ext:lt_ext_area,lt_delta:lt_delta_area,jalurs};
+  }).sort((a,b)=>b.total-a.total);
+
+  function fj(v){return v===null?'<span style="color:var(--muted)">—</span>':(v/1e6).toFixed(1);}
+  function savPct(ci,ce){if(ce===null||ci===0) return '<span style="color:var(--muted)">—</span>';const s=((ce-ci)/ci*100);return `<span class="${s>=0?'pos':'neg'}">${s>=0?'+':''}${s.toFixed(1)}%</span>`;}
+  function pcl(i,t){const p=t?Math.round(i/t*100):0;return{p,cls:p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'};}
+  function fltd(v,isPos){if(v===null) return '<span style="color:var(--muted)">—</span>';return `<span class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${v} hr</span>`;}
+
+  let rows_html='';
+  data.forEach((a,ai)=>{
+    const{p,cls}=pcl(a.int,a.total);
+    rows_html+=`<tr class="row-area-g" onclick="toggleContrib(${ai})">
+      <td><div class="area-cell-inner"><span class="toggle-ch" id="tch-${ai}">›</span><span>${a.area}</span></div></td>
+      <td style="text-align:right">${fmt(a.int)}</td><td style="text-align:right">${fmt(a.ext)}</td>
+      <td style="text-align:right">${fmt(a.total)}</td>
+      <td style="text-align:right"><span class="pill ${cls}">${p}%</span></td>
+      <td style="text-align:right;color:var(--blue);font-weight:600">${a.int>0?(a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0).toFixed(1):'—'}</td>
+      <td style="text-align:right;color:var(--muted)">${a.extCbm>0?a.extCbm.toFixed(1):'—'}</td>
+      <td style="text-align:right">${((a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0)+a.extCbm).toFixed(1)}</td>
+      ${(()=>{const tCbm=(a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0)+a.extCbm;const pCbm=tCbm>0?Math.round((a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0)/tCbm*100):0;const cls2=pCbm>=50?'phi':pCbm>=25?'pmi':pCbm>=10?'plo':'pvlo';return`<td style="text-align:right"><span class="pill ${cls2}">${pCbm}%</span></td>`;})()}
+      <td style="text-align:right">${fj(a.ci)}</td><td style="text-align:right">${fj(a.ce)}</td>
+      <td style="text-align:right">${savPct(a.ci,a.ce)}</td>
+      <td style="text-align:right;color:var(--blue);font-weight:600">${a.lt_int!==null?a.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
+      <td style="text-align:right;color:var(--muted)">${a.lt_ext!==null?a.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
+      <td style="text-align:right">${fltd(a.lt_delta)}</td>
+    </tr>`;
+    a.jalurs.forEach((j,ji)=>{
+      const jPct=j.total?Math.round(j.int/j.total*100):0;
+      const jCls=jPct>=50?'phi':jPct>=25?'pmi':jPct>=10?'plo':'pvlo';
+      const jKey=`${ai}-${ji}`;
+      const hasArmada=j.armadas&&j.armadas.length>0;
       rows_html+=`<tr class="row-jalur-g hidden" data-cg="${ai}" ${hasArmada?`onclick="toggleArmada('${jKey}')" style="cursor:pointer"`:''}">
         <td><div class="area-cell-inner">${hasArmada?`<span class="toggle-ch" id="tcha-${jKey}">›</span>`:\'<span style="width:13px;display:inline-block"></span>\'}<span class="jalur-chip">${j.name}</span></div></td>
         <td style="text-align:right">${fmt(j.int)}</td>
@@ -983,22 +1972,25 @@ function renderContribExpandable(rows){
       if(hasArmada){
         j.armadas.forEach(arm=>{
           const aSavPct=arm.ce&&arm.ci?+((arm.ce-arm.ci)/arm.ci*100).toFixed(1):null;
-          rows_html+=`<tr class="row-armada-g hidden" data-ag="${jKey}">
-            <td><span class="armada-chip">${arm.arm}</span></td>
-            <td style="text-align:right;font-size:11px">${fmt(arm.int)}</td>
-            <td style="text-align:right;color:var(--muted);font-size:11px">—</td>
-            <td style="text-align:right;font-size:11px">${fmt(arm.int)}</td>
-            <td style="text-align:right">—</td>
-            <td style="text-align:right;color:var(--blue);font-size:11px">${arm.intCbm>0?arm.intCbm.toFixed(1):'—'}</td>
-            <td style="text-align:right;color:var(--muted);font-size:11px">—</td>
-            <td style="text-align:right;font-size:11px">${arm.intCbm>0?arm.intCbm.toFixed(1):'—'}</td>
-            <td>—</td>
-            <td style="text-align:right;color:var(--blue);font-size:11px">${fj(arm.ci)}</td>
-            <td style="text-align:right;color:var(--muted);font-size:11px">${arm.ce?fj(arm.ce):'—'}</td>
-            <td style="text-align:right;font-size:11px">${aSavPct!==null?`<span class="${aSavPct>=0?'pos':'neg'}">${aSavPct>=0?'+':''} ${aSavPct}%</span>`:'—'}</td>
-            <td colspan="3"></td>
-          </tr>`;
+          const aSavHtml=aSavPct!==null?'<span class="'+(aSavPct>=0?'pos':'neg')+'">'+(aSavPct>=0?'+':'')+aSavPct+'%</span>':'—';
+          rows_html+='<tr class="row-armada-g hidden" data-ag="'+jKey+'">'
+            +'<td><span class="armada-chip">'+arm.arm+'</span></td>'
+            +'<td style="text-align:right;font-size:11px">'+fmt(arm.int)+'</td>'
+            +'<td style="text-align:right;color:var(--muted);font-size:11px">—</td>'
+            +'<td style="text-align:right;font-size:11px">'+fmt(arm.int)+'</td>'
+            +'<td>—</td>'
+            +'<td style="text-align:right;color:var(--blue);font-size:11px">'+(arm.intCbm>0?arm.intCbm.toFixed(1):'—')+'</td>'
+            +'<td style="text-align:right;color:var(--muted);font-size:11px">—</td>'
+            +'<td style="text-align:right;font-size:11px">'+(arm.intCbm>0?arm.intCbm.toFixed(1):'—')+'</td>'
+            +'<td>—</td>'
+            +'<td style="text-align:right;color:var(--blue);font-size:11px">'+fj(arm.ci)+'</td>'
+            +'<td style="text-align:right;color:var(--muted);font-size:11px">'+(arm.ce?fj(arm.ce):'—')+'</td>'
+            +'<td style="text-align:right;font-size:11px">'+aSavHtml+'</td>'
+            +'<td colspan="3"></td>'
+            +'</tr>';
         });
+      }
+    });
       }
     });
   });
