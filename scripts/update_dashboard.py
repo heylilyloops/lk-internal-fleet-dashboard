@@ -93,8 +93,8 @@ ext_header = ext_data[0]
 col = {h.strip(): i for i, h in enumerate(ext_header)}
 print(f"EXT header cols: {list(col.keys())[:12]}")
 
-ext_agg_area  = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
-ext_agg_jalur = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int))))
+ext_agg_area  = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))  # [trips, cbm]
+ext_agg_jalur = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0]))))  # [trips, cbm]
 
 skipped = 0
 for line in ext_data[1:]:
@@ -125,9 +125,14 @@ for line in ext_data[1:]:
         continue
 
     jalur = jalur_raw.title() if jalur_raw else ''
-    ext_agg_area[site][del_date][area] += 1
+    cbm_raw2 = get_col('CBM', 11)
+    try: cbm2 = float(cbm_raw2.replace(',','')) if cbm_raw2 else 0.0
+    except: cbm2 = 0.0
+    ext_agg_area[site][del_date][area][0] += 1
+    ext_agg_area[site][del_date][area][1] += cbm2
     if jalur:
-        ext_agg_jalur[site][del_date][area][jalur] += 1
+        ext_agg_jalur[site][del_date][area][jalur][0] += 1
+        ext_agg_jalur[site][del_date][area][jalur][1] += cbm2
 
 print(f"EXT skipped: {skipped}")
 
@@ -164,9 +169,14 @@ for line in rdc_data[1:]:
     # Area kosong → pakai jalur sebagai area
     area_key = area if area else jalur_r
 
-    ext_agg_area[site][del_date][area_key] += 1
+    cbm_rdc_raw = get_rdc('CBM', 11)
+    try: cbm_rdc = float(cbm_rdc_raw.replace(',','')) if cbm_rdc_raw else 0.0
+    except: cbm_rdc = 0.0
+    ext_agg_area[site][del_date][area_key][0] += 1
+    ext_agg_area[site][del_date][area_key][1] += cbm_rdc
     if jalur_r:
-        ext_agg_jalur[site][del_date][area_key][jalur_r] += 1
+        ext_agg_jalur[site][del_date][area_key][jalur_r][0] += 1
+        ext_agg_jalur[site][del_date][area_key][jalur_r][1] += cbm_rdc
 
     # Collect LT for benchmark
     try:
@@ -178,17 +188,17 @@ for line in rdc_data[1:]:
 print(f"RDC EXT skipped: {rdc_skipped}")
 
 ext_list_area = [
-    {"fleet":"External","site":s,"date":d,"area":a,"trips":t}
+    {"fleet":"External","site":s,"date":d,"area":a,"trips":v[0],"cbm":round(v[1],2)}
     for s, dates in ext_agg_area.items()
     for d, areas in dates.items()
-    for a, t in areas.items()
+    for a, v in areas.items()
 ]
 ext_list_jalur = [
-    {"site":s,"date":d,"area":a,"jalur":j,"trips":t}
+    {"site":s,"date":d,"area":a,"jalur":j,"trips":v[0],"cbm":round(v[1],2)}
     for s, dates in ext_agg_jalur.items()
     for d, areas in dates.items()
     for a, jalurs in areas.items()
-    for j, t in jalurs.items()
+    for j, v in jalurs.items()
 ]
 print(f"EXT area entries (incl RDC): {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}")
 
