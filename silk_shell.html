@@ -471,25 +471,49 @@ function renderTrendChart(view){
   if(!el) return;
 
   let datasets=[];
-  if(view==='total'){
-    const d=allMonths.map(m=>byMonthArea['__total__'][m]||{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
-    datasets=[
-      {label:'Trip Internal',type:'bar',data:d.map(x=>x.trips),backgroundColor:'rgba(38,108,169,.7)',borderColor:'#1d5a91',borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
+  const SCOPE_AREAS=['Jawa Barat','Lampung','Jawa Timur'];
+  const DCJ_SITES=['AHI Jababeka','HCI Jababeka','HCI Cikupa'];
+  const DCJ_AREAS=['Jawa Barat','Lampung'];
+  const DCS_AREAS=['Jawa Timur'];
+  const DCJ_COLORS={'Jawa Barat':'#266CA9','Lampung':'#f5a623'};
+  const DCS_COLORS={'Jawa Timur':'#8b6cf7'};
+
+  function comboDatasets(d, color){
+    return [
+      {label:'Trip Internal',type:'bar',data:d.map(x=>x.trips),backgroundColor:color+'b3',borderColor:color,borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
       {label:'CBM (m³)',type:'line',data:d.map(x=>+x.cbm.toFixed(0)),borderColor:'#00c49a',backgroundColor:'rgba(0,196,154,.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#00c49a',tension:0.3,yAxisID:'y2',order:1},
       {label:'Saving Scope (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y3',order:0,spanGaps:true},
     ];
-  } else {
-    // Per area — only trip lines, top 6 areas
-    topAreas.forEach((area,i)=>{
+  }
+
+  if(view==='total'){
+    const d=allMonths.map(m=>byMonthArea['__total__'][m]||{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
+    datasets=comboDatasets(d,'#266CA9');
+  } else if(view==='area'){
+    // Scope areas only: Jawa Barat, Lampung, Jawa Timur
+    const aColors={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
+    SCOPE_AREAS.forEach((area,i)=>{
       datasets.push({
         label:area,type:'line',
         data:allMonths.map(m=>(byMonthArea[area]&&byMonthArea[area][m])?byMonthArea[area][m].trips:0),
-        borderColor:AREA_COLORS[i]||'#637d9a',
+        borderColor:aColors[area]||AREA_COLORS[i],
         backgroundColor:'transparent',
-        borderWidth:2,pointRadius:3,
+        borderWidth:2.5,pointRadius:4,
         tension:0.3,yAxisID:'y',order:i,spanGaps:true
       });
     });
+  } else if(view==='dcj'){
+    // DC Jakarta: Jawa Barat + Lampung per area, combo
+    DCJ_AREAS.forEach((area,i)=>{
+      const d=allMonths.map(m=>byMonthArea[area]&&byMonthArea[area][m]?byMonthArea[area][m]:{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
+      const col=Object.values(DCJ_COLORS)[i]||AREA_COLORS[i];
+      datasets.push({label:'Trip '+area,type:'bar',data:d.map(x=>x.trips),backgroundColor:col+'99',borderColor:col,borderWidth:1,borderRadius:3,yAxisID:'y',order:i+2,stack:'trips'});
+      datasets.push({label:'Saving '+area+' (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:col,backgroundColor:'transparent',borderWidth:2,pointRadius:4,pointBackgroundColor:col,tension:0.3,yAxisID:'y3',order:i,spanGaps:true,borderDash:i>0?[4,3]:[]});
+    });
+  } else if(view==='dcs'){
+    // DC Sidoarjo: Jawa Timur combo
+    const d=allMonths.map(m=>byMonthArea['Jawa Timur']&&byMonthArea['Jawa Timur'][m]?byMonthArea['Jawa Timur'][m]:{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
+    datasets=comboDatasets(d,'#8b6cf7');
   }
 
   const opts={
@@ -515,10 +539,11 @@ function renderTrendChart(view){
 
 function setTrendView(view){
   window._trendView=view;
-  const btnTotal=document.getElementById('trendToggleTotal');
-  const btnArea=document.getElementById('trendToggleArea');
-  if(btnTotal){btnTotal.style.background=view==='total'?'var(--blue)':'transparent';btnTotal.style.color=view==='total'?'#fff':'var(--muted)';}
-  if(btnArea){btnArea.style.background=view==='area'?'var(--blue)':'transparent';btnArea.style.color=view==='area'?'#fff':'var(--muted)';}
+  ['Total','Area','DCJ','DCS'].forEach(k=>{
+    const btn=document.getElementById('trendToggle'+k);
+    const active=(k==='Total'&&view==='total')||(k==='Area'&&view==='area')||(k==='DCJ'&&view==='dcj')||(k==='DCS'&&view==='dcs');
+    if(btn){btn.style.background=active?'var(--blue)':'transparent';btn.style.color=active?'#fff':'var(--muted)';}
+  });
   renderTrendChart(view);
 }
 
@@ -826,9 +851,11 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const chartsHTML=`<div class="card mb12">
     <div class="card-title">Trend LK Internal per Bulan
       <span class="card-badge">Bar=Trip · Line=CBM · Line=Saving (scope)</span>
-      <div style="margin-left:auto;display:flex;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px">
-        <button id="trendToggleTotal" onclick="setTrendView('total')" style="padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-family:var(--font);font-weight:600">Total LK</button>
-        <button id="trendToggleArea" onclick="setTrendView('area')" style="padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
+      <div style="margin-left:auto;display:flex;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px">
+        <button id="trendToggleTotal" onclick="setTrendView('total')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-family:var(--font);font-weight:600">Total LK</button>
+        <button id="trendToggleArea" onclick="setTrendView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
+        <button id="trendToggleDCJ" onclick="setTrendView('dcj')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">DC Jakarta</button>
+        <button id="trendToggleDCS" onclick="setTrendView('dcs')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">DC Sidoarjo</button>
       </div>
     </div>
     <div id="trendChartWrap" style="position:relative;height:260px"><canvas id="cTrend"></canvas></div>
@@ -846,16 +873,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     return{m:MLBL[m]||m,trips:d.trips,sav:+sv.toFixed(1),prevTrips:prev?.trips,ci:+(d.cbm).toFixed(0),cbm:+(d.cbm).toFixed(0)};
   });
 
-  const chartsHTML2=`<div class="grid2 mb12">
-    <div class="card" style="margin-bottom:0">
-      <div class="card-title">Savings per Bulan <span class="card-badge">scope area · Jt Rp</span></div>
-      <div style="position:relative;height:155px"><canvas id="cSav"></canvas></div>
-    </div>
-    <div class="card" style="margin-bottom:0">
-      <div class="card-title">Trip Internal per Bulan</div>
-      <div style="position:relative;height:155px"><canvas id="cTrip"></canvas></div>
-    </div>
-  </div>`;
+
 
   // 6. MoM table
   const momHTML=`<div class="card mb12">
@@ -872,17 +890,14 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     </table>
   </div>`;
 
-  document.getElementById('content').innerHTML=kpiHTML+alertHTML+siteHTML+scHTML+chartsHTML+chartsHTML2+momHTML;
+  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+alertHTML+siteHTML+scHTML+momHTML;
 
   // Store data for toggle
   window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
   window._trendView='total';
 
   setTimeout(()=>{
-    dc('cSav');dc('cTrip');dc('cTrend');
-    const savColors=momRows.map(m=>m.sav>=0?'rgba(34,160,107,.75)':'rgba(226,75,75,.75)');
-    CH['cSav']=new Chart(document.getElementById('cSav'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.sav),backgroundColor:savColors,borderColor:momRows.map(m=>m.sav>=0?'#22a06b':'#e24b4b'),borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y>=0?'Hemat':'Lebih mahal'}: ${Math.abs(c.parsed.y).toFixed(1)} Jt`}}},scales:{x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'},callback:v=>v+'Jt'},grid:{color:'rgba(0,0,0,.05)'}}}}});
-    CH['cTrip']=new Chart(document.getElementById('cTrip'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.trips),backgroundColor:'#266CA9',borderRadius:5,borderColor:'#1d5a91',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{color:'rgba(0,0,0,.05)'}}}}});
+    dc('cTrend');
     renderTrendChart('total');
   },30);
 }
