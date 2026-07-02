@@ -556,7 +556,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
   // 1. KPI Row
   const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(7,1fr)">
-    <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi</div></div>
+    <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi<br><span style="font-size:9px;color:var(--muted);font-style:italic">*ext: hanya trip darat</span></div></div>
     <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label">Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
     <div class="kpi c-teal"><div class="kpi-label">Keunggulan Pengiriman</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
     <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
@@ -993,6 +993,7 @@ function renderContribExpandable(rows){
   return`<div class="card mb12">
     <div class="card-title">Kontribusi Internal per Area
       <span class="card-badge">klik area untuk expand jalur</span>
+      <span style="margin-left:auto;font-size:9px;color:var(--muted);font-style:italic">*ext: hanya trip darat</span>
     </div>
     <div class="contrib-wrap"><table class="contrib-tbl" style="min-width:1100px">
       <thead><tr>
