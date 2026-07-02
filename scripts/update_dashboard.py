@@ -177,8 +177,34 @@ for line in rdc_data[1:]:
         except: continue
     if not del_date: rdc_skipped += 1; continue
 
-    # Area kosong → pakai jalur sebagai area
-    area_key = area if area else jalur_r
+    # Area kosong → pakai mapping jalur → area untuk RDC
+    RDC_JALUR_AREA = {
+        'Pekanbaru'        : 'Riau',
+        'Dumai'            : 'Riau',
+        'Banda Aceh'       : 'Aceh',
+        'Langsa'           : 'Aceh',
+        'Aceh Tamiang'     : 'Aceh',
+        'Lhokseumawe'      : 'Aceh',
+        'Padang'           : 'Sumatera Barat',
+        'Bukit Tinggi'     : 'Sumatera Barat',
+        'Bukittinggi'      : 'Sumatera Barat',
+        'Rantau Parapat'   : 'Sumatera Utara',
+        'Siantar'          : 'Sumatera Utara',
+        'Sibolga'          : 'Sumatera Utara',
+        'Tarutung'         : 'Sumatera Utara',
+        'Tapanuli'         : 'Sumatera Utara',
+        'Kisaran'          : 'Sumatera Utara',
+        'Percut Sei Tuan'  : 'Sumatera Utara',
+        'Tanjung Morawa'   : 'Sumatera Utara',
+        'Samosir'          : 'Sumatera Utara',
+        'Tobasa'           : 'Sumatera Utara',
+        'Sidikalang'       : 'Sumatera Utara',
+        'Medan Polonia'    : 'Sumatera Utara',
+        'Porsea'           : 'Sumatera Utara',
+        'Jakarta'          : 'Jabodetabek',
+        'Batam'            : 'Kepri',
+    }
+    area_key = area if area else RDC_JALUR_AREA.get(jalur_r, jalur_r)
 
     cbm_rdc_raw = get_rdc('CBM', 11)
     try: cbm_rdc = float(cbm_rdc_raw.replace(',','')) if cbm_rdc_raw else 0.0
