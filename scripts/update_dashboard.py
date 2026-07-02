@@ -107,9 +107,15 @@ for line in ext_data[1:]:
     area         = get_col('Area', 2)
     jalur_raw    = get_col('Jalur', 3)
     delivery_raw = get_col('DELIVERY DATE', 7)
+    moda_raw     = get_col('MODA', 6).upper()
 
     site = SITE_MAP.get(site_raw.upper())
     if not site or not area:
+        skipped += 1
+        continue
+
+    # Only LAND moda
+    if moda_raw not in ('LAND', 'DARAT', ''):
         skipped += 1
         continue
 
@@ -155,8 +161,13 @@ for line in rdc_data[1:]:
     jalur_r  = get_rdc('Jalur', 3).title()
     del_raw  = get_rdc('DELIVERY DATE', 7)
     lt_r     = get_rdc('Lead Time', 10)
+    moda_rdc = get_rdc('MODA', 6).upper()
 
     if not site: rdc_skipped += 1; continue
+
+    # Only LAND moda
+    if moda_rdc not in ('LAND', 'DARAT', ''):
+        rdc_skipped += 1; continue
 
     del_date = None
     for fmt_str in ('%m/%d/%Y', '%d-%b-%Y', '%d %b %y', '%Y-%m-%d'):
