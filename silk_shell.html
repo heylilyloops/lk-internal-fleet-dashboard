@@ -475,7 +475,7 @@ function initDateRange(){
 
 function buildQuickBtns(minD,maxD){
   const months=[...new Set(RAW.map(r=>r[7].slice(0,7)))].sort();
-  const MNAMES={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'Mei','06':'Jun'};
+  const MNAMES={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'Mei','06':'Jun','07':'Jul','08':'Agu','09':'Sep','10':'Okt','11':'Nov','12':'Des'};
   const today=new Date().toISOString().slice(0,10);
   const curMonth=today.slice(0,7);
   const mtdFirst=curMonth+'-01';
@@ -725,7 +725,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     if(isScopeRow(r)){byMonth[m].ci_s+=r[3]||0;if(r[4]){byMonth[m].ce_s+=r[4];byMonth[m].ceS_n++;}}
   });
   const months=Object.keys(byMonth).sort();
-  const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei','2026-06':'Jun'};
+  const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei','2026-06':'Jun','2026-07':'Jul','2026-08':'Agu','2026-09':'Sep','2026-10':'Okt','2026-11':'Nov','2026-12':'Des'};
   const momRows=months.map((m,i)=>{
     const d=byMonth[m];
     const sv=d.ceS_n>0?(d.ce_s-d.ci_s)/1e6:0;
