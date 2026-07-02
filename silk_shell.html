@@ -446,6 +446,82 @@ function getScopeLabel(){
 }
 
 // NAVIGATION
+
+
+function setMenu(menu){
+  activeMenu=menu;
+  document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
+  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5};
+  const btns=document.querySelectorAll('.sb-menu-item');
+  if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
+  render();
+}
+
+function navTo(s){
+  activeSite=s;
+  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.toggle('active',el.dataset.site===s));
+  render();
+}
+
+function renderTrendChart(view){
+  if(!window._trendData) return;
+  const {byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS}=window._trendData;
+  dc('cTrend');
+  const el=document.getElementById('cTrend');
+  if(!el) return;
+
+  let datasets=[];
+  if(view==='total'){
+    const d=allMonths.map(m=>byMonthArea['__total__'][m]||{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
+    datasets=[
+      {label:'Trip Internal',type:'bar',data:d.map(x=>x.trips),backgroundColor:'rgba(38,108,169,.7)',borderColor:'#1d5a91',borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
+      {label:'CBM (m³)',type:'line',data:d.map(x=>+x.cbm.toFixed(0)),borderColor:'#00c49a',backgroundColor:'rgba(0,196,154,.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#00c49a',tension:0.3,yAxisID:'y2',order:1},
+      {label:'Saving Scope (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y3',order:0,spanGaps:true},
+    ];
+  } else {
+    // Per area — only trip lines, top 6 areas
+    topAreas.forEach((area,i)=>{
+      datasets.push({
+        label:area,type:'line',
+        data:allMonths.map(m=>(byMonthArea[area]&&byMonthArea[area][m])?byMonthArea[area][m].trips:0),
+        borderColor:AREA_COLORS[i]||'#637d9a',
+        backgroundColor:'transparent',
+        borderWidth:2,pointRadius:3,
+        tension:0.3,yAxisID:'y',order:i,spanGaps:true
+      });
+    });
+  }
+
+  const opts={
+    responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
+      tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y!==null?c.parsed.y:'—'}`}}
+    },
+    scales:{
+      x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
+      y:{type:'linear',position:'left',ticks:{color:'#266CA9',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Trip',color:'#266CA9',font:{size:10}}},
+    }
+  };
+
+  if(view==='total'){
+    opts.scales.y2={type:'linear',position:'right',ticks:{color:'#00c49a',font:{size:10}},grid:{display:false},title:{display:true,text:'CBM',color:'#00c49a',font:{size:10}}};
+    opts.scales.y3={type:'linear',position:'right',ticks:{color:'#22a06b',font:{size:10},callback:v=>v+'Jt'},grid:{display:false},title:{display:true,text:'Saving (Jt)',color:'#22a06b',font:{size:10}},offset:true};
+  }
+
+  CH['cTrend']=new Chart(el,{data:{labels:mLabels,datasets},options:opts});
+}
+
+function setTrendView(view){
+  window._trendView=view;
+  const btnTotal=document.getElementById('trendToggleTotal');
+  const btnArea=document.getElementById('trendToggleArea');
+  if(btnTotal){btnTotal.style.background=view==='total'?'var(--blue)':'transparent';btnTotal.style.color=view==='total'?'#fff':'var(--muted)';}
+  if(btnArea){btnArea.style.background=view==='area'?'var(--blue)':'transparent';btnArea.style.color=view==='area'?'#fff':'var(--muted)';}
+  renderTrendChart(view);
+}
+
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
@@ -719,24 +795,58 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     </div>`;
   });
 
-  // 5. Charts trend
-  const byMonth={};
+  // 5. Trend Chart — combo Bar(Trip) + Line(CBM) + Line(Saving) with toggle Total/Per Area
+  const byMonthArea={};
   rows.forEach(r=>{
     const m=r[7].slice(0,7);
-    if(!byMonth[m]) byMonth[m]={trips:0,ci:0,ci_s:0,ce_s:0,ceS_n:0};
-    byMonth[m].trips++;byMonth[m].ci+=r[3]||0;
-    if(isScopeRow(r)){byMonth[m].ci_s+=r[3]||0;if(r[4]){byMonth[m].ce_s+=r[4];byMonth[m].ceS_n++;}}
-  });
-  const months=Object.keys(byMonth).sort();
-  const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei','2026-06':'Jun','2026-07':'Jul','2026-08':'Agu','2026-09':'Sep','2026-10':'Okt','2026-11':'Nov','2026-12':'Des'};
-  const momRows=months.map((m,i)=>{
-    const d=byMonth[m];
-    const sv=d.ceS_n>0?(d.ce_s-d.ci_s)/1e6:0;
-    const prev=i>0?byMonth[months[i-1]]:null;
-    return{m:MLBL[m]||m,trips:d.trips,sav:+sv.toFixed(1),prevTrips:prev?.trips,ci:+(d.ci/1e6).toFixed(1)};
+    const area=r[1];
+    const key_total='__total__';
+    [key_total, area].forEach(k=>{
+      if(!byMonthArea[k]) byMonthArea[k]={};
+      if(!byMonthArea[k][m]) byMonthArea[k][m]={trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0};
+      byMonthArea[k][m].trips++;
+      byMonthArea[k][m].cbm+=(r[9]||0);
+      if(isScopeRow(r)){
+        byMonthArea[k][m].ci_s+=r[3]||0;
+        if(r[4]){byMonthArea[k][m].ce_s+=r[4];byMonthArea[k][m].ceS_n++;}
+      }
+    });
   });
 
-  const chartsHTML=`<div class="grid2 mb12">
+  const allMonths=[...new Set(rows.map(r=>r[7].slice(0,7)))].sort();
+  const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei','2026-06':'Jun','2026-07':'Jul','2026-08':'Agu','2026-09':'Sep','2026-10':'Okt','2026-11':'Nov','2026-12':'Des'};
+  const mLabels=allMonths.map(m=>MLBL[m]||m);
+
+  // Top areas by trip count
+  const areaTrips={};
+  rows.forEach(r=>{areaTrips[r[1]]=(areaTrips[r[1]]||0)+1;});
+  const topAreas=Object.entries(areaTrips).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([a])=>a);
+  const AREA_COLORS=['#266CA9','#00c49a','#f5a623','#8b6cf7','#e24b4b','#5ba4f5','#fb923c','#e879f9'];
+
+  const chartsHTML=`<div class="card mb12">
+    <div class="card-title">Trend LK Internal per Bulan
+      <span class="card-badge">Bar=Trip · Line=CBM · Line=Saving (scope)</span>
+      <div style="margin-left:auto;display:flex;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px">
+        <button id="trendToggleTotal" onclick="setTrendView('total')" style="padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-family:var(--font);font-weight:600">Total LK</button>
+        <button id="trendToggleArea" onclick="setTrendView('area')" style="padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
+      </div>
+    </div>
+    <div id="trendChartWrap" style="position:relative;height:260px"><canvas id="cTrend"></canvas></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:10px;color:var(--muted)">
+      <span>■ <span style="color:var(--blue)">Bar</span> = Trip Internal</span>
+      <span>— <span style="color:var(--teal)">Line</span> = CBM (m³)</span>
+      <span>— <span style="color:var(--green)">Line</span> = Saving scope (Jt)</span>
+    </div>
+  </div>`;
+
+  const momRows=allMonths.map((m,i)=>{
+    const d=byMonthArea['__total__'][m]||{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0};
+    const sv=d.ceS_n>0?(d.ce_s-d.ci_s)/1e6:0;
+    const prev=i>0?byMonthArea['__total__'][allMonths[i-1]]:null;
+    return{m:MLBL[m]||m,trips:d.trips,sav:+sv.toFixed(1),prevTrips:prev?.trips,ci:+(d.cbm).toFixed(0),cbm:+(d.cbm).toFixed(0)};
+  });
+
+  const chartsHTML2=`<div class="grid2 mb12">
     <div class="card" style="margin-bottom:0">
       <div class="card-title">Savings per Bulan <span class="card-badge">scope area · Jt Rp</span></div>
       <div style="position:relative;height:155px"><canvas id="cSav"></canvas></div>
@@ -756,19 +866,24 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
         <td style="font-weight:700">${m.m}</td>
         <td style="text-align:right">${fmt(m.trips)}</td>
         <td style="text-align:right">${m.prevTrips!=null?`<span class="${m.trips>=m.prevTrips?'pos':'neg'}">${m.trips>=m.prevTrips?'▲':'▼'}${Math.abs(m.trips-m.prevTrips)}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
-        <td style="text-align:right">${m.ci}</td>
+        <td style="text-align:right">${(rows.filter(r=>r[7].slice(0,7)===allMonths[momRows.indexOf(m)]).reduce((s,r)=>s+(r[3]||0),0)/1e6).toFixed(1)}</td>
         <td style="text-align:right;color:${m.sav>=0?CGREEN:CRED};font-weight:700">${m.sav>=0?'+':''}${m.sav}</td>
       </tr>`).join('')}</tbody>
     </table>
   </div>`;
 
-  document.getElementById('content').innerHTML=kpiHTML+alertHTML+siteHTML+scHTML+chartsHTML+momHTML;
+  document.getElementById('content').innerHTML=kpiHTML+alertHTML+siteHTML+scHTML+chartsHTML+chartsHTML2+momHTML;
+
+  // Store data for toggle
+  window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
+  window._trendView='total';
 
   setTimeout(()=>{
-    dc('cSav');dc('cTrip');
+    dc('cSav');dc('cTrip');dc('cTrend');
     const savColors=momRows.map(m=>m.sav>=0?'rgba(34,160,107,.75)':'rgba(226,75,75,.75)');
     CH['cSav']=new Chart(document.getElementById('cSav'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.sav),backgroundColor:savColors,borderColor:momRows.map(m=>m.sav>=0?'#22a06b':'#e24b4b'),borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y>=0?'Hemat':'Lebih mahal'}: ${Math.abs(c.parsed.y).toFixed(1)} Jt`}}},scales:{x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'},callback:v=>v+'Jt'},grid:{color:'rgba(0,0,0,.05)'}}}}});
     CH['cTrip']=new Chart(document.getElementById('cTrip'),{type:'bar',data:{labels:momRows.map(m=>m.m),datasets:[{data:momRows.map(m=>m.trips),backgroundColor:'#266CA9',borderRadius:5,borderColor:'#1d5a91',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},y:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{color:'rgba(0,0,0,.05)'}}}}});
+    renderTrendChart('total');
   },30);
 }
 
