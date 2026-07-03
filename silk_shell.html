@@ -349,7 +349,13 @@ function fmtJt(n){const a=Math.abs(n);return(n<0?'-':'')+(a>=1e9?(a/1e9).toFixed
 function fmtM(v){return fmtJt(v)}
 function pc(p){return p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'}
 function dc(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
-function isScopeRow(r){const s=SAVING_SCOPE[r[0]];return s?s.includes(r[1]):false;}
+function isScopeRow(r){
+  const s=SAVING_SCOPE[r[0]];
+  if(!s) return false;
+  // Lampung: jalur = 'Lampung' masuk scope untuk Jababeka/Cikupa meski area = Sumatera Bagian Selatan
+  if(s.includes('Lampung') && r[2]==='Lampung') return true;
+  return s.includes(r[1]);
+}
 
 function getRows(){
   let rows=RAW;
@@ -693,7 +699,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     const sk=calcKpi(sr);
     const scopeAreas_s=SAVING_SCOPE[s]||[];
     // Kontribusi hanya scope area
-    const si=sr.filter(r=>scopeAreas_s.includes(r[1])).length;
+    const si=sr.filter(r=>isScopeRow(r)).length;
     let extScope=EXT_AGG.filter(e=>e.site===s&&scopeAreas_s.includes(e.area));
     if(dateFrom) extScope=extScope.filter(e=>e.date>=dateFrom);
     if(dateTo)   extScope=extScope.filter(e=>e.date<=dateTo);
@@ -912,7 +918,7 @@ function renderCoverage(rows,contrib,tInt,tAll,pct){
     const sr=rows.filter(r=>r[0]===s);if(!sr.length) return;
     const scopeAreas_s=SAVING_SCOPE[s]||[];
     // Kontribusi hanya scope area
-    const si=sr.filter(r=>scopeAreas_s.includes(r[1])).length;
+    const si=sr.filter(r=>isScopeRow(r)).length;
     let extScope=EXT_AGG.filter(e=>e.site===s&&scopeAreas_s.includes(e.area));
     if(dateFrom) extScope=extScope.filter(e=>e.date>=dateFrom);
     if(dateTo)   extScope=extScope.filter(e=>e.date<=dateTo);
@@ -1414,7 +1420,7 @@ function buildSlideData(rows,kpi,tInt,tAll,pct,sav){
     const sk=calcKpi(sr);
     const scopeAreas_s=SAVING_SCOPE[s]||[];
     // Kontribusi hanya scope area
-    const si=sr.filter(r=>scopeAreas_s.includes(r[1])).length;
+    const si=sr.filter(r=>isScopeRow(r)).length;
     let extScope=EXT_AGG.filter(e=>e.site===s&&scopeAreas_s.includes(e.area));
     if(dateFrom) extScope=extScope.filter(e=>e.date>=dateFrom);
     if(dateTo)   extScope=extScope.filter(e=>e.date<=dateTo);
@@ -1663,7 +1669,7 @@ function presentSlide(){
 function calcCostSite(rows, site){
   const sr = rows.filter(r=>r[0]===site);
   const scopeAreas = SAVING_SCOPE[site]||[];
-  const scope = sr.filter(r=>scopeAreas.includes(r[1]));
+  const scope = sr.filter(r=>isScopeRow(r));
   const months = [...new Set(sr.map(r=>r[7].slice(0,7)))].length||1;
 
   const sumCI   = scope.reduce((s,r)=>s+(r[3]||0),0);
