@@ -1440,16 +1440,20 @@ function buildSlideData(rows,kpi,tInt,tAll,pct,sav){
     const slaAvgSite=slaData.length?+(slaData.reduce((a,j)=>a+j.lt_delta,0)/slaData.length).toFixed(2):null;
     // Scope area breakdown
     const areaBreakdown=scopeAreas.map(area=>{
-      const aRows=sr.filter(r=>r[1]===area);
+      // Lampung: match by jalur='Lampung' karena area di data = 'Sumatera Bagian Selatan'
+      const isLampung=area==='Lampung';
+      const aRows=isLampung?sr.filter(r=>r[2]==='Lampung'):sr.filter(r=>r[1]===area);
       const aCI=aRows.reduce((s,r)=>s+(r[3]||0),0);
       const aCE=aRows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
       const aCECnt=aRows.filter(r=>r[4]).length;
       const savPct=aCECnt>0&&aCI>0?+((aCE-aCI)/aCI*100).toFixed(1):null;
       // SLA for area
-      const aJalurs=jalurs.filter(j=>j.area===area&&j.lt_delta!==null);
+      const aJalurs=isLampung?jalurs.filter(j=>j.j==='Lampung'&&j.lt_delta!==null):jalurs.filter(j=>j.area===area&&j.lt_delta!==null);
       const aSLA=aJalurs.length?+(aJalurs.reduce((s,j)=>s+j.lt_delta,0)/aJalurs.length).toFixed(2):null;
-      // % trip
-      const extTripsArea=EXT_AGG.filter(e=>(activeSite==='all'||e.site===s)&&e.area===area&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
+      // % trip — ext trips for Lampung match by jalur in EXT_JALUR
+      const extTripsArea=isLampung
+        ?EXT_JALUR.filter(e=>(activeSite==='all'||e.site===s)&&e.jalur==='Lampung'&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0)
+        :EXT_AGG.filter(e=>(activeSite==='all'||e.site===s)&&e.area===area&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
       const totalArea=aRows.length+extTripsArea;
       const pctArea=totalArea?Math.round(aRows.length/totalArea*100):0;
       return{area,intTrip:aRows.length,ci:aCI,ce:aCECnt>0?aCE:null,savPct,sla:aSLA,pct:pctArea};
