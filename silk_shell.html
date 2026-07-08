@@ -797,9 +797,9 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
             <td class="scv int">${j.ci}</td>
             <td class="scv ext">${j.ce!==null?j.ce:'<span style="color:var(--muted)">—</span>'}</td>
             <td class="${j.gap!==null?(j.gap>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.gap!==null?(j.gap>=0?'+':'')+j.gap+' Jt':'—'}</td>
+            <td class="scv" style="text-align:right;color:${j.olf!==null?(j.olf>=80?'var(--green)':j.olf>=60?'var(--teal)':'var(--orange)'):'var(--muted)'}">${j.olf!==null?j.olf+'%':'<span style="color:var(--muted)">—</span>'}</td>
             <td class="scv int">${j.lt_int!==null?j.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
             <td class="scv ext">${j.lt_ext!==null?j.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
-            <td class="scv" style="text-align:right">${j.olf!==null?j.olf+'%':'<span style="color:var(--muted)">—</span>'}</td>
             <td class="${j.lt_delta!==null?(j.lt_delta>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.lt_delta!==null?(j.lt_delta>=0?'+':'')+j.lt_delta+' hr':'—'}</td>
             <td style="text-align:center"><span class="status-pill ${statusClass[j.status]||'sp-nodata'}" style="font-size:9px;cursor:help" title="${statusTooltip[j.status]||''}">${statusLabel[j.status]||'—'}</span></td>
           </tr>`;
@@ -824,6 +824,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
             <td style="${st};text-align:right;color:var(--blue)">${tCI}</td>
             <td style="${st};text-align:right;color:var(--muted)">${tCE!==null?tCE:'—'}</td>
             <td style="${st};text-align:right;color:${tGap!==null?(tGap>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${tGap!==null?(tGap>=0?'+':'')+tGap+' Jt':'—'}</td>
+            <td style="${st};text-align:right;color:var(--muted)">—</td>
             <td style="${st};text-align:right;color:var(--blue)">${avgLtInt!==null?avgLtInt:'—'}</td>
             <td style="${st};text-align:right;color:var(--muted)">${avgLtExt!==null?avgLtExt:'—'}</td>
             <td style="${st};text-align:right;color:${avgDelta!==null?(avgDelta>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${avgDelta!==null?(avgDelta>=0?'+':'')+avgDelta+' hr':'—'}</td>
