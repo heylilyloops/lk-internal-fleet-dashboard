@@ -85,7 +85,10 @@ for line in int_data[1:]:
     mpp  = float(mpp_raw)  if mpp_raw  else None
     sewa = float(sewa_raw) if sewa_raw else None
     kap_raw  = line[20].strip().replace(',','') if len(line) > 20 else ''
-    kap  = float(kap_raw) if kap_raw else None
+    try:
+        kap = float(kap_raw) if kap_raw and kap_raw not in ('#N/A','#VALUE!','#REF!','#DIV/0!','#NULL!','#NAME?') else None
+    except:
+        kap = None
     int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap])
 
 print(f"INT parsed: {len(int_rows)} rows")
