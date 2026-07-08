@@ -337,8 +337,8 @@ const SAVING_SCOPE={
   'Corp Tamora':  ['Sumatera Utara'],
   'Corp Tallo':   ['Sulawesi Selatan']
 };
-// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa]
-//        0    1    2    3  4    5      6         7      8   9   10   11   12   13
+// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap]
+//        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14
 
 let activeSite='all', activeMenu='overview', CH={};
 let dateFrom='', dateTo='';
@@ -417,7 +417,9 @@ function calcJalur(rows,site){
     } else if(pct_ef!==null){
       status=pct_ef>=0?'worthit':'eval';
     }
-    return{j:j.j,area:j.area,t:j.t,ci:+ci.toFixed(1),ce:ce!==null?+ce.toFixed(1):null,gap,pct_ef,alert,inScope:j.inScope,lt_int,lt_ext,lt_delta,status};
+    const olfR=rows.filter(r=>r[2]===j.j&&r[14]&&r[9]);
+    const olf=olfR.length?+(olfR.reduce((s,r)=>s+(r[9]/r[14]*100),0)/olfR.length).toFixed(1):null;
+    return{j:j.j,area:j.area,t:j.t,ci:+ci.toFixed(1),ce:ce!==null?+ce.toFixed(1):null,gap,pct_ef,alert,inScope:j.inScope,lt_int,lt_ext,lt_delta,status,olf};
   }).sort((a,b)=>b.t-a.t);
 }
 
@@ -662,7 +664,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const cpdo=kpi.tDO>0?kpi.tCI/kpi.tDO:0;
 
   // 1. KPI Row
-  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(7,1fr)">
+  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(9,1fr)">
     <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi<br><span style="font-size:9px;color:var(--muted);font-style:italic">*ext: hanya trip darat</span></div></div>
     <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label">Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
     <div class="kpi c-teal"><div class="kpi-label">Keunggulan Pengiriman</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
@@ -675,9 +677,17 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       const pUJP=+(tUJP/tArm*100).toFixed(1);
       const pMPP=+(tMPP/tArm*100).toFixed(1);
       const pSewa=+(tSewa/tArm*100).toFixed(1);
+      // Saving All Area
+      const savAll=rows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0)-(r[3]||0),0);
+      // OLF
+      const olfRows=rows.filter(r=>r[14]&&r[9]);
+      const olfVal=olfRows.length?+(olfRows.reduce((s,r)=>s+(r[9]/r[14]*100),0)/olfRows.length).toFixed(1):null;
+      const olfCls=olfVal>=80?'c-green':olfVal>=60?'c-teal':'c-orange';
       return`<div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${pUJP}% dari Total Cost Armada</div></div>
     <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${pMPP}% dari Total Cost Armada</div></div>
-    <div class="kpi c-purple"><div class="kpi-label">Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${pSewa}% dari Total Cost Armada</div></div>`;
+    <div class="kpi c-purple"><div class="kpi-label">Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${pSewa}% dari Total Cost Armada</div></div>
+    <div class="kpi c-${savAll>=0?'green':'red'}"><div class="kpi-label">Saving All Area</div><div class="kpi-value" style="color:${savAll>=0?CGREEN:CRED}">${savAll>=0?'+':''}${fmtM(savAll)}</div><div class="kpi-sub">semua jalur yang ada rate ext</div></div>
+    <div class="kpi ${olfCls}"><div class="kpi-label">OLF Avg</div><div class="kpi-value">${olfVal!==null?olfVal+'%':'—'}</div><div class="kpi-sub">CBM/Kapasitas · ${olfRows.length} trip ada data</div></div>`;
     })()}
   </div>`;
 
@@ -772,7 +782,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
           <th style="min-width:140px">Jalur</th>
           <th class="r">Trip</th>
           <th class="r">Cost Int (Jt)</th><th class="r">Cost Ext (Jt)</th><th class="r">Gap Cost</th>
-          <th class="r">LT Int (hr)</th><th class="r">LT Ext (hr)</th><th class="r">Δ SLA</th>
+          <th class="r">OLF</th><th class="r">LT Int (hr)</th><th class="r">LT Ext (hr)</th><th class="r">Δ SLA</th>
           <th style="text-align:center">Status</th>
         </tr></thead>
         <tbody>${jalurs.map(j=>{
@@ -789,6 +799,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
             <td class="${j.gap!==null?(j.gap>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.gap!==null?(j.gap>=0?'+':'')+j.gap+' Jt':'—'}</td>
             <td class="scv int">${j.lt_int!==null?j.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
             <td class="scv ext">${j.lt_ext!==null?j.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
+            <td class="scv" style="text-align:right">${j.olf!==null?j.olf+'%':'<span style="color:var(--muted)">—</span>'}</td>
             <td class="${j.lt_delta!==null?(j.lt_delta>=0?'sc-pos':'sc-neg'):'sc-neu'}">${j.lt_delta!==null?(j.lt_delta>=0?'+':'')+j.lt_delta+' hr':'—'}</td>
             <td style="text-align:center"><span class="status-pill ${statusClass[j.status]||'sp-nodata'}" style="font-size:9px;cursor:help" title="${statusTooltip[j.status]||''}">${statusLabel[j.status]||'—'}</span></td>
           </tr>`;
@@ -1002,11 +1013,12 @@ function renderContribExpandable(rows){
     areaMap[area].int++;areaMap[area].ci+=r[3]||0;
     if(r[4]){areaMap[area].ce+=r[4];areaMap[area].ceCnt++;}
     if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].ltS+=+r[10];areaMap[area].ltN++;}
-    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,intCbm:0,armadas:{}};
+    if(!areaMap[area].jalurs[jalur]) areaMap[area].jalurs[jalur]={int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,intCbm:0,armadas:{},olfSum:0,olfN:0};
     areaMap[area].jalurs[jalur].int++;areaMap[area].jalurs[jalur].ci+=r[3]||0;
     if(r[4]){areaMap[area].jalurs[jalur].ce+=r[4];areaMap[area].jalurs[jalur].ceCnt++;}
     if(r[10]!==null&&r[10]!==undefined&&!isNaN(+r[10])){areaMap[area].jalurs[jalur].ltS+=+r[10];areaMap[area].jalurs[jalur].ltN++;}
     areaMap[area].jalurs[jalur].intCbm+=(r[9]||0);
+    if(r[14]&&r[9]){areaMap[area].jalurs[jalur].olfSum+=(r[9]/r[14]*100);areaMap[area].jalurs[jalur].olfN++;}
     const arm=r[5]||'Unknown';
     if(!areaMap[area].jalurs[jalur].armadas[arm]) areaMap[area].jalurs[jalur].armadas[arm]={int:0,ci:0,ce:0,ceCnt:0,intCbm:0};
     areaMap[area].jalurs[jalur].armadas[arm].int++;
@@ -1065,7 +1077,8 @@ function renderContribExpandable(rows){
       const lt_ext=extLtByJalur[jname]?+(extLtByJalur[jname].reduce((s,v)=>s+v,0)/extLtByJalur[jname].length).toFixed(2):null;
       const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
       const armadaList=Object.entries(jv.armadas||{}).map(([arm,av])=>({arm,int:av.int,ci:av.ci,ce:av.ceCnt>0?av.ce:null,intCbm:av.intCbm||0})).sort((a,b)=>b.int-a.int);
-      return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta,armadas:armadaList};
+      const jOlf=jv.olfN>0?+(jv.olfSum/jv.olfN).toFixed(1):null;
+      return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta,armadas:armadaList,olf:jOlf};
     }).sort((a,b)=>b.total-a.total);
     const lt_int_area=v.ltN>0?+(v.ltS/v.ltN).toFixed(2):null;
     const lt_ext_area=extLtByArea[area]||null;
@@ -1093,6 +1106,7 @@ function renderContribExpandable(rows){
       ${(()=>{const tCbm=(a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0)+a.extCbm;const pCbm=tCbm>0?Math.round((a.jalurs.reduce((s,j)=>s+j.intCbm,0)||0)/tCbm*100):0;const cls2=pCbm>=50?'phi':pCbm>=25?'pmi':pCbm>=10?'plo':'pvlo';return`<td style="text-align:right"><span class="pill ${cls2}">${pCbm}%</span></td>`;})()}
       <td style="text-align:right">${fj(a.ci)}</td><td style="text-align:right">${fj(a.ce)}</td>
       <td style="text-align:right">${savPct(a.ci,a.ce)}</td>
+      <td style="text-align:right;font-weight:600;color:${(()=>{const ao=a.jalurs.filter(j=>j.olf!==null);const avg=ao.length?+(ao.reduce((s,j)=>s+j.olf,0)/ao.length).toFixed(1):null;return avg!==null?(avg>=80?'var(--green)':avg>=60?'var(--teal)':'var(--orange)'):'var(--muted)';})()}">${(()=>{const ao=a.jalurs.filter(j=>j.olf!==null);const avg=ao.length?+(ao.reduce((s,j)=>s+j.olf,0)/ao.length).toFixed(1):null;return avg!==null?avg+'%':'—';})()}</td>
       <td style="text-align:right;color:var(--blue);font-weight:600">${a.lt_int!==null?a.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
       <td style="text-align:right;color:var(--muted)">${a.lt_ext!==null?a.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
       <td style="text-align:right">${fltd(a.lt_delta)}</td>
@@ -1122,6 +1136,7 @@ function renderContribExpandable(rows){
         +'<td style="text-align:right">'+fj(j.ci)+'</td>'
         +'<td style="text-align:right">'+fj(j.ce)+'</td>'
         +'<td style="text-align:right">'+savPct(j.ci,j.ce)+'</td>'
+        +'<td style="text-align:right;font-weight:600;color:'+(j.olf!==null?(j.olf>=80?'var(--green)':j.olf>=60?'var(--teal)':'var(--orange)'):'var(--muted)')+'">'+(j.olf!==null?j.olf+'%':'&#8212;')+'</td>'
         +'<td style="text-align:right;color:var(--blue);font-weight:600">'+(j.lt_int!==null?String(j.lt_int):'<span style="color:var(--muted)">&#8212;</span>')+'</td>'
         +'<td style="text-align:right;color:var(--muted)">'+(j.lt_ext!==null?String(j.lt_ext):'<span style="color:var(--muted)">&#8212;</span>')+'</td>'
         +'<td style="text-align:right">'+fltd(j.lt_delta)+'</td>'
@@ -1140,7 +1155,7 @@ function renderContribExpandable(rows){
         <th>INT Trip</th><th>EXT Trip</th><th>Total</th><th>% INT</th>
         <th>INT CBM</th><th>EXT CBM</th><th>Total CBM</th><th>% CBM</th>
         <th>Cost Int (Jt)</th><th>Cost Ext (Jt)</th><th>Savings %</th>
-        <th>LT Int (hr)</th><th>LT Ext (hr)</th><th>Δ SLA</th>
+        <th>OLF</th><th>LT Int (hr)</th><th>LT Ext (hr)</th><th>Δ SLA</th>
       </tr></thead>
       <tbody>${rows_html}</tbody>
     </table></div>
