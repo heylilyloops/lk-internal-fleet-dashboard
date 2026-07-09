@@ -89,8 +89,7 @@ for line in int_data[1:]:
         kap = float(kap_raw) if kap_raw and kap_raw not in ('#N/A','#VALUE!','#REF!','#DIV/0!','#NULL!','#NAME?') else None
     except:
         kap = None
-    nopol = line[8].strip() if len(line) > 8 else ''
-    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap, nopol])
+    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap])
 
 print(f"INT parsed: {len(int_rows)} rows")
 
