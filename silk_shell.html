@@ -337,8 +337,8 @@ const SAVING_SCOPE={
   'Corp Tamora':  ['Sumatera Utara'],
   'Corp Tallo':   ['Sulawesi Selatan']
 };
-// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap,nopol]
-//        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14   15
+// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap]
+//        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14
 
 let activeSite='all', activeMenu='overview', CH={};
 let dateFrom='', dateTo='';
@@ -682,9 +682,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   </div>
   <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-top:8px">
     ${(()=>{
-      const nopolSet=new Set(rows.filter(r=>r[15]).map(r=>r[15]));
-      const nArmada=nopolSet.size;
-      const avgTripPerArmada=nArmada>0?+(rows.length/nArmada).toFixed(1):0;
+      const totalDO=rows.reduce((s,r)=>s+(r[8]||0),0);
+      const avgDOPerTrip=rows.length>0?+(totalDO/rows.length).toFixed(1):0;
       const savAll=rows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0)-(r[3]||0),0);
       const olfRows=rows.filter(r=>r[14]&&r[9]);
       const olfVal=olfRows.length?+(olfRows.reduce((s,r)=>s+(r[9]/r[14]*100),0)/olfRows.length).toFixed(1):null;
@@ -694,7 +693,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       const tSewa=rows.reduce((s,r)=>s+(r[13]||0),0);
       const tArm=tUJP+tMPP+tSewa||1;
       return`
-      <div class="kpi c-blue"><div class="kpi-label">Armada Unik LK</div><div class="kpi-value">${nArmada}</div><div class="kpi-sub">avg ${avgTripPerArmada} trip/armada</div></div>
+      <div class="kpi c-blue"><div class="kpi-label">Total DO Internal</div><div class="kpi-value">${fmt(totalDO)}</div><div class="kpi-sub">avg ${avgDOPerTrip} DO/trip</div></div>
       <div class="kpi c-${savAll>=0?'green':'red'}"><div class="kpi-label">Saving All Area</div><div class="kpi-value" style="color:${savAll>=0?CGREEN:CRED}">${savAll>=0?'+':''}${fmtM(savAll)}</div><div class="kpi-sub">semua jalur yg ada rate ext</div></div>
       <div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${+(tUJP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
       <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${+(tMPP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
