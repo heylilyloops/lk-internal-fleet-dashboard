@@ -89,7 +89,8 @@ for line in int_data[1:]:
         kap = float(kap_raw) if kap_raw and kap_raw not in ('#N/A','#VALUE!','#REF!','#DIV/0!','#NULL!','#NAME?') else None
     except:
         kap = None
-    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap])
+    nopol = line[8].strip() if len(line) > 8 else ''
+    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap, nopol])
 
 print(f"INT parsed: {len(int_rows)} rows")
 
@@ -99,7 +100,7 @@ col = {h.strip(): i for i, h in enumerate(ext_header)}
 print(f"EXT header cols: {list(col.keys())[:12]}")
 
 ext_agg_area  = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))  # [trips, cbm]
-ext_agg_jalur = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0]))))  # [trips, cbm]
+ext_agg_jalur = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0, 0.0, 0]))))  # [trips, cbm, olf_sum, olf_n]
 
 skipped = 0
 for line in ext_data[1:]:
@@ -137,13 +138,20 @@ for line in ext_data[1:]:
 
     jalur = jalur_raw.title() if jalur_raw else ''
     cbm_raw2 = get_col('CBM', 11)
+    kap_raw2 = get_col('Kapasitas Armada', 12)
     try: cbm2 = float(cbm_raw2.replace(',','')) if cbm_raw2 else 0.0
     except: cbm2 = 0.0
+    try: kap2 = float(kap_raw2.replace(',','')) if kap_raw2 and kap_raw2 not in ('#N/A','#VALUE!','#REF!','') else 0.0
+    except: kap2 = 0.0
+    olf_ext = (cbm2/kap2*100) if kap2>0 and cbm2>0 else 0.0
     ext_agg_area[site][del_date][area][0] += 1
     ext_agg_area[site][del_date][area][1] += cbm2
     if jalur:
         ext_agg_jalur[site][del_date][area][jalur][0] += 1
         ext_agg_jalur[site][del_date][area][jalur][1] += cbm2
+        if olf_ext > 0:
+            ext_agg_jalur[site][del_date][area][jalur][2] += olf_ext
+            ext_agg_jalur[site][del_date][area][jalur][3] += 1
 
 print(f"EXT skipped: {skipped}")
 
@@ -236,7 +244,7 @@ ext_list_area = [
     for a, v in areas.items()
 ]
 ext_list_jalur = [
-    {"site":s,"date":d,"area":a,"jalur":j,"trips":v[0],"cbm":round(v[1],2)}
+    {"site":s,"date":d,"area":a,"jalur":j,"trips":v[0],"cbm":round(v[1],2),"olf_ext":round(v[2]/v[3],1) if v[3]>0 else None}
     for s, dates in ext_agg_jalur.items()
     for d, areas in dates.items()
     for a, jalurs in areas.items()
