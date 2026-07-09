@@ -1131,6 +1131,7 @@ function renderContribExpandable(rows){
       <td style="text-align:right">${fj(a.ci)}</td><td style="text-align:right">${fj(a.ce)}</td>
       <td style="text-align:right">${savPct(a.ci,a.ce)}</td>
       <td style="text-align:right;font-weight:600;color:${(()=>{const ao=a.jalurs.filter(j=>j.olf!==null);const avg=ao.length?+(ao.reduce((s,j)=>s+j.olf,0)/ao.length).toFixed(1):null;return avg!==null?(avg>=80?'var(--green)':avg>=60?'var(--teal)':'var(--orange)'):'var(--muted)';})()}">${(()=>{const ao=a.jalurs.filter(j=>j.olf!==null);const avg=ao.length?+(ao.reduce((s,j)=>s+j.olf,0)/ao.length).toFixed(1):null;return avg!==null?avg+'%':'—';})()}</td>
+      <td style="text-align:right;font-weight:600;color:${(()=>{const ae=a.jalurs.filter(j=>j.olf_ext!==null);const avg=ae.length?+(ae.reduce((s,j)=>s+j.olf_ext,0)/ae.length).toFixed(1):null;return avg!==null?(avg>=80?'var(--green)':avg>=60?'var(--teal)':'var(--orange)'):'var(--muted)';})()}">${(()=>{const ae=a.jalurs.filter(j=>j.olf_ext!==null);const avg=ae.length?+(ae.reduce((s,j)=>s+j.olf_ext,0)/ae.length).toFixed(1):null;return avg!==null?avg+'%':'—';})()}</td>
       <td style="text-align:right;color:var(--blue);font-weight:600">${a.lt_int!==null?a.lt_int:'<span style="color:var(--muted)">—</span>'}</td>
       <td style="text-align:right;color:var(--muted)">${a.lt_ext!==null?a.lt_ext:'<span style="color:var(--muted)">—</span>'}</td>
       <td style="text-align:right">${fltd(a.lt_delta)}</td>
@@ -1918,6 +1919,89 @@ function renderCostAnalysis(rows){
   </div>`;
 
   // Break-even insight
+  // Jalur summary table — all components
+  const jalurSummary=[];
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    if(!sr.length) return;
+    const jalurMap={};
+    sr.forEach(r=>{
+      const j=r[2];
+      if(!jalurMap[j]) jalurMap[j]={site:s,jalur:j,area:r[1],trips:0,ci:0,ce:0,ceCnt:0,cbm:0,olfSum:0,olfN:0};
+      jalurMap[j].trips++;
+      jalurMap[j].ci+=r[3]||0;
+      if(r[4]){jalurMap[j].ce+=r[4];jalurMap[j].ceCnt++;}
+      jalurMap[j].cbm+=r[9]||0;
+      if(r[14]&&r[9]){jalurMap[j].olfSum+=(r[9]/r[14]*100);jalurMap[j].olfN++;}
+    });
+    Object.values(jalurMap).forEach(jv=>{
+      const ci_jt=+(jv.ci/1e6).toFixed(1);
+      const ce_jt=jv.ceCnt>0?+(jv.ce/1e6).toFixed(1):null;
+      const gap=ce_jt!==null?+(ce_jt-ci_jt).toFixed(1):null;
+      const costCbm=jv.cbm>0?+(jv.ci/jv.cbm).toFixed(0):null;
+      const olfInt=jv.olfN>0?+(jv.olfSum/jv.olfN).toFixed(1):null;
+      // OLF Ext from EXT_JALUR
+      let efj=EXT_JALUR.filter(e=>e.site===s&&e.jalur===jv.jalur&&e.olf_ext!==null);
+      if(dateFrom) efj=efj.filter(e=>e.date>=dateFrom);
+      if(dateTo) efj=efj.filter(e=>e.date<=dateTo);
+      const olfExt=efj.length?+(efj.reduce((a,e)=>a+e.olf_ext,0)/efj.length).toFixed(1):null;
+      const deltaOlf=olfInt!==null&&olfExt!==null?+(olfInt-olfExt).toFixed(1):null;
+      // Status: EFISIEN = gap>0 && olfInt>=70, PERLU REVIEW = gap<0, OPTIMASI = olfInt<70
+      let status='nodata';
+      if(gap!==null){
+        if(gap>=0&&olfInt!==null&&olfInt>=70) status='efisien';
+        else if(gap<0) status='review';
+        else status='optimasi';
+      }
+      jalurSummary.push({...jv,ci_jt,ce_jt,gap,costCbm,olfInt,olfExt,deltaOlf,status});
+    });
+  });
+  jalurSummary.sort((a,b)=>b.ci_jt-a.ci_jt);
+
+  const statusLbl={efisien:'EFISIEN',review:'PERLU REVIEW',optimasi:'OPTIMASI OLF',nodata:'NO BENCHMARK'};
+  const statusCls={efisien:'sp-ideal',review:'sp-eval',optimasi:'sp-worth',nodata:'sp-nodata'};
+
+  const jalurTableHTML=`<div class="card mb12">
+    <div class="card-title">Summary per Jalur — Cost & OLF Comparison
+      <span class="card-badge">semua jalur · semua site</span>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1100px;font-size:11.5px">
+      <thead><tr style="background:var(--bg)">
+        <th style="text-align:left;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Jalur</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Trip</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--blue);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Cost Int (Jt)</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Cost Ext (Jt)</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Gap Cost</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--orange);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Cost/CBM</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--teal);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">OLF Int</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">OLF Ext</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Δ OLF</th>
+        <th style="text-align:center;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Status</th>
+      </tr></thead>
+      <tbody>
+        ${jalurSummary.map(j=>`<tr style="border-bottom:1px solid #f0f4f9">
+          <td style="padding:7px 10px">
+            <div style="font-weight:700;font-size:12px">${j.jalur}</div>
+            <div style="font-size:10px;color:${SCOL[j.site]};font-weight:600">${j.site}</div>
+            <div style="font-size:10px;color:var(--muted)">${j.area}</div>
+          </td>
+          <td style="text-align:right;padding:7px 10px;color:var(--txt2)">${j.trips}</td>
+          <td style="text-align:right;padding:7px 10px;font-weight:700;color:var(--blue)">${j.ci_jt}</td>
+          <td style="text-align:right;padding:7px 10px;color:var(--muted)">${j.ce_jt!==null?j.ce_jt:'—'}</td>
+          <td style="text-align:right;padding:7px 10px;font-weight:700;color:${j.gap!==null?(j.gap>=0?CGREEN:CRED):'var(--muted)'}">${j.gap!==null?(j.gap>=0?'+':'')+j.gap+' Jt':'—'}</td>
+          <td style="text-align:right;padding:7px 10px;color:var(--orange);font-weight:600">${j.costCbm!==null?'Rp '+fmt(j.costCbm):'—'}</td>
+          <td style="text-align:right;padding:7px 10px;font-weight:700;color:${j.olfInt!==null?(j.olfInt>=80?CGREEN:j.olfInt>=60?'var(--teal)':'var(--orange)'):'var(--muted)'}">${j.olfInt!==null?j.olfInt+'%':'—'}</td>
+          <td style="text-align:right;padding:7px 10px;color:var(--muted)">${j.olfExt!==null?j.olfExt+'%':'—'}</td>
+          <td style="text-align:right;padding:7px 10px;font-weight:700;color:${j.deltaOlf!==null?(j.deltaOlf>=0?CGREEN:CRED):'var(--muted)'}">${j.deltaOlf!==null?(j.deltaOlf>=0?'+':'')+j.deltaOlf+'%':'—'}</td>
+          <td style="text-align:center;padding:7px 10px"><span class="status-pill ${statusCls[j.status]}" style="font-size:9px">${statusLbl[j.status]}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+    <div style="font-size:9px;color:var(--muted);font-style:italic;margin-top:6px">
+      *EFISIEN: Gap Cost positif + OLF ≥70% · OPTIMASI OLF: Cost murah tapi muatan belum optimal · PERLU REVIEW: Cost lebih mahal dari external
+    </div>
+  </div>`;
+
   const insightHTML=`<div class="card mb12">
     <div class="card-title">Break-even Analysis — Internal All-in vs Reduce Armada</div>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -1945,7 +2029,7 @@ function renderCostAnalysis(rows){
     </div>
   </div>`;
 
-  document.getElementById('content').innerHTML=kpiHTML+tableHTML+chartHTML+insightHTML;
+  document.getElementById('content').innerHTML=kpiHTML+tableHTML+chartHTML+jalurTableHTML+insightHTML;
 
   // Render charts
   setTimeout(()=>{
