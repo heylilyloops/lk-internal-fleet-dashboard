@@ -337,8 +337,8 @@ const SAVING_SCOPE={
   'Corp Tamora':  ['Sumatera Utara'],
   'Corp Tallo':   ['Sulawesi Selatan']
 };
-// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap]
-//        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14
+// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap,nopol]
+//        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14   15
 
 let activeSite='all', activeMenu='overview', CH={};
 let dateFrom='', dateTo='';
@@ -519,9 +519,18 @@ function renderTrendChart(view){
       datasets.push({label:'Saving '+area+' (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:col,backgroundColor:'transparent',borderWidth:2,pointRadius:4,pointBackgroundColor:col,tension:0.3,yAxisID:'y3',order:i,spanGaps:true,borderDash:i>0?[4,3]:[]});
     });
   } else if(view==='dcs'){
-    // DC Sidoarjo: Jawa Timur combo
     const d=allMonths.map(m=>byMonthArea['Jawa Timur']&&byMonthArea['Jawa Timur'][m]?byMonthArea['Jawa Timur'][m]:{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
     datasets=comboDatasets(d,'#8b6cf7');
+  } else if(view==='armada'){
+    ARMADA_TYPES.forEach((arm,i)=>{
+      datasets.push({
+        label:arm,type:'bar',
+        data:allMonths.map(m=>byMonthArmada[arm]&&byMonthArmada[arm][m]?byMonthArmada[arm][m]:0),
+        backgroundColor:ARMADA_COLORS[arm]||AREA_COLORS[i],
+        borderColor:ARMADA_COLORS[arm]||AREA_COLORS[i],
+        borderWidth:1,borderRadius:3,yAxisID:'y',order:i,stack:'armada'
+      });
+    });
   }
 
   const opts={
@@ -547,9 +556,9 @@ function renderTrendChart(view){
 
 function setTrendView(view){
   window._trendView=view;
-  ['Total','Area','DCJ','DCS'].forEach(k=>{
+  ['Total','Area','DCJ','DCS','Armada'].forEach(k=>{
     const btn=document.getElementById('trendToggle'+k);
-    const active=(k==='Total'&&view==='total')||(k==='Area'&&view==='area')||(k==='DCJ'&&view==='dcj')||(k==='DCS'&&view==='dcs');
+    const active=(k==='Total'&&view==='total')||(k==='Area'&&view==='area')||(k==='DCJ'&&view==='dcj')||(k==='DCS'&&view==='dcs')||(k==='Armada'&&view==='armada');
     if(btn){btn.style.background=active?'var(--blue)':'transparent';btn.style.color=active?'#fff':'var(--muted)';}
   });
   renderTrendChart(view);
@@ -664,30 +673,32 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const cpdo=kpi.tDO>0?kpi.tCI/kpi.tDO:0;
 
   // 1. KPI Row
-  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(9,1fr)">
+  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
     <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi<br><span style="font-size:9px;color:var(--muted);font-style:italic">*ext: hanya trip darat</span></div></div>
     <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label">Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
     <div class="kpi c-teal"><div class="kpi-label">Keunggulan Pengiriman</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
     <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
+
+  </div>
+  <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-top:8px">
     ${(()=>{
+      const nopolSet=new Set(rows.filter(r=>r[15]).map(r=>r[15]));
+      const nArmada=nopolSet.size;
+      const avgTripPerArmada=nArmada>0?+(rows.length/nArmada).toFixed(1):0;
+      const savAll=rows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0)-(r[3]||0),0);
+      const olfRows=rows.filter(r=>r[14]&&r[9]);
+      const olfVal=olfRows.length?+(olfRows.reduce((s,r)=>s+(r[9]/r[14]*100),0)/olfRows.length).toFixed(1):null;
+      const olfCls=olfVal>=80?'c-green':olfVal>=60?'c-teal':'c-orange';
       const tUJP=rows.reduce((s,r)=>s+(r[11]||0),0);
       const tMPP=rows.reduce((s,r)=>s+(r[12]||0),0);
       const tSewa=rows.reduce((s,r)=>s+(r[13]||0),0);
       const tArm=tUJP+tMPP+tSewa||1;
-      const pUJP=+(tUJP/tArm*100).toFixed(1);
-      const pMPP=+(tMPP/tArm*100).toFixed(1);
-      const pSewa=+(tSewa/tArm*100).toFixed(1);
-      // Saving All Area
-      const savAll=rows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0)-(r[3]||0),0);
-      // OLF
-      const olfRows=rows.filter(r=>r[14]&&r[9]);
-      const olfVal=olfRows.length?+(olfRows.reduce((s,r)=>s+(r[9]/r[14]*100),0)/olfRows.length).toFixed(1):null;
-      const olfCls=olfVal>=80?'c-green':olfVal>=60?'c-teal':'c-orange';
-      return`<div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${pUJP}% dari Total Cost Armada</div></div>
-    <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${pMPP}% dari Total Cost Armada</div></div>
-    <div class="kpi c-purple"><div class="kpi-label">Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${pSewa}% dari Total Cost Armada</div></div>
-    <div class="kpi c-${savAll>=0?'green':'red'}"><div class="kpi-label">Saving All Area</div><div class="kpi-value" style="color:${savAll>=0?CGREEN:CRED}">${savAll>=0?'+':''}${fmtM(savAll)}</div><div class="kpi-sub">semua jalur yang ada rate ext</div></div>
-    <div class="kpi ${olfCls}"><div class="kpi-label">OLF Avg</div><div class="kpi-value">${olfVal!==null?olfVal+'%':'—'}</div><div class="kpi-sub">CBM/Kapasitas · ${olfRows.length} trip ada data</div></div>`;
+      return`
+      <div class="kpi c-blue"><div class="kpi-label">Armada Unik LK</div><div class="kpi-value">${nArmada}</div><div class="kpi-sub">avg ${avgTripPerArmada} trip/armada</div></div>
+      <div class="kpi c-${savAll>=0?'green':'red'}"><div class="kpi-label">Saving All Area</div><div class="kpi-value" style="color:${savAll>=0?CGREEN:CRED}">${savAll>=0?'+':''}${fmtM(savAll)}</div><div class="kpi-sub">semua jalur yg ada rate ext</div></div>
+      <div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${+(tUJP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
+      <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${+(tMPP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
+      <div class="kpi ${olfCls}"><div class="kpi-label">OLF Avg Int</div><div class="kpi-value">${olfVal!==null?olfVal+'%':'—'}</div><div class="kpi-sub">CBM/Kapasitas · ${olfRows.length} trip</div></div>`;
     })()}
   </div>`;
 
@@ -839,6 +850,17 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   });
 
   // 5. Trend Chart — combo Bar(Trip) + Line(CBM) + Line(Saving) with toggle Total/Per Area
+  const byMonthArmada={};
+  const ARMADA_TYPES=['CDDLC','CDELC','WINGBOX','FUSO'];
+  const ARMADA_COLORS={'CDDLC':'#266CA9','CDELC':'#5ba4f5','WINGBOX':'#00c49a','FUSO':'#f5a623'};
+  rows.forEach(r=>{
+    const arm=r[5]||'Other';
+    const m=r[7].slice(0,7);
+    if(!byMonthArmada[arm]) byMonthArmada[arm]={};
+    if(!byMonthArmada[arm][m]) byMonthArmada[arm][m]=0;
+    byMonthArmada[arm][m]++;
+  });
+
   const byMonthArea={};
   rows.forEach(r=>{
     const m=r[7].slice(0,7);
@@ -874,6 +896,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
         <button id="trendToggleArea" onclick="setTrendView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
         <button id="trendToggleDCJ" onclick="setTrendView('dcj')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">DC Jakarta</button>
         <button id="trendToggleDCS" onclick="setTrendView('dcs')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">DC Sidoarjo</button>
+        <button id="trendToggleArmada" onclick="setTrendView('armada')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Type Armada</button>
       </div>
     </div>
     <div id="trendChartWrap" style="position:relative;height:260px"><canvas id="cTrend"></canvas></div>
@@ -1079,7 +1102,8 @@ function renderContribExpandable(rows){
       const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
       const armadaList=Object.entries(jv.armadas||{}).map(([arm,av])=>({arm,int:av.int,ci:av.ci,ce:av.ceCnt>0?av.ce:null,intCbm:av.intCbm||0})).sort((a,b)=>b.int-a.int);
       const jOlf=jv.olfN>0?+(jv.olfSum/jv.olfN).toFixed(1):null;
-      return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta,armadas:armadaList,olf:jOlf};
+      const jOlfExt=extJalurV.olf_ext||null;
+      return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta,armadas:armadaList,olf:jOlf,olf_ext:jOlfExt};
     }).sort((a,b)=>b.total-a.total);
     const lt_int_area=v.ltN>0?+(v.ltS/v.ltN).toFixed(2):null;
     const lt_ext_area=extLtByArea[area]||null;
@@ -1138,6 +1162,7 @@ function renderContribExpandable(rows){
         +'<td style="text-align:right">'+fj(j.ce)+'</td>'
         +'<td style="text-align:right">'+savPct(j.ci,j.ce)+'</td>'
         +'<td style="text-align:right;font-weight:600;color:'+(j.olf!==null?(j.olf>=80?'var(--green)':j.olf>=60?'var(--teal)':'var(--orange)'):'var(--muted)')+'">'+(j.olf!==null?j.olf+'%':'&#8212;')+'</td>'
+        +'<td style="text-align:right;font-weight:600;color:'+(j.olf_ext!==null?(j.olf_ext>=80?'var(--green)':j.olf_ext>=60?'var(--teal)':'var(--orange)'):'var(--muted)')+'">'+(j.olf_ext!==null?j.olf_ext+'%':'&#8212;')+'</td>'
         +'<td style="text-align:right;color:var(--blue);font-weight:600">'+(j.lt_int!==null?String(j.lt_int):'<span style="color:var(--muted)">&#8212;</span>')+'</td>'
         +'<td style="text-align:right;color:var(--muted)">'+(j.lt_ext!==null?String(j.lt_ext):'<span style="color:var(--muted)">&#8212;</span>')+'</td>'
         +'<td style="text-align:right">'+fltd(j.lt_delta)+'</td>'
@@ -1156,7 +1181,7 @@ function renderContribExpandable(rows){
         <th>INT Trip</th><th>EXT Trip</th><th>Total</th><th>% INT</th>
         <th>INT CBM</th><th>EXT CBM</th><th>Total CBM</th><th>% CBM</th>
         <th>Cost Int (Jt)</th><th>Cost Ext (Jt)</th><th>Savings %</th>
-        <th>OLF</th><th>LT Int (hr)</th><th>LT Ext (hr)</th><th>Δ SLA</th>
+        <th>OLF Int</th><th>OLF Ext</th><th>LT Int (hr)</th><th>LT Ext (hr)</th><th>Δ SLA</th>
       </tr></thead>
       <tbody>${rows_html}</tbody>
     </table></div>
@@ -1283,7 +1308,59 @@ function renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     </div>
   </div>`;
 
-  document.getElementById('content').innerHTML=insightHTML+matrixHTML;
+
+  // Potensi Semester 2 section
+  const allJalursScope=sitesToShow.flatMap(s=>calcJalur(rows.filter(r=>r[0]===s),s).filter(j=>j.inScope));
+
+  // Jalur WORTH IT dengan % internal rendah → potensi tambah
+  const potTambah=allJalursScope.filter(j=>j.status==='worthit'&&j.t<10).sort((a,b)=>b.lt_delta-a.lt_delta).slice(0,5);
+  // Jalur yg bisa naik size armada (OLF tinggi → armada terlalu kecil)
+  const potUpsize=allJalursScope.filter(j=>j.olf!==null&&j.olf>=85&&j.t>=5).sort((a,b)=>b.olf-a.olf).slice(0,5);
+  // Jalur WORTH IT Jabar+Lampung vs Jatim
+  const worthJabar=allJalursScope.filter(j=>['Jawa Barat','Lampung'].includes(j.area)&&j.status==='worthit');
+  const worthJatim=allJalursScope.filter(j=>j.area==='Jawa Timur'&&j.status==='worthit');
+
+  const potensiHTML=`<div class="card mb12">
+    <div class="card-title">🎯 Potensi & Rekomendasi Semester 2
+      <span class="card-badge">berdasarkan data Jan–saat ini</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--bg);border-radius:8px;padding:12px 14px;border-left:3px solid var(--green)">
+        <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:8px">✅ Kandidat Tambah Internal S2</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Jalur WORTH IT (lebih murah+cepat) tapi volume internal masih rendah</div>
+        ${potTambah.length?potTambah.map(j=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+          <span style="font-weight:600">${j.j} <span style="color:var(--muted);font-size:10px">${j.area}</span></span>
+          <span style="color:var(--green)">+${j.gap}Jt · +${j.lt_delta}hr · ${j.t} trip</span>
+        </div>`).join(''):'<div style="color:var(--muted);font-size:11px">Tidak ada jalur WORTH IT dengan volume rendah</div>'}
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px 14px;border-left:3px solid var(--orange)">
+        <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:8px">📦 Kandidat Naik Size Armada</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">OLF ≥85% → armada sering penuh, pertimbangkan upgrade ke Fuso</div>
+        ${potUpsize.length?potUpsize.map(j=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+          <span style="font-weight:600">${j.j} <span style="color:var(--muted);font-size:10px">${j.area}</span></span>
+          <span style="color:var(--orange)">OLF ${j.olf}% · ${j.t} trip</span>
+        </div>`).join(''):'<div style="color:var(--muted);font-size:11px">Tidak ada jalur dengan OLF ≥85%</div>'}
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px 14px;border-left:3px solid var(--blue)">
+        <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:8px">📍 Jabar+Lampung — WORTH IT</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${worthJabar.length} jalur lebih murah & lebih cepat dari external</div>
+        ${worthJabar.slice(0,4).map(j=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">
+          <span style="font-weight:600">${j.j}</span>
+          <span>hemat ${j.gap}Jt · OLF ${j.olf!==null?j.olf+'%':'—'}</span>
+        </div>`).join('')}
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px 14px;border-left:3px solid var(--purple)">
+        <div style="font-size:11px;font-weight:700;color:var(--purple);margin-bottom:8px">📍 Jawa Timur — WORTH IT</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${worthJatim.length} jalur lebih murah & lebih cepat dari external</div>
+        ${worthJatim.slice(0,4).map(j=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">
+          <span style="font-weight:600">${j.j}</span>
+          <span>hemat ${j.gap}Jt · OLF ${j.olf!==null?j.olf+'%':'—'}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('content').innerHTML=insightHTML+potensiHTML+matrixHTML;
 }
 
 // ── SEBARAN ──────────────────────────────────────────────────────
