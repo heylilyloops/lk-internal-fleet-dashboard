@@ -1780,12 +1780,11 @@ function calcCostSite(rows, site){
   const avgMPP  = sumMPP/months;
   const avgSewa = sumSewa/months;
 
+  const costArmada = avgUJP + avgMPP + avgSewa;
   const pUJP  = costArmada?+(avgUJP/costArmada*100).toFixed(1):0;
   const pMPP  = costArmada?+(avgMPP/costArmada*100).toFixed(1):0;
   const pSewa = costArmada?+(avgSewa/costArmada*100).toFixed(1):0;
   const pCI   = avgCI?100:0;
-
-  const costArmada = avgUJP + avgMPP + avgSewa;
   const saving     = avgCE - avgCI;
   const netBenefit = saving - costArmada;
   const verdict    = avgCE===0?'nodata': netBenefit>=0?'worth_it':'reduce';
