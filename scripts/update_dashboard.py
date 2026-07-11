@@ -26,6 +26,8 @@ SITE_MAP = {
     'NDC SIDOARJO'      : 'Corp Sidoarjo',
     'NDC AHI JABABEKA'  : 'AHI Jababeka',
     'NDC CORP SIDOARJO' : 'Corp Sidoarjo',
+    'IND JABABEKA'      : 'IND Jababeka',
+    'NDC IND JABABEKA'  : 'IND Jababeka',
 }
 MONTH_MAP = {}
 
