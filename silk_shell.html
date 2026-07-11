@@ -270,6 +270,10 @@ canvas{display:block}
     <span class="sb-dot" style="background:#8b6cf7"></span>Corp Sidoarjo
     <span class="sb-badge" id="badge-Corp Sidoarjo">—</span>
   </button>
+  <button class="sb-site-item" data-site="IND Jababeka" onclick="navTo('IND Jababeka')">
+    <span class="sb-dot" style="background:#e24b4b"></span>IND Jababeka
+    <span class="sb-badge" id="badge-IND Jababeka">—</span>
+  </button>
 
   <div class="sb-divider"></div>
   <div class="sb-section">RDC Sites</div>
@@ -321,11 +325,11 @@ canvas{display:block}
 <script>
 __DATA_BLOCK__
 
-const NDC=['AHI Jababeka','HCI Jababeka','HCI Cikupa','Corp Sidoarjo'];
+const NDC=['AHI Jababeka','HCI Jababeka','HCI Cikupa','Corp Sidoarjo','IND Jababeka'];
 const RDC=['Corp Tamora','Corp Tallo'];
 const ALL_SITES=[...NDC,...RDC];
-const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7','Corp Tamora':'#e879f9','Corp Tallo':'#fb923c'};
-const SSHORT={'AHI Jababeka':'AHI Jababeka','HCI Jababeka':'HCI Jababeka','HCI Cikupa':'HCI Cikupa','Corp Sidoarjo':'Corp Sidoarjo','Corp Tamora':'Corp Tamora','Corp Tallo':'Corp Tallo'};
+const SCOL={'AHI Jababeka':'#f5a623','HCI Jababeka':'#5ba4f5','HCI Cikupa':'#00c49a','Corp Sidoarjo':'#8b6cf7','Corp Tamora':'#e879f9','Corp Tallo':'#fb923c','IND Jababeka':'#e24b4b'};
+const SSHORT={'AHI Jababeka':'AHI Jababeka','HCI Jababeka':'HCI Jababeka','HCI Cikupa':'HCI Cikupa','Corp Sidoarjo':'Corp Sidoarjo','Corp Tamora':'Corp Tamora','Corp Tallo':'Corp Tallo','IND Jababeka':'IND Jababeka'};
 const ACOLS=['#1a3a5c','#266CA9','#4a90c4','#6aadde','#a8cde8'];
 const CGREEN='var(--green)',CRED='var(--red)';
 const DAY_LABELS=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
@@ -335,7 +339,8 @@ const SAVING_SCOPE={
   'HCI Cikupa':  ['Jawa Barat','Lampung'],
   'Corp Sidoarjo':['Jawa Timur'],
   'Corp Tamora':  ['Sumatera Utara'],
-  'Corp Tallo':   ['Sulawesi Selatan']
+  'Corp Tallo':   ['Sulawesi Selatan'],
+  'IND Jababeka': ['Jawa Barat']
 };
 // RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap]
 //        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14
