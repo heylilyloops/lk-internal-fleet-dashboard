@@ -990,6 +990,33 @@ function compExtTrips(site,owner){
   return ownerRows.filter(e=>e.owner===owner).reduce((s,e)=>s+e.trips,0);
 }
 
+function calcBUMonthlySeries(buKey,allMonths){
+  const comps=BU_DEF[buKey]||[];
+  return allMonths.map(m=>{
+    let cnt=0;
+    comps.forEach(c=>{
+      cnt+=compRowsFor(c.site,c.owner).filter(r=>r[7].slice(0,7)===m).length;
+    });
+    return cnt;
+  });
+}
+
+function buInsight(b){
+  if(b.pctInt===null) return `Belum ada data trip untuk BU ini di rentang tanggal terpilih.`;
+  let s=`Kontribusi internal <b>${b.pctInt}%</b> (${fmt(b.intTrips)} dari ${fmt(b.intTrips+b.extTrips)} total trip).`;
+  if(!b.hasSav){
+    s+=` Belum ada data benchmark eksternal (Cost Ext) untuk hitung saving.`;
+  } else if(b.sav>=0){
+    s+=` Armada internal menghemat <b style="color:${CGREEN}">${fmtM(b.sav)}</b> dibanding tarif eksternal — pertahankan performa.`;
+  } else {
+    s+=` Armada internal <b style="color:${CRED}">${fmtM(Math.abs(b.sav))} lebih mahal</b> dibanding tarif eksternal — perlu dievaluasi jalur/tarifnya.`;
+  }
+  if(b.pctInt!==null&&b.pctInt<25&&b.extTrips>0){
+    s+=` Kontribusi masih rendah, ada potensi optimasi armada untuk ambil alih sebagian trip eksternal.`;
+  }
+  return s;
+}
+
 function calcBU(buKey){
   const comps=BU_DEF[buKey]||[];
   let intTrips=0,extTrips=0,ci=0,ciS=0,ceS=0;
@@ -1014,24 +1041,55 @@ function calcBU(buKey){
 
 function renderBU(){
   const buKeys=Object.keys(BU_DEF);
-  const buData=buKeys.map(calcBU).filter(b=>b.intTrips>0||b.extTrips>0);
+  let buData=buKeys.map(calcBU).filter(b=>b.intTrips>0||b.extTrips>0);
+  // Ranking: efisiensi = %internal, tertinggi dulu (null di bawah)
+  buData=buData.sort((a,b)=>(b.pctInt??-1)-(a.pctInt??-1));
+  const rankIcon=(i)=>i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);
 
   let html=`<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">
-    Summary BU mengelompokkan trip per Business Unit pemilik. Corp Sidoarjo dipecah berdasarkan kolom Owner (HCI/AHI/FBI/KLS) dan digabung ke BU aslinya. Corp Tamora & Corp Tallo belum dipecah (masuk bucket Corp).
+    Summary BU mengelompokkan trip per Business Unit pemilik, diurutkan dari yang paling efisien (%internal tertinggi). Corp Sidoarjo dipecah berdasarkan kolom Owner (HCI/AHI/FBI/KLS) dan digabung ke BU aslinya. Corp Tamora &amp; Corp Tallo belum dipecah (masuk bucket Corp).
   </div>`;
 
+  // 1. RANKING KPI CARDS
   html+=`<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(buData.length,4)},1fr)">`;
-  buData.forEach(b=>{
+  buData.forEach((b,i)=>{
     const col=BU_COL[b.key]||'#266CA9';
     const pctTxt=b.pctInt!==null?b.pctInt+'%':'—';
-    html+=`<div class="kpi" style="border-left:3px solid ${col}">
+    const pCls=pc(b.pctInt||0);
+    html+=`<div class="kpi" style="border-left:3px solid ${col};position:relative">
+      <div style="position:absolute;top:10px;right:12px;font-size:13px">${rankIcon(i)}</div>
       <div class="kpi-label">${b.key}</div>
       <div class="kpi-value">${fmt(b.intTrips)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> trip int</span></div>
-      <div class="kpi-sub">${pctTxt} internal · ${b.hasSav?(b.sav>=0?'Hemat '+fmtM(b.sav):fmtM(Math.abs(b.sav))+' lebih mahal'):'—'}</div>
+      <div class="kpi-sub"><span class="pill ${pCls}">${pctTxt} internal</span> · ${b.hasSav?(b.sav>=0?'Hemat '+fmtM(b.sav):fmtM(Math.abs(b.sav))+' lebih mahal'):'—'}</div>
     </div>`;
   });
   html+=`</div>`;
 
+  // 2. COMPARISON + TREND CHARTS
+  html+=`<div class="card mt12">
+    <div class="card-title">Perbandingan Antar BU<span class="card-badge">Bar=Trip Int/Ext · Line=%Internal</span></div>
+    <div style="position:relative;height:240px"><canvas id="cBUCompare"></canvas></div>
+  </div>
+  <div class="card mt12">
+    <div class="card-title">Trend Trip Internal per Bulan<span class="card-badge">per BU</span></div>
+    <div style="position:relative;height:240px"><canvas id="cBUTrend"></canvas></div>
+  </div>`;
+
+  // 3. INSIGHT CARDS
+  html+=`<div class="card mt12">
+    <div class="card-title">Insight per BU</div>
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(buData.length,2)},1fr);gap:10px">
+    ${buData.map((b,i)=>{
+      const col=BU_COL[b.key]||'#266CA9';
+      return`<div style="font-size:11.5px;color:var(--txt2);line-height:1.5;padding:9px 11px;background:var(--bg);border-radius:6px;border-left:3px solid ${col}">
+        <div style="font-weight:700;color:${col};font-size:11px;margin-bottom:3px">${rankIcon(i)} ${b.key}</div>
+        ${buInsight(b)}
+      </div>`;
+    }).join('')}
+    </div>
+  </div>`;
+
+  // 4. DETAIL TABLE
   const th=(txt,align,color)=>`<th style="text-align:${align};padding:7px 10px;font-size:9px;color:${color||'var(--muted)'};text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">${txt}</th>`;
   html+=`<div class="card mt12">
     <div class="card-title">Detail per BU & Komponen
@@ -1060,6 +1118,62 @@ function renderBU(){
   html+=`</tbody></table></div></div>`;
 
   document.getElementById('content').innerHTML=html;
+
+  setTimeout(()=>{
+    dc('cBUCompare');
+    const elC=document.getElementById('cBUCompare');
+    if(elC){
+      CH['cBUCompare']=new Chart(elC,{
+        data:{
+          labels:buData.map(b=>b.key),
+          datasets:[
+            {label:'Trip Internal',type:'bar',data:buData.map(b=>b.intTrips),backgroundColor:buData.map(b=>(BU_COL[b.key]||'#266CA9')+'b3'),borderColor:buData.map(b=>BU_COL[b.key]||'#266CA9'),borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
+            {label:'Trip Eksternal',type:'bar',data:buData.map(b=>b.extTrips),backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,yAxisID:'y',order:3},
+            {label:'%Internal',type:'line',data:buData.map(b=>b.pctInt),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y2',order:1,spanGaps:true}
+          ]
+        },
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          interaction:{mode:'index',intersect:false},
+          plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
+          scales:{
+            x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
+            y:{type:'linear',position:'left',ticks:{color:'#266CA9',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Trip',color:'#266CA9',font:{size:10}}},
+            y2:{type:'linear',position:'right',min:0,max:100,ticks:{color:'#22a06b',font:{size:10},callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'%Internal',color:'#22a06b',font:{size:10}}}
+          }
+        }
+      });
+    }
+
+    dc('cBUTrend');
+    const elT=document.getElementById('cBUTrend');
+    if(elT){
+      const dateFilteredRaw=RAW.filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+      const allMonths=[...new Set(dateFilteredRaw.map(r=>r[7].slice(0,7)))].sort();
+      const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei','2026-06':'Jun','2026-07':'Jul','2026-08':'Agu','2026-09':'Sep','2026-10':'Okt','2026-11':'Nov','2026-12':'Des'};
+      const mLabels=allMonths.map(m=>MLBL[m]||m);
+      CH['cBUTrend']=new Chart(elT,{
+        data:{
+          labels:mLabels,
+          datasets:buData.map(b=>({
+            label:b.key,type:'line',
+            data:calcBUMonthlySeries(b.key,allMonths),
+            borderColor:BU_COL[b.key]||'#266CA9',backgroundColor:'transparent',
+            borderWidth:2.5,pointRadius:4,tension:0.3,spanGaps:true
+          }))
+        },
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          interaction:{mode:'index',intersect:false},
+          plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
+          scales:{
+            x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
+            y:{ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Trip Internal',color:'#637d9a',font:{size:10}}}
+          }
+        }
+      });
+    }
+  },30);
 }
 
 function renderCoverage(rows,contrib,tInt,tAll,pct){
