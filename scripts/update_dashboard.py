@@ -47,6 +47,12 @@ rdc_data = ws_rdc.get_all_values()
 print(f"Internal rows: {len(int_data)-1}, External rows: {len(ext_data)-1}, Master LT rows: {len(lt_data)}, External RDC rows: {len(rdc_data)-1}")
 
 # ── PARSE INTERNAL ────────────────────────────────────────────────
+int_header = int_data[0]
+int_col = {h.strip(): i for i, h in enumerate(int_header)}
+OWNER_IDX = int_col.get('Owner', 18)
+KAP_IDX   = int_col.get('Kapasitas Armada', 21)
+print(f"INT header — Owner idx: {OWNER_IDX}, Kapasitas Armada idx: {KAP_IDX}")
+
 int_rows = []
 for line in int_data[1:]:
     if len(line) < 13: continue
@@ -86,12 +92,13 @@ for line in int_data[1:]:
     ujp  = float(ujp_raw)  if ujp_raw  else None
     mpp  = float(mpp_raw)  if mpp_raw  else None
     sewa = float(sewa_raw) if sewa_raw else None
-    kap_raw  = line[20].strip().replace(',','') if len(line) > 20 else ''
+    kap_raw  = line[KAP_IDX].strip().replace(',','') if len(line) > KAP_IDX else ''
     try:
         kap = float(kap_raw) if kap_raw and kap_raw not in ('#N/A','#VALUE!','#REF!','#DIV/0!','#NULL!','#NAME?') else None
     except:
         kap = None
-    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap])
+    owner = line[OWNER_IDX].strip() if len(line) > OWNER_IDX else ''
+    int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap, owner])
 
 print(f"INT parsed: {len(int_rows)} rows")
 
@@ -102,6 +109,7 @@ print(f"EXT header cols: {list(col.keys())[:12]}")
 
 ext_agg_area  = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))  # [trips, cbm]
 ext_agg_jalur = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0, 0.0, 0]))))  # [trips, cbm, olf_sum, olf_n]
+ext_agg_owner = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))  # [site][date][owner/BU] = [trips, cbm] — only filled where BU column present (currently Corp Sidoarjo)
 
 skipped = 0
 for line in ext_data[1:]:
@@ -140,6 +148,7 @@ for line in ext_data[1:]:
     jalur = jalur_raw.title() if jalur_raw else ''
     cbm_raw2 = get_col('CBM', 11)
     kap_raw2 = get_col('Kapasitas Armada', 12)
+    bu_raw   = get_col('BU', 14).strip()
     try: cbm2 = float(cbm_raw2.replace(',','')) if cbm_raw2 else 0.0
     except: cbm2 = 0.0
     try: kap2 = float(kap_raw2.replace(',','')) if kap_raw2 and kap_raw2 not in ('#N/A','#VALUE!','#REF!','') else 0.0
@@ -147,6 +156,9 @@ for line in ext_data[1:]:
     olf_ext = (cbm2/kap2*100) if kap2>0 and cbm2>0 else 0.0
     ext_agg_area[site][del_date][area][0] += 1
     ext_agg_area[site][del_date][area][1] += cbm2
+    if bu_raw:
+        ext_agg_owner[site][del_date][bu_raw][0] += 1
+        ext_agg_owner[site][del_date][bu_raw][1] += cbm2
     if jalur:
         ext_agg_jalur[site][del_date][area][jalur][0] += 1
         ext_agg_jalur[site][del_date][area][jalur][1] += cbm2
@@ -251,7 +263,13 @@ ext_list_jalur = [
     for a, jalurs in areas.items()
     for j, v in jalurs.items()
 ]
-print(f"EXT area entries (incl RDC): {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}")
+ext_list_owner = [
+    {"site":s,"date":d,"owner":o,"trips":v[0],"cbm":round(v[1],2)}
+    for s, dates in ext_agg_owner.items()
+    for d, owners in dates.items()
+    for o, v in owners.items()
+]
+print(f"EXT area entries (incl RDC): {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}, EXT owner (BU) entries: {len(ext_list_owner)}")
 
 # ── BUILD EXT_LT FROM MASTER LEAD TIME ───────────────────────────
 ORIGIN_SITE_MAP = {
@@ -299,7 +317,8 @@ data_block = (
     'const RAW = '       + json.dumps(int_rows,        ensure_ascii=False) + ';\n' +
     'const EXT_AGG = '   + json.dumps(ext_list_area,   ensure_ascii=False) + ';\n' +
     'const EXT_JALUR = ' + json.dumps(ext_list_jalur,  ensure_ascii=False) + ';\n' +
-    'const EXT_LT = '    + json.dumps(ext_lt_list,     ensure_ascii=False) + ';\n'
+    'const EXT_LT = '    + json.dumps(ext_lt_list,     ensure_ascii=False) + ';\n' +
+    'const EXT_OWNER = '  + json.dumps(ext_list_owner,  ensure_ascii=False) + ';\n'
 )
 
 # ── INJECT KE HTML ────────────────────────────────────────────────
