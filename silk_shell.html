@@ -247,6 +247,9 @@ canvas{display:block}
   <button class="sb-menu-item" onclick="setMenu('costanalysis')">
     <span class="sb-menu-icon">💰</span>Cost Analysis
   </button>
+  <button class="sb-menu-item" onclick="setMenu('bu')">
+    <span class="sb-menu-icon">🏢</span>Summary BU
+  </button>
 
   <div class="sb-divider"></div>
   <div class="sb-section">NDC Sites</div>
@@ -342,8 +345,24 @@ const SAVING_SCOPE={
   'Corp Tallo':   ['Sulawesi Selatan'],
   'IND Jababeka': ['Jawa Barat']
 };
-// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap]
-//        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14
+// RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap,owner]
+//        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14  15
+// owner (r[15]): BU pemilik trip. Saat ini cuma keisi untuk Corp Sidoarjo (HCI/AHI/FBI/KLS).
+
+// Summary BU: definisi komponen per BU. Tiap entri {site, owner}.
+// owner=null artinya ambil semua trip site itu apa adanya (belum displit).
+// Corp Sidoarjo displit per kolom Owner (r[15]) dan digabung ke BU aslinya.
+// Tamora & Tallo sengaja belum displit (owner=null, tetap masuk bucket 'Corp').
+const SIDOARJO_KNOWN_OWNERS=['HCI','AHI','FBI','KLS'];
+const BU_DEF={
+  'AHI': [{site:'AHI Jababeka',owner:null},{site:'Corp Sidoarjo',owner:'AHI'}],
+  'HCI': [{site:'HCI Jababeka',owner:null},{site:'HCI Cikupa',owner:null},{site:'Corp Sidoarjo',owner:'HCI'}],
+  'FBI': [{site:'Corp Sidoarjo',owner:'FBI'}],
+  'KLS': [{site:'Corp Sidoarjo',owner:'KLS'}],
+  'Corp':[{site:'Corp Tamora',owner:null},{site:'Corp Tallo',owner:null},{site:'Corp Sidoarjo',owner:'__OTHER__'}],
+  'IND': [{site:'IND Jababeka',owner:null}]
+};
+const BU_COL={'AHI':'#f5a623','HCI':'#5ba4f5','Corp':'#8b6cf7','IND':'#e24b4b','FBI':'#00c49a','KLS':'#e879f9'};
 
 let activeSite='all', activeMenu='overview', CH={};
 let dateFrom='', dateTo='';
@@ -464,7 +483,7 @@ function getScopeLabel(){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5};
+  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5,bu:6};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
@@ -572,7 +591,7 @@ function setTrendView(view){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5};
+  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5,bu:6};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
@@ -640,7 +659,7 @@ function render(){
   const slaAvg=calcSLAAvg(rows);
   const sav=kpi.sav;
 
-  const menuLabels={overview:'Overview',coverage:'Coverage',insight:'Insight'};
+  const menuLabels={overview:'Overview',coverage:'Coverage',insight:'Insight',bu:'Summary BU'};
   document.getElementById('mainTitle').textContent=(activeSite==='all'?'Semua NDC':activeSite)+' — '+menuLabels[activeMenu];
   const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
   const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
@@ -669,6 +688,7 @@ function render(){
   else if(activeMenu==='insight') renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
   else if(activeMenu==='slide') renderSlide(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
   else if(activeMenu==='costanalysis') renderCostAnalysis(rows);
+  else if(activeMenu==='bu') renderBU();
 }
 
 // ── OVERVIEW ─────────────────────────────────────────────────────
@@ -948,6 +968,100 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 }
 
 // ── COVERAGE ─────────────────────────────────────────────────────
+// ── SUMMARY BU ───────────────────────────────────────────────────
+function compRowsFor(site,owner){
+  let r=RAW.filter(r=>r[0]===site);
+  if(dateFrom) r=r.filter(r=>r[7]>=dateFrom);
+  if(dateTo)   r=r.filter(r=>r[7]<=dateTo);
+  if(owner===null) return r;
+  if(owner==='__OTHER__') return r.filter(r=>!SIDOARJO_KNOWN_OWNERS.includes(r[15]));
+  return r.filter(r=>r[15]===owner);
+}
+
+function compExtTrips(site,owner){
+  const ef=(e)=>e.site===site&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo);
+  if(owner===null) return EXT_AGG.filter(ef).reduce((s,e)=>s+e.trips,0);
+  const ownerRows=(typeof EXT_OWNER!=='undefined'?EXT_OWNER:[]).filter(ef);
+  if(owner==='__OTHER__'){
+    const total=EXT_AGG.filter(ef).reduce((s,e)=>s+e.trips,0);
+    const known=ownerRows.filter(e=>SIDOARJO_KNOWN_OWNERS.includes(e.owner)).reduce((s,e)=>s+e.trips,0);
+    return Math.max(0,total-known);
+  }
+  return ownerRows.filter(e=>e.owner===owner).reduce((s,e)=>s+e.trips,0);
+}
+
+function calcBU(buKey){
+  const comps=BU_DEF[buKey]||[];
+  let intTrips=0,extTrips=0,ci=0,ciS=0,ceS=0;
+  const compDetail=[];
+  comps.forEach(c=>{
+    const cr=compRowsFor(c.site,c.owner);
+    const cInt=cr.length;
+    const cExt=compExtTrips(c.site,c.owner);
+    const cCi=cr.reduce((s,r)=>s+(r[3]||0),0);
+    const scopeRows=cr.filter(isScopeRow);
+    const cCiS=scopeRows.reduce((s,r)=>s+(r[3]||0),0);
+    const cCeRows=scopeRows.filter(r=>r[4]);
+    const cCeS=cCeRows.reduce((s,r)=>s+(r[4]||0),0);
+    intTrips+=cInt;extTrips+=cExt;ci+=cCi;ciS+=cCiS;ceS+=cCeS;
+    const label=c.owner===null?SSHORT[c.site]:(c.owner==='__OTHER__'?SSHORT[c.site]+' (lainnya)':SSHORT[c.site]+' — '+c.owner);
+    compDetail.push({label,int:cInt,ext:cExt,ci:cCi,hasSav:cCeRows.length>0,sav:cCeS-cCiS});
+  });
+  const pctInt=(intTrips+extTrips)>0?Math.round(intTrips/(intTrips+extTrips)*100):null;
+  const hasSav=comps.some((c,i)=>compDetail[i].hasSav);
+  return{key:buKey,intTrips,extTrips,ci,sav:ceS-ciS,hasSav,pctInt,comps:compDetail};
+}
+
+function renderBU(){
+  const buKeys=Object.keys(BU_DEF);
+  const buData=buKeys.map(calcBU).filter(b=>b.intTrips>0||b.extTrips>0);
+
+  let html=`<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">
+    Summary BU mengelompokkan trip per Business Unit pemilik. Corp Sidoarjo dipecah berdasarkan kolom Owner (HCI/AHI/FBI/KLS) dan digabung ke BU aslinya. Corp Tamora & Corp Tallo belum dipecah (masuk bucket Corp).
+  </div>`;
+
+  html+=`<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(buData.length,4)},1fr)">`;
+  buData.forEach(b=>{
+    const col=BU_COL[b.key]||'#266CA9';
+    const pctTxt=b.pctInt!==null?b.pctInt+'%':'—';
+    html+=`<div class="kpi" style="border-left:3px solid ${col}">
+      <div class="kpi-label">${b.key}</div>
+      <div class="kpi-value">${fmt(b.intTrips)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> trip int</span></div>
+      <div class="kpi-sub">${pctTxt} internal · ${b.hasSav?(b.sav>=0?'Hemat '+fmtM(b.sav):fmtM(Math.abs(b.sav))+' lebih mahal'):'—'}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  const th=(txt,align,color)=>`<th style="text-align:${align};padding:7px 10px;font-size:9px;color:${color||'var(--muted)'};text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">${txt}</th>`;
+  html+=`<div class="card mt12">
+    <div class="card-title">Detail per BU & Komponen
+      <span class="card-badge">Corp Sidoarjo displit per Owner · %internal &amp; saving dihitung per komponen</span>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:760px;font-size:12px">
+      <thead><tr style="background:var(--bg)">
+        ${th('BU','left')}${th('Komponen','left')}${th('Trip Int','right')}${th('Trip Ext','right')}${th('%Internal','right')}${th('Cost Int','right')}${th('Saving','right')}
+      </tr></thead>
+      <tbody>`;
+  buData.forEach(b=>{
+    const col=BU_COL[b.key]||'#266CA9';
+    b.comps.forEach((c,i)=>{
+      const p=(c.int+c.ext)>0?Math.round(c.int/(c.int+c.ext)*100):null;
+      html+=`<tr style="border-bottom:1px solid #f0f4f9">
+        ${i===0?`<td rowspan="${b.comps.length}" style="padding:7px 10px;font-weight:700;color:${col};vertical-align:top">${b.key}</td>`:''}
+        <td style="padding:7px 10px;color:var(--txt2)">${c.label}</td>
+        <td style="padding:7px 10px;text-align:right">${fmt(c.int)}</td>
+        <td style="padding:7px 10px;text-align:right">${fmt(c.ext)}</td>
+        <td style="padding:7px 10px;text-align:right">${p!==null?p+'%':'—'}</td>
+        <td style="padding:7px 10px;text-align:right">${fmtM(c.ci)}</td>
+        <td style="padding:7px 10px;text-align:right;color:${c.hasSav?(c.sav>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${c.hasSav?(c.sav>=0?'+':'')+fmtM(c.sav):'—'}</td>
+      </tr>`;
+    });
+  });
+  html+=`</tbody></table></div></div>`;
+
+  document.getElementById('content').innerHTML=html;
+}
+
 function renderCoverage(rows,contrib,tInt,tAll,pct){
   const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
   const oosData=calcOutOfScope(rows);
@@ -971,8 +1085,15 @@ function renderCoverage(rows,contrib,tInt,tAll,pct){
     const scopeData=sc.filter(r=>scopeAreas.includes(r.area));
     const maxTotal=scopeData.reduce((m,r)=>Math.max(m,r.total),1);
 
+    const siteKpi=calcKpi(sr);
+    const narrative=siteKpi.tCE_s>0
+      ?(siteKpi.sav>=0
+        ?`${SSHORT[s]} berkontribusi <b>${sp}%</b> pengiriman internal di scope ${scopeAreas.join(' + ')||'-'}, menghemat <b style="color:${CGREEN}">${fmtM(siteKpi.sav)}</b> dibanding tarif eksternal.`
+        :`${SSHORT[s]} berkontribusi <b>${sp}%</b> pengiriman internal di scope ${scopeAreas.join(' + ')||'-'}, namun <b style="color:${CRED}">${fmtM(Math.abs(siteKpi.sav))}</b> lebih mahal dibanding tarif eksternal.`)
+      :`${SSHORT[s]} berkontribusi <b>${sp}%</b> pengiriman internal di scope ${scopeAreas.join(' + ')||'-'}; belum ada data benchmark eksternal untuk dibandingkan.`;
+
     covHTML+=`<div class="card mb12">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
         <div>
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${col}">${SSHORT[s]}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">Scope: ${scopeAreas.join(' + ')}</div>
@@ -982,6 +1103,7 @@ function renderCoverage(rows,contrib,tInt,tAll,pct){
           <div style="font-size:10px;color:var(--muted);margin-top:3px">${fmt(si)} int / ${fmt(sa)} total</div>
         </div>
       </div>
+      <div style="font-size:11.5px;color:var(--txt2);line-height:1.5;margin-bottom:12px;padding:8px 10px;background:var(--bg);border-radius:6px;border-left:3px solid ${col}">${narrative}</div>
       <div style="display:grid;grid-template-columns:repeat(${Math.min(scopeData.length,3)},1fr);gap:8px">
         ${scopeData.map(r=>{
           const p=r.total?Math.round(r.int/r.total*100):0;
