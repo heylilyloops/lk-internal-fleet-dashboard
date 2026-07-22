@@ -19,6 +19,7 @@ GID_INTERNAL   = 2055243006
 GID_EXTERNAL   = 1514192890
 GID_MASTER_LT  = 963114842
 GID_EXT_RDC    = 1448086752
+GID_INTERNAL_2025 = 1000808421
 
 SITE_MAP = {
     'NDC HCI CIKUPA'    : 'HCI Cikupa',
@@ -39,12 +40,14 @@ ws_int = spreadsheet.get_worksheet_by_id(GID_INTERNAL)
 ws_ext = spreadsheet.get_worksheet_by_id(GID_EXTERNAL)
 ws_lt  = spreadsheet.get_worksheet_by_id(GID_MASTER_LT)
 ws_rdc = spreadsheet.get_worksheet_by_id(GID_EXT_RDC)
+ws_2025 = spreadsheet.get_worksheet_by_id(GID_INTERNAL_2025)
 
 int_data = ws_int.get_all_values()
 ext_data = ws_ext.get_all_values()
 lt_data  = ws_lt.get_all_values()
 rdc_data = ws_rdc.get_all_values()
-print(f"Internal rows: {len(int_data)-1}, External rows: {len(ext_data)-1}, Master LT rows: {len(lt_data)}, External RDC rows: {len(rdc_data)-1}")
+data_2025 = ws_2025.get_all_values()
+print(f"Internal rows: {len(int_data)-1}, External rows: {len(ext_data)-1}, Master LT rows: {len(lt_data)}, External RDC rows: {len(rdc_data)-1}, Internal 2025 rows: {len(data_2025)-1}")
 
 # ── PARSE INTERNAL ────────────────────────────────────────────────
 int_header = int_data[0]
@@ -312,13 +315,41 @@ for s, jalurs in rdc_lt_sum.items():
 
 print(f"EXT_LT total (incl RDC): {len(ext_lt_list)} entries")
 
+# ── PARSE INTERNAL 2025 (trip volume only, no cost — YoY comparison) ──
+h2025 = data_2025[0]
+col2025 = {h.strip(): i for i, h in enumerate(h2025)}
+SITE_IDX_25  = col2025.get('Site', 0)
+MONTH_IDX_25 = col2025.get('Month', 6)
+
+agg_2025 = defaultdict(lambda: defaultdict(int))  # [site][month(1-12)] = trips
+for line in data_2025[1:]:
+    if len(line) <= max(SITE_IDX_25, MONTH_IDX_25): continue
+    site25 = line[SITE_IDX_25].strip()
+    if not site25 or site25 == 'Site': continue
+    site25 = SITE_MAP.get(site25, site25)
+    m_raw = line[MONTH_IDX_25].strip()
+    try:
+        m = int(float(m_raw))
+    except:
+        continue
+    if not (1 <= m <= 12): continue
+    agg_2025[site25][m] += 1
+
+trip_2025_list = [
+    {"site": s, "m": f"{m:02d}", "trips": v}
+    for s, months in agg_2025.items()
+    for m, v in months.items()
+]
+print(f"TRIP2025 entries: {len(trip_2025_list)} (sites: {sorted(agg_2025.keys())})")
+
 # ── BUILD data_block.js ───────────────────────────────────────────
 data_block = (
     'const RAW = '       + json.dumps(int_rows,        ensure_ascii=False) + ';\n' +
     'const EXT_AGG = '   + json.dumps(ext_list_area,   ensure_ascii=False) + ';\n' +
     'const EXT_JALUR = ' + json.dumps(ext_list_jalur,  ensure_ascii=False) + ';\n' +
     'const EXT_LT = '    + json.dumps(ext_lt_list,     ensure_ascii=False) + ';\n' +
-    'const EXT_OWNER = '  + json.dumps(ext_list_owner,  ensure_ascii=False) + ';\n'
+    'const EXT_OWNER = '  + json.dumps(ext_list_owner,  ensure_ascii=False) + ';\n' +
+    'const TRIP2025 = '   + json.dumps(trip_2025_list,  ensure_ascii=False) + ';\n'
 )
 
 # ── INJECT KE HTML ────────────────────────────────────────────────
