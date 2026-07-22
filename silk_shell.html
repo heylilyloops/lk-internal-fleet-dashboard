@@ -736,6 +736,39 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   if(kritis.length) alertHTML+=`<div class="alert-banner eval"><span class="alert-icon">🔴</span><div class="alert-content"><div class="alert-title">EVALUASI — Cost internal >15% di atas benchmark eksternal</div><div class="alert-items">${kritis.map(j=>`<span class="alert-tag kritis">${SSHORT[j.site]} · ${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
   if(warn.length) alertHTML+=`<div class="alert-banner mon"><span class="alert-icon">🟡</span><div class="alert-content"><div class="alert-title">MONITORING — Cost internal melebihi benchmark eksternal</div><div class="alert-items">${warn.map(j=>`<span class="alert-tag warning">${SSHORT[j.site]} · ${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
 
+  // 2.5 YoY 2025 vs 2026 (trip volume only, no cost)
+  const yoyHTML=(()=>{
+    if(typeof TRIP2025==='undefined') return '';
+    const MLBL12=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const monthKeys=MLBL12.map((_,i)=>String(i+1).padStart(2,'0'));
+    const has2025=activeSite==='all'||TRIP2025.some(e=>e.site===activeSite);
+    if(!has2025){
+      return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${SSHORT[activeSite]||activeSite} (site baru di 2026).</div>`;
+    }
+    const list25=activeSite==='all'?TRIP2025:TRIP2025.filter(e=>e.site===activeSite);
+    const by25={}; list25.forEach(e=>{by25[e.m]=(by25[e.m]||0)+e.trips;});
+    const raw26=activeSite==='all'?RAW:RAW.filter(r=>r[0]===activeSite);
+    const by26={}; raw26.forEach(r=>{const m=r[7].slice(5,7); by26[m]=(by26[m]||0)+1;});
+
+    const data25=monthKeys.map(m=>by25[m]||0);
+    const data26=monthKeys.map(m=>m in by26?by26[m]:null);
+
+    // Growth hanya dihitung dari bulan yg sudah ada data 2026 (overlap)
+    let sum25ov=0,sum26ov=0,nOv=0;
+    monthKeys.forEach((m,i)=>{if(data26[i]!==null){sum25ov+=data25[i];sum26ov+=data26[i];nOv++;}});
+    const growth=sum25ov>0?Math.round((sum26ov-sum25ov)/sum25ov*100):null;
+    const ovLabel=nOv>0?`${MLBL12[0]}\u2013${MLBL12[nOv-1]}`:'-';
+    const badge=growth===null?'':`<span class="pill ${growth>=0?'phi':'pvlo'}" style="margin-left:8px">${growth>=0?'▲':'▼'} ${Math.abs(growth)}% YoY (${ovLabel})</span>`;
+
+    return `<div class="card mb12">
+      <div class="card-title">Perbandingan Trip Internal — 2025 vs 2026${badge}
+        <span class="card-badge">volume trip saja, tanpa cost</span>
+      </div>
+      <div style="position:relative;height:230px"><canvas id="cYoY"></canvas></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">Total 2025: ${fmt(data25.reduce((s,v)=>s+v,0))} trip · Total 2026 (s/d ${ovLabel.split('\u2013').pop()}): ${fmt(sum26ov)} trip</div>
+    </div>`;
+  })();
+
   // 3. Site cards
   let siteHTML=`<div class="grid4" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
   sitesToShow.forEach(s=>{
@@ -955,7 +988,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     </table>
   </div>`;
 
-  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+alertHTML+siteHTML+scHTML+momHTML;
+  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+alertHTML+siteHTML+scHTML+momHTML;
 
   // Store data for toggle
   window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
@@ -964,6 +997,39 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   setTimeout(()=>{
     dc('cTrend');
     renderTrendChart('total');
+
+    dc('cYoY');
+    const elY=document.getElementById('cYoY');
+    if(elY&&typeof TRIP2025!=='undefined'){
+      const MLBL12=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      const monthKeys=MLBL12.map((_,i)=>String(i+1).padStart(2,'0'));
+      const list25=activeSite==='all'?TRIP2025:TRIP2025.filter(e=>e.site===activeSite);
+      const by25={}; list25.forEach(e=>{by25[e.m]=(by25[e.m]||0)+e.trips;});
+      const raw26=activeSite==='all'?RAW:RAW.filter(r=>r[0]===activeSite);
+      const by26={}; raw26.forEach(r=>{const m=r[7].slice(5,7); by26[m]=(by26[m]||0)+1;});
+      const data25=monthKeys.map(m=>by25[m]||0);
+      const data26=monthKeys.map(m=>m in by26?by26[m]:null);
+      if(data25.some(v=>v>0)){
+        CH['cYoY']=new Chart(elY,{
+          data:{
+            labels:MLBL12,
+            datasets:[
+              {label:'2025',type:'bar',data:data25,backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,order:2},
+              {label:'2026',type:'line',data:data26,borderColor:'#266CA9',backgroundColor:'rgba(38,108,169,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#266CA9',tension:0.3,spanGaps:false,order:1}
+            ]
+          },
+          options:{
+            responsive:true,maintainAspectRatio:false,
+            interaction:{mode:'index',intersect:false},
+            plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
+            scales:{
+              x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
+              y:{ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Trip',color:'#637d9a',font:{size:10}}}
+            }
+          }
+        });
+      }
+    }
   },30);
 }
 
