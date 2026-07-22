@@ -746,30 +746,37 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   // 2.5 YoY 2025 vs 2026 (trip volume only, no cost)
   const yoyHTML=(()=>{
     if(typeof TRIP2025==='undefined') return '';
-    const MLBL12=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    const monthKeys=MLBL12.map((_,i)=>String(i+1).padStart(2,'0'));
+    const MLBL_ALL=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const monthKeysAll=MLBL_ALL.map((_,i)=>String(i+1).padStart(2,'0'));
+    // Ikutin filter Delivery Date (dari-sampai) di topbar — batasi bulan yg dibandingkan
+    const mFrom=dateFrom?dateFrom.slice(5,7):'01';
+    const mTo=dateTo?dateTo.slice(5,7):'12';
+    const idxKeep=monthKeysAll.map((m,i)=>m>=mFrom&&m<=mTo?i:-1).filter(i=>i>=0);
+    const monthKeys=idxKeep.map(i=>monthKeysAll[i]);
+    const MLBL12=idxKeep.map(i=>MLBL_ALL[i]);
+
     const has2025=activeSite==='all'||TRIP2025.some(e=>e.site===activeSite);
     if(!has2025){
       return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${SSHORT[activeSite]||activeSite} (site baru di 2026).</div>`;
     }
-    const list25=activeSite==='all'?TRIP2025:TRIP2025.filter(e=>e.site===activeSite);
+    const list25=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>e.site===activeSite)).filter(e=>monthKeys.includes(e.m));
     const by25={}; list25.forEach(e=>{by25[e.m]=(by25[e.m]||0)+e.trips;});
-    const raw26=activeSite==='all'?RAW:RAW.filter(r=>r[0]===activeSite);
+    const raw26=(activeSite==='all'?RAW:RAW.filter(r=>r[0]===activeSite)).filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
     const by26={}; raw26.forEach(r=>{const m=r[7].slice(5,7); by26[m]=(by26[m]||0)+1;});
 
     const data25=monthKeys.map(m=>by25[m]||0);
     const data26=monthKeys.map(m=>m in by26?by26[m]:null);
 
-    // Growth hanya dihitung dari bulan yg sudah ada data 2026 (overlap)
+    // Growth hanya dihitung dari bulan yg sudah ada data 2026 (overlap), dalam rentang filter terpilih
     let sum25ov=0,sum26ov=0,nOv=0;
     monthKeys.forEach((m,i)=>{if(data26[i]!==null){sum25ov+=data25[i];sum26ov+=data26[i];nOv++;}});
     const growth=sum25ov>0?Math.round((sum26ov-sum25ov)/sum25ov*100):null;
-    const ovLabel=nOv>0?`${MLBL12[0]}\u2013${MLBL12[nOv-1]}`:'-';
+    const ovLabel=nOv>0?(nOv===1?MLBL12[0]:`${MLBL12[0]}\u2013${MLBL12[MLBL12.length-1]}`):'-';
     const badge=growth===null?'':`<span class="pill ${growth>=0?'phi':'pvlo'}" style="margin-left:8px">${growth>=0?'▲':'▼'} ${Math.abs(growth)}% YoY (${ovLabel})</span>`;
 
     // Per-area breakdown (Jawa Barat / Lampung / Jawa Timur) — precompute for toggle
     const YOY_AREAS=['Jawa Barat','Lampung','Jawa Timur'];
-    const list25Area=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>e.site===activeSite)):[];
+    const list25Area=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>e.site===activeSite)).filter(e=>monthKeys.includes(e.m)):[];
     const by25Area={}; YOY_AREAS.forEach(a=>by25Area[a]={});
     list25Area.forEach(e=>{if(by25Area[e.area]) by25Area[e.area][e.m]=(by25Area[e.area][e.m]||0)+e.trips;});
     const by26Area={}; YOY_AREAS.forEach(a=>by26Area[a]={});
