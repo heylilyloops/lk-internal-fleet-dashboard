@@ -320,8 +320,11 @@ h2025 = data_2025[0]
 col2025 = {h.strip(): i for i, h in enumerate(h2025)}
 SITE_IDX_25  = col2025.get('Site', 0)
 MONTH_IDX_25 = col2025.get('Month', 6)
+AREA_IDX_25  = col2025.get('Area', 2)
+DEST_IDX_25  = col2025.get('Destination', 3)
 
 agg_2025 = defaultdict(lambda: defaultdict(int))  # [site][month(1-12)] = trips
+agg_2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][month][area] = trips
 for line in data_2025[1:]:
     if len(line) <= max(SITE_IDX_25, MONTH_IDX_25): continue
     site25 = line[SITE_IDX_25].strip()
@@ -334,13 +337,28 @@ for line in data_2025[1:]:
         continue
     if not (1 <= m <= 12): continue
     agg_2025[site25][m] += 1
+    # Area untuk breakdown "Per Area": Lampung tidak pernah muncul sbg nilai Area mentah
+    # (sama seperti data 2026), tapi keisi di kolom Destination — override ke 'Lampung' kalau match.
+    area25 = line[AREA_IDX_25].strip() if len(line) > AREA_IDX_25 else ''
+    dest25 = line[DEST_IDX_25].strip() if len(line) > DEST_IDX_25 else ''
+    if dest25 == 'Lampung':
+        area25 = 'Lampung'
+    if area25 and area25 not in ('#N/A', 'Area', '0'):
+        agg_2025_area[site25][m][area25] += 1
 
 trip_2025_list = [
     {"site": s, "m": f"{m:02d}", "trips": v}
     for s, months in agg_2025.items()
     for m, v in months.items()
 ]
+trip_2025_area_list = [
+    {"site": s, "m": f"{m:02d}", "area": a, "trips": v}
+    for s, months in agg_2025_area.items()
+    for m, areas in months.items()
+    for a, v in areas.items()
+]
 print(f"TRIP2025 entries: {len(trip_2025_list)} (sites: {sorted(agg_2025.keys())})")
+print(f"TRIP2025_AREA entries: {len(trip_2025_area_list)}")
 
 # ── BUILD data_block.js ───────────────────────────────────────────
 data_block = (
@@ -349,7 +367,8 @@ data_block = (
     'const EXT_JALUR = ' + json.dumps(ext_list_jalur,  ensure_ascii=False) + ';\n' +
     'const EXT_LT = '    + json.dumps(ext_lt_list,     ensure_ascii=False) + ';\n' +
     'const EXT_OWNER = '  + json.dumps(ext_list_owner,  ensure_ascii=False) + ';\n' +
-    'const TRIP2025 = '   + json.dumps(trip_2025_list,  ensure_ascii=False) + ';\n'
+    'const TRIP2025 = '   + json.dumps(trip_2025_list,  ensure_ascii=False) + ';\n' +
+    'const TRIP2025_AREA = ' + json.dumps(trip_2025_area_list, ensure_ascii=False) + ';\n'
 )
 
 # ── INJECT KE HTML ────────────────────────────────────────────────
