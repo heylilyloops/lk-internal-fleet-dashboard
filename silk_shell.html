@@ -783,16 +783,20 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     window._yoyData={monthKeys,MLBL12,data25,data26,by25Area,by26Area,YOY_AREAS};
     window._yoyView=window._yoyView||'total';
 
-    // KPI cards: Total + per area, growth dihitung dari bulan overlap yg sama (nOv)
+    // KPI cards: Total keseluruhan + Total scope (Jabar+Lampung+Jatim) + per area
     const aColorsK={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
-    const kpiCards=[{key:'Total',col:'#22a06b',s25:sum25ov,s26:sum26ov}].concat(
-      YOY_AREAS.map(a=>{
-        let s25=0,s26=0;
-        monthKeys.forEach((m,i)=>{if(data26[i]!==null){s25+=(by25Area[a]&&by25Area[a][m])||0;s26+=(by26Area[a]&&by26Area[a][m])||0;}});
-        return{key:a,col:aColorsK[a],s25,s26};
-      })
-    );
-    const yoyKpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(${kpiCards.length},1fr);margin-bottom:12px">
+    const areaCards=YOY_AREAS.map(a=>{
+      let s25=0,s26=0;
+      monthKeys.forEach((m,i)=>{if(data26[i]!==null){s25+=(by25Area[a]&&by25Area[a][m])||0;s26+=(by26Area[a]&&by26Area[a][m])||0;}});
+      return{key:a,col:aColorsK[a],s25,s26};
+    });
+    const scopeSum25=areaCards.reduce((s,c)=>s+c.s25,0);
+    const scopeSum26=areaCards.reduce((s,c)=>s+c.s26,0);
+    const kpiCards=[
+      {key:'Total Keseluruhan',col:'#22a06b',s25:sum25ov,s26:sum26ov},
+      {key:'Total Jabar+Lampung+Jatim',col:'#5b6b7a',s25:scopeSum25,s26:scopeSum26}
+    ].concat(areaCards);
+    const yoyKpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(kpiCards.length,5)},1fr);margin-bottom:12px">
       ${kpiCards.map(c=>{
         const g=c.s25>0?Math.round((c.s26-c.s25)/c.s25*100):null;
         return`<div class="kpi" style="border-left:3px solid ${c.col}">
