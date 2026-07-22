@@ -791,7 +791,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
           <button id="yoyToggleArea" onclick="setYoyView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
         </span>
       </div>
-      <div style="position:relative;height:230px"><canvas id="cYoY"></canvas></div>
+      <div id="yoyChartWrap" style="position:relative;min-height:230px"><canvas id="cYoY"></canvas></div>
       <div style="font-size:10px;color:var(--muted);margin-top:6px">Total 2025: ${fmt(data25.reduce((s,v)=>s+v,0))} trip · Total 2026 (s/d ${ovLabel.split('\u2013').pop()}): ${fmt(sum26ov)} trip</div>
     </div>`;
   })();
@@ -1052,39 +1052,59 @@ function setYoyView(view){
 function renderYoYChart(view){
   if(!window._yoyData) return;
   const {MLBL12,data25,data26,by25Area,by26Area,YOY_AREAS}=window._yoyData;
-  dc('cYoY');
-  const el=document.getElementById('cYoY');
-  if(!el) return;
+  ['cYoY','cYoY_0','cYoY_1','cYoY_2'].forEach(dc);
+  const wrap=document.getElementById('yoyChartWrap');
+  if(!wrap) return;
 
-  let datasets=[];
   if(view==='total'){
-    datasets=[
-      {label:'2025',type:'bar',data:data25,backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,order:2},
-      {label:'2026',type:'bar',data:data26,backgroundColor:'#266CA9',borderColor:'#1d5488',borderWidth:1,borderRadius:4,order:1}
-    ];
+    wrap.innerHTML=`<div style="position:relative;height:230px"><canvas id="cYoY"></canvas></div>`;
+    const el=document.getElementById('cYoY');
+    CH['cYoY']=new Chart(el,{
+      data:{labels:MLBL12,datasets:[
+        {label:'2025',type:'bar',data:data25,backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,order:2},
+        {label:'2026',type:'bar',data:data26,backgroundColor:'#266CA9',borderColor:'#1d5488',borderWidth:1,borderRadius:4,order:1}
+      ]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
+        scales:{
+          x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
+          y:{ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Trip',color:'#637d9a',font:{size:10}}}
+        }
+      }
+    });
   } else if(view==='area'){
     const aColors={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
-    YOY_AREAS.forEach(area=>{
+    wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(${YOY_AREAS.length},1fr);gap:10px">
+      ${YOY_AREAS.map((a,i)=>`<div>
+        <div style="font-size:10px;font-weight:700;color:${aColors[a]};text-align:center;margin-bottom:4px">${a}</div>
+        <div style="position:relative;height:180px"><canvas id="cYoY_${i}"></canvas></div>
+      </div>`).join('')}
+    </div>`;
+    YOY_AREAS.forEach((area,i)=>{
       const col=aColors[area];
-      const d25=MLBL12.map((_,i)=>{const m=String(i+1).padStart(2,'0');return (by25Area[area]&&by25Area[area][m])||0;});
-      const d26=MLBL12.map((_,i)=>{const m=String(i+1).padStart(2,'0');return (by26Area[area]&&by26Area[area][m])!==undefined?by26Area[area][m]:null;});
-      datasets.push({label:'2025 '+area,type:'line',data:d25,borderColor:col,backgroundColor:'transparent',borderWidth:2,borderDash:[4,3],pointRadius:3,tension:0.3,spanGaps:true});
-      datasets.push({label:'2026 '+area,type:'line',data:d26,borderColor:col,backgroundColor:'transparent',borderWidth:2.5,pointRadius:4,tension:0.3,spanGaps:false});
+      const d25=MLBL12.map((_,j)=>{const m=String(j+1).padStart(2,'0');return (by25Area[area]&&by25Area[area][m])||0;});
+      const d26=MLBL12.map((_,j)=>{const m=String(j+1).padStart(2,'0');return (by26Area[area]&&by26Area[area][m])!==undefined?by26Area[area][m]:null;});
+      const el=document.getElementById('cYoY_'+i);
+      if(!el) return;
+      CH['cYoY_'+i]=new Chart(el,{
+        data:{labels:MLBL12,datasets:[
+          {label:'2025',type:'bar',data:d25,backgroundColor:col+'40',borderColor:col+'80',borderWidth:1,borderRadius:3,order:2},
+          {label:'2026',type:'bar',data:d26,backgroundColor:col,borderColor:col,borderWidth:1,borderRadius:3,order:1}
+        ]},
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          interaction:{mode:'index',intersect:false},
+          plugins:{legend:{display:i===0,position:'top',labels:{font:{size:9,family:'Helvetica Neue'},boxWidth:10,padding:8}}},
+          scales:{
+            x:{ticks:{color:'#637d9a',font:{size:9,family:'Helvetica Neue'}},grid:{display:false}},
+            y:{ticks:{color:'#637d9a',font:{size:9}},grid:{color:'rgba(0,0,0,.05)'},beginAtZero:true}
+          }
+        }
+      });
     });
   }
-
-  CH['cYoY']=new Chart(el,{
-    data:{labels:MLBL12,datasets},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
-      scales:{
-        x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
-        y:{ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Trip',color:'#637d9a',font:{size:10}}}
-      }
-    }
-  });
 }
 
 // ── COVERAGE ─────────────────────────────────────────────────────
