@@ -364,6 +364,9 @@ const BU_DEF={
 };
 const BU_COL={'AHI':'#f5a623','HCI':'#5ba4f5','Corp':'#8b6cf7','IND':'#e24b4b','FBI':'#00c49a','KLS':'#e879f9'};
 
+// Segmen bisnis untuk toggle YoY: semua site Retail kecuali IND Jababeka (Industrial)
+function siteSegment(site){return site==='IND Jababeka'?'Industrial':'Retail';}
+
 let activeSite='all', activeMenu='overview', CH={};
 let dateFrom='', dateTo='';
 
@@ -780,7 +783,17 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       matched.forEach(a=>{if(by26Area[a]) by26Area[a][m]=(by26Area[a][m]||0)+1;});
     });
 
-    window._yoyData={monthKeys,MLBL12,data25,data26,by25Area,by26Area,YOY_AREAS};
+    // Retail vs Industrial breakdown — semua site Retail kecuali IND Jababeka (Industrial)
+    const bySeg25={Retail:{},Industrial:{}};
+    list25.forEach(e=>{const seg=siteSegment(e.site);bySeg25[seg][e.m]=(bySeg25[seg][e.m]||0)+e.trips;});
+    const bySeg26={Retail:{},Industrial:{}};
+    raw26.forEach(r=>{const seg=siteSegment(r[0]);const m=r[7].slice(5,7);bySeg26[seg][m]=(bySeg26[seg][m]||0)+1;});
+    const dataRetail25=monthKeys.map(m=>bySeg25.Retail[m]||0);
+    const dataRetail26=monthKeys.map(m=>m in bySeg26.Retail?bySeg26.Retail[m]:null);
+    const dataIndustrial25=monthKeys.map(m=>bySeg25.Industrial[m]||0);
+    const dataIndustrial26=monthKeys.map(m=>m in bySeg26.Industrial?bySeg26.Industrial[m]:null);
+
+    window._yoyData={monthKeys,MLBL12,data25,data26,by25Area,by26Area,YOY_AREAS,dataRetail25,dataRetail26,dataIndustrial25,dataIndustrial26};
     window._yoyView=window._yoyView||'total';
 
     // KPI cards: Total keseluruhan + Total scope (Jabar+Lampung+Jatim) + per area
@@ -813,6 +826,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
         <span style="float:right;display:inline-flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px">
           <button id="yoyToggleTotal" onclick="setYoyView('total')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--card);color:var(--txt);font-family:var(--font);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)">Total</button>
           <button id="yoyToggleArea" onclick="setYoyView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
+          <button id="yoyToggleRetail" onclick="setYoyView('retail')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Retail</button>
+          <button id="yoyToggleIndustrial" onclick="setYoyView('industrial')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Industrial</button>
         </span>
       </div>
       ${yoyKpiHTML}
@@ -1060,34 +1075,33 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
 function setYoyView(view){
   window._yoyView=view;
-  const bT=document.getElementById('yoyToggleTotal'), bA=document.getElementById('yoyToggleArea');
-  if(bT&&bA){
-    bT.style.background=view==='total'?'var(--card)':'transparent';
-    bT.style.color=view==='total'?'var(--txt)':'var(--muted)';
-    bT.style.fontWeight=view==='total'?'600':'500';
-    bT.style.boxShadow=view==='total'?'0 1px 2px rgba(0,0,0,.08)':'none';
-    bA.style.background=view==='area'?'var(--card)':'transparent';
-    bA.style.color=view==='area'?'var(--txt)':'var(--muted)';
-    bA.style.fontWeight=view==='area'?'600':'500';
-    bA.style.boxShadow=view==='area'?'0 1px 2px rgba(0,0,0,.08)':'none';
-  }
+  const btns={total:'yoyToggleTotal',area:'yoyToggleArea',retail:'yoyToggleRetail',industrial:'yoyToggleIndustrial'};
+  Object.entries(btns).forEach(([v,id])=>{
+    const b=document.getElementById(id);
+    if(!b) return;
+    const active=v===view;
+    b.style.background=active?'var(--card)':'transparent';
+    b.style.color=active?'var(--txt)':'var(--muted)';
+    b.style.fontWeight=active?'600':'500';
+    b.style.boxShadow=active?'0 1px 2px rgba(0,0,0,.08)':'none';
+  });
   renderYoYChart(view);
 }
 
 function renderYoYChart(view){
   if(!window._yoyData) return;
-  const {MLBL12,data25,data26,by25Area,by26Area,YOY_AREAS}=window._yoyData;
+  const {MLBL12,data25,data26,by25Area,by26Area,YOY_AREAS,dataRetail25,dataRetail26,dataIndustrial25,dataIndustrial26}=window._yoyData;
   ['cYoY','cYoY_0','cYoY_1','cYoY_2'].forEach(dc);
   const wrap=document.getElementById('yoyChartWrap');
   if(!wrap) return;
 
-  if(view==='total'){
+  const singleBarChart=(d25,d26,col25,col26)=>{
     wrap.innerHTML=`<div style="position:relative;height:230px"><canvas id="cYoY"></canvas></div>`;
     const el=document.getElementById('cYoY');
     CH['cYoY']=new Chart(el,{
       data:{labels:MLBL12,datasets:[
-        {label:'2025',type:'bar',data:data25,backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,order:2},
-        {label:'2026',type:'bar',data:data26,backgroundColor:'#266CA9',borderColor:'#1d5488',borderWidth:1,borderRadius:4,order:1}
+        {label:'2025',type:'bar',data:d25,backgroundColor:col25,borderColor:col25,borderWidth:1,borderRadius:4,order:2},
+        {label:'2026',type:'bar',data:d26,backgroundColor:col26,borderColor:col26,borderWidth:1,borderRadius:4,order:1}
       ]},
       options:{
         responsive:true,maintainAspectRatio:false,
@@ -1099,6 +1113,14 @@ function renderYoYChart(view){
         }
       }
     });
+  };
+
+  if(view==='total'){
+    singleBarChart(data25,data26,'#c9d6e3','#266CA9');
+  } else if(view==='retail'){
+    singleBarChart(dataRetail25,dataRetail26,'#c9e3d6','#22a06b');
+  } else if(view==='industrial'){
+    singleBarChart(dataIndustrial25,dataIndustrial26,'#f5d9b8','#e2793a');
   } else if(view==='area'){
     const aColors={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
     wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(${YOY_AREAS.length},1fr);gap:10px">
