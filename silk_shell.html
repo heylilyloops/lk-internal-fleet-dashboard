@@ -947,12 +947,13 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const byMonthArea={};
   rows.forEach(r=>{
     const m=r[7].slice(0,7);
-    const area=r[1];
     const key_total='__total__';
-    // Lampung tidak pernah muncul sbg nilai Area mentah — cuma keisi di kolom Jalur (r[2]).
-    // Sama seperti logic isScopeRow, ikutkan row ke bucket 'Lampung' kalau jalur-nya cocok.
-    const keys=new Set([key_total, area]);
-    if(r[2]==='Lampung') keys.add('Lampung');
+    const scope=SAVING_SCOPE[r[0]]||[];
+    // Cuma masukkan ke bucket area kalau area itu scope resmi site-nya (mirror isScopeRow) —
+    // menghindari anomali data entry (mis. AHI Jababeka ke-tag 'Jawa Timur').
+    const keys=new Set([key_total]);
+    if(scope.includes(r[1])) keys.add(r[1]);
+    if(scope.includes('Lampung') && r[2]==='Lampung') keys.add('Lampung');
     keys.forEach(k=>{
       if(!byMonthArea[k]) byMonthArea[k]={};
       if(!byMonthArea[k][m]) byMonthArea[k][m]={trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0};
@@ -1050,9 +1051,12 @@ function computeYoySeries(segment){
   const by26Area={}; YOY_AREAS.forEach(a=>by26Area[a]={});
   raw26.forEach(r=>{
     const m=r[7].slice(5,7);
-    const matched=new Set([r[1]]);
-    if(r[2]==='Lampung') matched.add('Lampung');
-    matched.forEach(a=>{if(by26Area[a]) by26Area[a][m]=(by26Area[a][m]||0)+1;});
+    const scope=SAVING_SCOPE[r[0]]||[];
+    YOY_AREAS.forEach(a=>{
+      if(!scope.includes(a)) return; // bukan scope resmi site ini — kemungkinan anomali data entry
+      const match=a==='Lampung'?r[2]==='Lampung':r[1]===a;
+      if(match) by26Area[a][m]=(by26Area[a][m]||0)+1;
+    });
   });
 
   const aColorsK={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
