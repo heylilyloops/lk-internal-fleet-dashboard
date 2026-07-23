@@ -32,6 +32,18 @@ SITE_MAP = {
 }
 MONTH_MAP = {}
 
+# Scope area resmi per site (mirror SAVING_SCOPE di silk_shell.html) — dipakai buat
+# nyaring anomali data entry (mis. area ketulis 'Jawa Timur' padahal site-nya AHI Jababeka).
+SAVING_SCOPE_PY = {
+    'AHI Jababeka':  ['Jawa Barat', 'Lampung'],
+    'HCI Jababeka':  ['Jawa Barat', 'Lampung'],
+    'HCI Cikupa':    ['Jawa Barat', 'Lampung'],
+    'Corp Sidoarjo': ['Jawa Timur'],
+    'Corp Tamora':   ['Sumatera Utara'],
+    'Corp Tallo':    ['Sulawesi Selatan'],
+    'IND Jababeka':  ['Jawa Barat'],
+}
+
 # ── FETCH SHEETS ─────────────────────────────────────────────────
 print("Fetching Google Sheets data...")
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
@@ -343,7 +355,9 @@ for line in data_2025[1:]:
     dest25 = line[DEST_IDX_25].strip() if len(line) > DEST_IDX_25 else ''
     if dest25 == 'Lampung':
         area25 = 'Lampung'
-    if area25 and area25 not in ('#N/A', 'Area', '0'):
+    # Hanya masukkan kalau area itu memang scope resmi site-nya — data entry error
+    # (mis. AHI Jababeka ke-tag 'Jawa Timur') difilter di sini.
+    if area25 and area25 in SAVING_SCOPE_PY.get(site25, []):
         agg_2025_area[site25][m][area25] += 1
 
 trip_2025_list = [
