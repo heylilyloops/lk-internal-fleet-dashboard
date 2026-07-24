@@ -1144,6 +1144,7 @@ function renderKontribChart(){
   wrap.innerHTML=`<canvas id="cKontrib"></canvas>`;
   const el=document.getElementById('cKontrib');
   CH['cKontrib']=new Chart(el,{
+    type:'bar',
     data:{labels:kData.map(k=>k.area),datasets:[
       {label:'% Internal',data:kData.map(k=>k.pct),backgroundColor:kData.map(k=>aColors[k.area]),stack:'s'},
       {label:'% Eksternal',data:kData.map(k=>k.pct===null?null:100-k.pct),backgroundColor:kData.map(k=>aColors[k.area]+'30'),stack:'s'}
