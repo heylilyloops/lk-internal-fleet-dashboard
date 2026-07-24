@@ -1019,7 +1019,23 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     </table>
   </div>`;
 
-  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+alertHTML+siteHTML+scHTML+momHTML;
+  // 2.6 Kontribusi % Internal per Area — 2026 only, section terpisah dari YoY
+  const kontribAreas=['Jawa Barat','Lampung','Jawa Timur'];
+  window._kontribSegment=window._kontribSegment||'all';
+  const kontribHTML=`<div class="card mb12">
+    <div class="card-title">Kontribusi Internal per Area — 2026
+      <span class="card-badge">% trip internal dari total trip (internal+eksternal)</span>
+      <span style="float:right;display:inline-flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px">
+        <button id="kontribSegAll" onclick="setKontribSegment('all')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--card);color:var(--txt);font-family:var(--font);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)">Semua</button>
+        <button id="kontribSegRetail" onclick="setKontribSegment('Retail')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Retail</button>
+        <button id="kontribSegIndustrial" onclick="setKontribSegment('Industrial')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Industrial</button>
+      </span>
+    </div>
+    <div id="kontribChartWrap" style="position:relative;height:230px"><canvas id="cKontrib"></canvas></div>
+    <div id="kontribFooter" style="display:flex;justify-content:center;gap:18px;margin-top:8px;font-size:10px;color:var(--muted)"></div>
+  </div>`;
+
+  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+kontribHTML+alertHTML+siteHTML+scHTML+momHTML;
 
   // Store data for toggle
   window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
@@ -1030,6 +1046,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     renderTrendChart('total');
 
     if(window._yoyData) renderYoYChart(window._yoyView||'total');
+
+    renderKontribChart();
   },30);
 }
 
@@ -1097,6 +1115,71 @@ function buildYoyKpiHTML(){
     {key:'Jabar+Lampung+Jatim'+segLabel,col:'#5b6b7a',s25:d.scopeSum25,s26:d.scopeSum26}
   ].concat(d.areaCards);
   return `<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(cards.length,5)},1fr);margin-bottom:12px">${cards.map(cardHTML).join('')}</div>`;
+}
+
+function setKontribSegment(segment){
+  window._kontribSegment=segment;
+  const btns={all:'kontribSegAll',Retail:'kontribSegRetail',Industrial:'kontribSegIndustrial'};
+  Object.entries(btns).forEach(([v,id])=>{
+    const b=document.getElementById(id);
+    if(!b) return;
+    const active=v===segment;
+    b.style.background=active?'var(--card)':'transparent';
+    b.style.color=active?'var(--txt)':'var(--muted)';
+    b.style.fontWeight=active?'600':'500';
+    b.style.boxShadow=active?'0 1px 2px rgba(0,0,0,.08)':'none';
+  });
+  renderKontribChart();
+}
+
+function renderKontribChart(){
+  const wrap=document.getElementById('kontribChartWrap');
+  const footer=document.getElementById('kontribFooter');
+  if(!wrap) return;
+  const kontribAreas=['Jawa Barat','Lampung','Jawa Timur'];
+  const kData=computeKontribusiArea(window._kontribSegment||'all',kontribAreas);
+  const aColors={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
+
+  dc('cKontrib');
+  wrap.innerHTML=`<canvas id="cKontrib"></canvas>`;
+  const el=document.getElementById('cKontrib');
+  CH['cKontrib']=new Chart(el,{
+    data:{labels:kData.map(k=>k.area),datasets:[
+      {label:'% Kontribusi Internal (2026)',type:'bar',data:kData.map(k=>k.pct),backgroundColor:kData.map(k=>aColors[k.area]),borderColor:kData.map(k=>aColors[k.area]),borderWidth:1,borderRadius:6,barPercentage:0.5}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.parsed.y+'% internal'}}
+      },
+      scales:{
+        x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue',weight:'600'}},grid:{display:false}},
+        y:{min:0,max:100,ticks:{color:'#637d9a',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'% Internal',color:'#637d9a',font:{size:10}}}
+      }
+    }
+  });
+  if(footer) footer.innerHTML=kData.map(k=>`<span><b style="color:${aColors[k.area]}">${k.area}</b>: ${fmt(k.intTrips)} int / ${fmt(k.extTrips)} ext</span>`).join('');
+}
+
+function computeKontribusiArea(segment,areas){
+  const scopeSitesFor=(area)=>Object.keys(SAVING_SCOPE).filter(site=>SAVING_SCOPE[site].includes(area));
+  return areas.map(area=>{
+    let sites=scopeSitesFor(area);
+    if(activeSite!=='all') sites=sites.filter(s=>s===activeSite);
+    if(segment!=='all') sites=sites.filter(s=>siteSegment(s)===segment);
+    const intRows=RAW.filter(r=>sites.includes(r[0])&&(area==='Lampung'?r[2]==='Lampung':r[1]===area)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+    const intTrips=intRows.length;
+    let extTrips;
+    if(area==='Lampung'){
+      extTrips=(typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]).filter(e=>sites.includes(e.site)&&e.jalur==='Lampung'&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
+    } else {
+      extTrips=(typeof EXT_AGG!=='undefined'?EXT_AGG:[]).filter(e=>sites.includes(e.site)&&e.area===area&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
+    }
+    const total=intTrips+extTrips;
+    const pct=total>0?Math.round(intTrips/total*100):null;
+    return{area,intTrips,extTrips,pct};
+  });
 }
 
 function setYoyView(view){
