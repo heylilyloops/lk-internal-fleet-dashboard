@@ -1145,8 +1145,8 @@ function renderKontribChart(){
   const el=document.getElementById('cKontrib');
   CH['cKontrib']=new Chart(el,{
     data:{labels:kData.map(k=>k.area),datasets:[
-      {label:'% Internal',data:kData.map(k=>k.pct),backgroundColor:kData.map(k=>aColors[k.area]),borderRadius:{topLeft:6,topRight:6,bottomLeft:0,bottomRight:0},borderSkipped:false,stack:'s'},
-      {label:'% Eksternal',data:kData.map(k=>k.pct===null?null:100-k.pct),backgroundColor:kData.map(k=>aColors[k.area]+'30'),borderRadius:{topLeft:0,topRight:0,bottomLeft:6,bottomRight:6},borderSkipped:false,stack:'s'}
+      {label:'% Internal',data:kData.map(k=>k.pct),backgroundColor:kData.map(k=>aColors[k.area]),stack:'s'},
+      {label:'% Eksternal',data:kData.map(k=>k.pct===null?null:100-k.pct),backgroundColor:kData.map(k=>aColors[k.area]+'30'),stack:'s'}
     ]},
     options:{
       responsive:true,maintainAspectRatio:false,
