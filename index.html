@@ -1038,7 +1038,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
         <button id="kontribSegIndustrial" onclick="setKontribSegment('Industrial')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Industrial</button>
       </span>
     </div>
-    <div id="kontribChartWrap" style="position:relative;height:230px"><canvas id="cKontrib"></canvas></div>
+    <div id="kontribChartWrap" style="position:relative;min-height:230px"><canvas id="cKontrib"></canvas></div>
     <div id="kontribFooter" style="display:flex;justify-content:center;gap:18px;margin-top:8px;font-size:10px;color:var(--muted)"></div>
   </div>`;
 
@@ -1147,26 +1147,32 @@ function renderKontribChart(){
   const kData=computeKontribusiArea(window._kontribSegment||'all',kontribAreas);
   const aColors={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
 
-  dc('cKontrib');
-  wrap.innerHTML=`<canvas id="cKontrib"></canvas>`;
-  const el=document.getElementById('cKontrib');
-  CH['cKontrib']=new Chart(el,{
-    type:'bar',
-    data:{labels:kData.map(k=>k.area),datasets:[
-      {label:'% Internal',data:kData.map(k=>k.pct),backgroundColor:kData.map(k=>aColors[k.area]),stack:'s'},
-      {label:'% Eksternal',data:kData.map(k=>k.pct===null?null:100-k.pct),backgroundColor:kData.map(k=>aColors[k.area]+'30'),stack:'s'}
-    ]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
-        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%`}}
+  ['cKontrib','cKontrib_0','cKontrib_1','cKontrib_2'].forEach(dc);
+  wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(${kData.length},1fr);gap:10px">
+    ${kData.map((k,i)=>`<div>
+      <div style="font-size:10px;font-weight:700;color:${aColors[k.area]};text-align:center;margin-bottom:4px">${k.area}${k.pct!==null?` — ${k.pct}%`:''}</div>
+      <div style="position:relative;height:190px"><canvas id="cKontrib_${i}"></canvas></div>
+    </div>`).join('')}
+  </div>`;
+  kData.forEach((k,i)=>{
+    const col=aColors[k.area];
+    const el=document.getElementById('cKontrib_'+i);
+    if(!el) return;
+    const hasData=(k.intTrips+k.extTrips)>0;
+    CH['cKontrib_'+i]=new Chart(el,{
+      type:'pie',
+      data:{
+        labels:['Internal','Eksternal'],
+        datasets:[{data:hasData?[k.intTrips,k.extTrips]:[1,0],backgroundColor:[col,col+'30'],borderColor:'#fff',borderWidth:2}]
       },
-      scales:{
-        x:{stacked:true,ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue',weight:'600'}},grid:{display:false}},
-        y:{stacked:true,min:0,max:100,ticks:{color:'#637d9a',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'%',color:'#637d9a',font:{size:10}}}
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:i===0,position:'bottom',labels:{font:{size:9,family:'Helvetica Neue'},boxWidth:10,padding:8}},
+          tooltip:{enabled:hasData,callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.parsed)} trip`}}
+        }
       }
-    }
+    });
   });
   if(footer) footer.innerHTML=kData.map(k=>`<span><b style="color:${aColors[k.area]}">${k.area}</b>: ${fmt(k.intTrips)} int / ${fmt(k.extTrips)} ext</span>`).join('');
 }
@@ -1242,9 +1248,10 @@ function renderYoYChart(view){
     wrap.innerHTML=`<div style="position:relative;height:230px"><canvas id="cYoY"></canvas></div>`;
     const el=document.getElementById('cYoY');
     CH['cYoY']=new Chart(el,{
+      type:'line',
       data:{labels:MLBL12,datasets:[
-        {label:'2025',type:'bar',data:data25,backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,order:2},
-        {label:'2026',type:'bar',data:data26,backgroundColor:'#266CA9',borderColor:'#1d5488',borderWidth:1,borderRadius:4,order:1}
+        {label:'2025',data:data25,borderColor:'#9fb3c8',backgroundColor:'rgba(159,179,200,.1)',borderWidth:2,borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#9fb3c8',tension:0.3,spanGaps:true},
+        {label:'2026',data:data26,borderColor:'#266CA9',backgroundColor:'rgba(38,108,169,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#266CA9',tension:0.3,spanGaps:false}
       ]},
       options:{
         responsive:true,maintainAspectRatio:false,
