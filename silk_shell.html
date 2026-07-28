@@ -2378,7 +2378,7 @@ function renderCostAnalysis(rows){
   const pMPPtot2  = totalCostArmada?+(totalAvgMPP/totalCostArmada*100).toFixed(1):0;
   const pSewatot2 = totalCostArmada?+(totalAvgSewa/totalCostArmada*100).toFixed(1):0;
 
-  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+  const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
     <div class="kpi c-orange">
       <div class="kpi-label">Total UJP</div>
       <div class="kpi-value">${fmtM(totalAvgUJP)}</div>
@@ -2393,11 +2393,6 @@ function renderCostAnalysis(rows){
       <div class="kpi-label">Total MPP</div>
       <div class="kpi-value">${fmtM(totalAvgMPP)}</div>
       <div class="kpi-sub">${pMPPtot2}% dari Total Cost Armada</div>
-    </div>
-    <div class="kpi c-${netBenefit>=0?'green':'red'}">
-      <div class="kpi-label">Net Benefit</div>
-      <div class="kpi-value" style="color:${netBenefit>=0?CGREEN:CRED}">${totalAvgCE>0?(netBenefit>=0?'+':'')+fmtM(netBenefit):'—'}</div>
-      <div class="kpi-sub">${totalAvgCE>0?`Saving ${fmtM(totalSaving)} − Cost Armada ${fmtM(totalCostArmada)}`:'Belum ada benchmark ext'}</div>
     </div>
   </div>`;
 
@@ -2418,8 +2413,6 @@ function renderCostAnalysis(rows){
         <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--purple);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Sewa Armada</th>
         <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--txt);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Total Cost Armada</th>
         <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Ext Benchmark</th>
-        <th style="text-align:right;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Gap</th>
-        <th style="text-align:center;padding:7px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Verdict</th>
       </tr></thead>
       <tbody>
         ${siteData.map(d=>`<tr style="border-bottom:1px solid #f0f4f9">
@@ -2439,8 +2432,6 @@ function renderCostAnalysis(rows){
           <td style="text-align:right;padding:9px 10px;color:var(--purple);font-weight:600">${d.avgSewa>0?fmtM(d.avgSewa):'<span style="color:var(--muted)">—</span>'}</td>
           <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--txt)">${fmtM(d.costArmada)}</td>
           <td style="text-align:right;padding:9px 10px;font-weight:600;color:${d.saving>=0?CGREEN:CRED}">${d.avgCE>0?(d.saving>=0?'+':'')+fmtM(d.saving):'—'}</td>
-          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${d.netBenefit>=0?CGREEN:CRED}">${d.avgCE>0?(d.netBenefit>=0?'+':'')+fmtM(d.netBenefit):'—'}</td>
-          <td style="text-align:center;padding:9px 10px"><span class="status-pill ${verdictClass[d.verdict]}" style="font-size:9px">${verdictLabel[d.verdict]}</span></td>
         </tr>`).join('')}
         <tr style="background:var(--bg);border-top:2px solid var(--border2)">
           <td style="padding:9px 10px;font-weight:700;font-size:10px;color:var(--txt2);text-transform:uppercase">Total / Avg</td>
@@ -2450,8 +2441,6 @@ function renderCostAnalysis(rows){
           <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--purple)">${fmtM(totalAvgSewa)}</td>
           <td style="text-align:right;padding:9px 10px;font-weight:700;color:var(--txt)">${fmtM(totalCostArmada)}</td>
           <td style="text-align:right;padding:9px 10px;font-weight:700;color:${totalSaving>=0?CGREEN:CRED}">${totalAvgCE>0?(totalSaving>=0?'+':'')+fmtM(totalSaving):'—'}</td>
-          <td style="text-align:right;padding:9px 10px;font-weight:700;color:${netBenefit>=0?CGREEN:CRED}">${totalAvgCE>0?(netBenefit>=0?'+':'')+fmtM(netBenefit):'—'}</td>
-          <td></td>
         </tr>
       </tbody>
     </table></div>
@@ -2520,6 +2509,32 @@ function renderCostAnalysis(rows){
   });
   jalurSummary.sort((a,b)=>b.ci_jt-a.ci_jt);
 
+  // Saving per Jalur x Type Armada — breakdown baru
+  const ARMADA_EXCLUDE=['','#N/A','0'];
+  const armadaTypesPresent=[...new Set(rows.map(r=>r[5]).filter(a=>a&&!ARMADA_EXCLUDE.includes(a)))];
+  const armadaTripCount={}; armadaTypesPresent.forEach(a=>armadaTripCount[a]=0);
+  rows.forEach(r=>{if(armadaTripCount[r[5]]!==undefined) armadaTripCount[r[5]]++;});
+  armadaTypesPresent.sort((a,b)=>armadaTripCount[b]-armadaTripCount[a]);
+
+  const jalurArmadaSaving=[];
+  sitesToShow.forEach(s=>{
+    const sr=rows.filter(r=>r[0]===s);
+    if(!sr.length) return;
+    const jalurMap={};
+    sr.forEach(r=>{
+      const j=r[2];
+      if(!jalurMap[j]) jalurMap[j]={site:s,jalur:j,area:r[1],trips:0,byArmada:{}};
+      jalurMap[j].trips++;
+      const arm=r[5];
+      if(!jalurMap[j].byArmada[arm]) jalurMap[j].byArmada[arm]={trips:0,ci:0,ce:0,ceCnt:0};
+      jalurMap[j].byArmada[arm].trips++;
+      jalurMap[j].byArmada[arm].ci+=r[3]||0;
+      if(r[4]){jalurMap[j].byArmada[arm].ce+=r[4];jalurMap[j].byArmada[arm].ceCnt++;}
+    });
+    Object.values(jalurMap).forEach(jv=>jalurArmadaSaving.push(jv));
+  });
+  jalurArmadaSaving.sort((a,b)=>b.trips-a.trips);
+
   const statusLbl={efisien:'EFISIEN',review:'PERLU REVIEW',optimasi:'OPTIMASI OLF',nodata:'NO BENCHMARK'};
   const statusCls={efisien:'sp-ideal',review:'sp-eval',optimasi:'sp-worth',nodata:'sp-nodata'};
 
@@ -2564,6 +2579,42 @@ function renderCostAnalysis(rows){
     </div>
   </div>`;
 
+  // HTML tabel Saving per Jalur x Type Armada
+  const armadaTableHTML=`<div class="card mb12">
+    <div class="card-title">Saving per Jalur — Breakdown Type Armada
+      <span class="card-badge">Ext Benchmark − Cost Int, per kombinasi Jalur × Armada (Jt Rp)</span>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:${560+armadaTypesPresent.length*110}px;font-size:11.5px">
+      <thead><tr style="background:var(--bg)">
+        <th style="text-align:left;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border);position:sticky;left:0;background:var(--bg)">Jalur</th>
+        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Trip Total</th>
+        ${armadaTypesPresent.map(a=>`<th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">${a}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${jalurArmadaSaving.map(j=>`<tr style="border-bottom:1px solid #f0f4f9">
+          <td style="padding:7px 10px;position:sticky;left:0;background:var(--card)">
+            <div style="font-weight:700;font-size:12px">${j.jalur}</div>
+            <div style="font-size:10px;color:${SCOL[j.site]};font-weight:600">${j.site}</div>
+            <div style="font-size:10px;color:var(--muted)">${j.area}</div>
+          </td>
+          <td style="text-align:right;padding:7px 10px;color:var(--txt2)">${j.trips}</td>
+          ${armadaTypesPresent.map(a=>{
+            const d=j.byArmada[a];
+            if(!d) return `<td style="text-align:right;padding:7px 10px;color:var(--muted)">—</td>`;
+            const sav=d.ceCnt>0?+((d.ce-d.ci)/1e6).toFixed(1):null;
+            return `<td style="text-align:right;padding:7px 10px">
+              <div style="font-weight:700;color:${sav!==null?(sav>=0?CGREEN:CRED):'var(--muted)'}">${sav!==null?(sav>=0?'+':'')+sav+' Jt':'—'}</div>
+              <div style="font-size:9px;color:var(--muted)">${d.trips} trip</div>
+            </td>`;
+          }).join('')}
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+    <div style="font-size:9px;color:var(--muted);font-style:italic;margin-top:6px">
+      *Saving dihitung hanya dari trip yang punya benchmark Cost Ext. "—" artinya tidak ada trip dengan kombinasi Jalur × Armada tersebut, atau belum ada benchmark.
+    </div>
+  </div>`;
+
   const insightHTML=`<div class="card mb12">
     <div class="card-title">Break-even Analysis — Internal All-in vs Reduce Armada</div>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -2591,7 +2642,7 @@ function renderCostAnalysis(rows){
     </div>
   </div>`;
 
-  document.getElementById('content').innerHTML=kpiHTML+tableHTML+chartHTML+jalurTableHTML+insightHTML;
+  document.getElementById('content').innerHTML=kpiHTML+tableHTML+chartHTML+jalurTableHTML+armadaTableHTML+insightHTML;
 
   // Render charts
   setTimeout(()=>{
