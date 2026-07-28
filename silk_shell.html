@@ -213,6 +213,19 @@ canvas{display:block}
 .popup-status{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-top:6px}
 .popup-site{display:inline-block;font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;margin-bottom:6px;color:#fff}
 
+/* SEBARAN — permanent label card (selalu tampil, ga perlu klik) */
+.leaflet-tooltip.sebaran-label{
+  background:#1e2d4a!important;border:1.5px solid rgba(255,255,255,.12)!important;
+  border-radius:8px!important;box-shadow:0 3px 10px rgba(0,0,0,.25)!important;
+  padding:5px 8px!important;color:#fff!important;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important;
+  opacity:0.96!important;
+}
+.leaflet-tooltip.sebaran-label::before{display:none!important}
+.sl-jalur{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.sl-pct{font-size:15px;font-weight:800;line-height:1.15;margin-top:1px}
+.sl-trend{font-size:9px;font-weight:600;margin-top:1px}
+.sl-sub{font-size:9px;color:rgba(255,255,255,.55);margin-top:2px;white-space:nowrap}
+
 @media(max-width:900px){.kpi-row,.grid4{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -376,6 +389,15 @@ function fmtJt(n){const a=Math.abs(n);return(n<0?'-':'')+(a>=1e9?(a/1e9).toFixed
 function fmtM(v){return fmtJt(v)}
 function pc(p){return p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'}
 function dc(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
+
+function toggleJalurRow(id){
+  const el=document.getElementById(id);
+  const arrow=document.getElementById(id+'-arrow');
+  if(!el) return;
+  const show=el.style.display==='none';
+  el.style.display=show?'table-row':'none';
+  if(arrow) arrow.style.transform=show?'rotate(90deg)':'rotate(0deg)';
+}
 function isScopeRow(r){
   const s=SAVING_SCOPE[r[0]];
   if(!s) return false;
@@ -2057,7 +2079,19 @@ function renderSebaran(rows){
       });
 
       marker.bindPopup(popupHTML,{maxWidth:220});
-      marker.bindTooltip(`<b>${jalur}</b> · ${totalTrip} trip`,{direction:'top',offset:[0,-4]});
+
+      // Label permanen (selalu tampil) — pakai pct_ef (worstEntry) sbg angka besar + trend
+      const pe=worstEntry.pct_ef;
+      const peColor=pe===null?'rgba(255,255,255,.5)':(pe>=0?'#4ade80':'#f87171');
+      const peTxt=pe===null?'—':(pe>=0?'+':'')+pe+'%';
+      const trendTxt=pe===null?'no data':(pe>=0?'▲ lebih murah':'▼ lebih mahal');
+      const labelHTML=`<div style="min-width:70px">
+        <div class="sl-jalur">${jalur}</div>
+        <div class="sl-pct" style="color:${peColor}">${peTxt}</div>
+        <div class="sl-trend" style="color:${peColor}">${trendTxt}</div>
+        <div class="sl-sub">${totalTrip} trip · CI ${worstEntry.ci}Jt</div>
+      </div>`;
+      marker.bindTooltip(labelHTML,{permanent:true,direction:'top',offset:[0,-radius-2],className:'sebaran-label',interactive:true});
     });
   },100);
 }
@@ -2509,13 +2543,7 @@ function renderCostAnalysis(rows){
   });
   jalurSummary.sort((a,b)=>b.ci_jt-a.ci_jt);
 
-  // Saving per Jalur x Type Armada — breakdown baru
-  const ARMADA_EXCLUDE=['','#N/A','0'];
-  const armadaTypesPresent=[...new Set(rows.map(r=>r[5]).filter(a=>a&&!ARMADA_EXCLUDE.includes(a)))];
-  const armadaTripCount={}; armadaTypesPresent.forEach(a=>armadaTripCount[a]=0);
-  rows.forEach(r=>{if(armadaTripCount[r[5]]!==undefined) armadaTripCount[r[5]]++;});
-  armadaTypesPresent.sort((a,b)=>armadaTripCount[b]-armadaTripCount[a]);
-
+  // Saving per Jalur x Type Armada — dipakai buat expand row
   const jalurArmadaSaving=[];
   sitesToShow.forEach(s=>{
     const sr=rows.filter(r=>r[0]===s);
@@ -2525,7 +2553,7 @@ function renderCostAnalysis(rows){
       const j=r[2];
       if(!jalurMap[j]) jalurMap[j]={site:s,jalur:j,area:r[1],trips:0,byArmada:{}};
       jalurMap[j].trips++;
-      const arm=r[5];
+      const arm=r[5]&&!['','#N/A','0'].includes(r[5])?r[5]:'Lainnya';
       if(!jalurMap[j].byArmada[arm]) jalurMap[j].byArmada[arm]={trips:0,ci:0,ce:0,ceCnt:0};
       jalurMap[j].byArmada[arm].trips++;
       jalurMap[j].byArmada[arm].ci+=r[3]||0;
@@ -2533,7 +2561,8 @@ function renderCostAnalysis(rows){
     });
     Object.values(jalurMap).forEach(jv=>jalurArmadaSaving.push(jv));
   });
-  jalurArmadaSaving.sort((a,b)=>b.trips-a.trips);
+  const armadaBySiteJalur={};
+  jalurArmadaSaving.forEach(j=>{armadaBySiteJalur[j.site+'|'+j.jalur]=j.byArmada;});
 
   const statusLbl={efisien:'EFISIEN',review:'PERLU REVIEW',optimasi:'OPTIMASI OLF',nodata:'NO BENCHMARK'};
   const statusCls={efisien:'sp-ideal',review:'sp-eval',optimasi:'sp-worth',nodata:'sp-nodata'};
@@ -2556,11 +2585,17 @@ function renderCostAnalysis(rows){
         <th style="text-align:center;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Status</th>
       </tr></thead>
       <tbody>
-        ${jalurSummary.map(j=>`<tr style="border-bottom:1px solid #f0f4f9">
-          <td style="padding:7px 10px">
-            <div style="font-weight:700;font-size:12px">${j.jalur}</div>
-            <div style="font-size:10px;color:${SCOL[j.site]};font-weight:600">${j.site}</div>
-            <div style="font-size:10px;color:var(--muted)">${j.area}</div>
+        ${jalurSummary.map((j,i)=>{
+          const byArmada=armadaBySiteJalur[j.site+'|'+j.jalur]||{};
+          const armadaEntries=Object.entries(byArmada).sort((a,b)=>b[1].trips-a[1].trips);
+          const rowId=`jarm-${i}`;
+          return `<tr style="border-bottom:1px solid #f0f4f9">
+          <td style="padding:7px 10px;cursor:pointer" onclick="toggleJalurRow('${rowId}')">
+            <div style="font-weight:700;font-size:12px;display:flex;align-items:center;gap:6px">
+              <span id="${rowId}-arrow" style="font-size:8px;color:var(--muted);transition:transform .15s">▸</span>${j.jalur}
+            </div>
+            <div style="font-size:10px;color:${SCOL[j.site]};font-weight:600;margin-left:14px">${j.site}</div>
+            <div style="font-size:10px;color:var(--muted);margin-left:14px">${j.area}</div>
           </td>
           <td style="text-align:right;padding:7px 10px;color:var(--txt2)">${j.trips}</td>
           <td style="text-align:right;padding:7px 10px;font-weight:700;color:var(--blue)">${j.ci_jt}</td>
@@ -2571,47 +2606,40 @@ function renderCostAnalysis(rows){
           <td style="text-align:right;padding:7px 10px;color:var(--muted)">${j.olfExt!==null?j.olfExt+'%':'—'}</td>
           <td style="text-align:right;padding:7px 10px;font-weight:700;color:${j.deltaOlf!==null?(j.deltaOlf>=0?CGREEN:CRED):'var(--muted)'}">${j.deltaOlf!==null?(j.deltaOlf>=0?'+':'')+j.deltaOlf+'%':'—'}</td>
           <td style="text-align:center;padding:7px 10px"><span class="status-pill ${statusCls[j.status]}" style="font-size:9px">${statusLbl[j.status]}</span></td>
-        </tr>`).join('')}
-      </tbody>
-    </table></div>
-    <div style="font-size:9px;color:var(--muted);font-style:italic;margin-top:6px">
-      *EFISIEN: Gap Cost positif + OLF ≥70% · OPTIMASI OLF: Cost murah tapi muatan belum optimal · PERLU REVIEW: Cost lebih mahal dari external
-    </div>
-  </div>`;
-
-  // HTML tabel Saving per Jalur x Type Armada
-  const armadaTableHTML=`<div class="card mb12">
-    <div class="card-title">Saving per Jalur — Breakdown Type Armada
-      <span class="card-badge">Ext Benchmark − Cost Int, per kombinasi Jalur × Armada (Jt Rp)</span>
-    </div>
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:${560+armadaTypesPresent.length*110}px;font-size:11.5px">
-      <thead><tr style="background:var(--bg)">
-        <th style="text-align:left;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border);position:sticky;left:0;background:var(--bg)">Jalur</th>
-        <th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">Trip Total</th>
-        ${armadaTypesPresent.map(a=>`<th style="text-align:right;padding:6px 10px;font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;border-bottom:2px solid var(--border)">${a}</th>`).join('')}
-      </tr></thead>
-      <tbody>
-        ${jalurArmadaSaving.map(j=>`<tr style="border-bottom:1px solid #f0f4f9">
-          <td style="padding:7px 10px;position:sticky;left:0;background:var(--card)">
-            <div style="font-weight:700;font-size:12px">${j.jalur}</div>
-            <div style="font-size:10px;color:${SCOL[j.site]};font-weight:600">${j.site}</div>
-            <div style="font-size:10px;color:var(--muted)">${j.area}</div>
+        </tr>
+        <tr id="${rowId}" style="display:none;background:var(--bg)">
+          <td colspan="10" style="padding:8px 14px 12px 34px">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:5px;letter-spacing:.5px">Breakdown per Type Armada</div>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;max-width:560px">
+              <thead><tr>
+                <th style="text-align:left;padding:4px 8px;color:var(--muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Armada</th>
+                <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Trip</th>
+                <th style="text-align:right;padding:4px 8px;color:var(--blue);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Cost Int (Jt)</th>
+                <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Cost Ext (Jt)</th>
+                <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Saving</th>
+              </tr></thead>
+              <tbody>
+                ${armadaEntries.length?armadaEntries.map(([arm,d])=>{
+                  const aci_jt=+(d.ci/1e6).toFixed(1);
+                  const ace_jt=d.ceCnt>0?+(d.ce/1e6).toFixed(1):null;
+                  const asav=ace_jt!==null?+(ace_jt-aci_jt).toFixed(1):null;
+                  return `<tr style="border-top:1px solid var(--border)">
+                    <td style="padding:5px 8px;font-weight:600">${arm}</td>
+                    <td style="text-align:right;padding:5px 8px">${d.trips}</td>
+                    <td style="text-align:right;padding:5px 8px;color:var(--blue);font-weight:600">${aci_jt}</td>
+                    <td style="text-align:right;padding:5px 8px;color:var(--muted)">${ace_jt!==null?ace_jt:'—'}</td>
+                    <td style="text-align:right;padding:5px 8px;font-weight:700;color:${asav!==null?(asav>=0?CGREEN:CRED):'var(--muted)'}">${asav!==null?(asav>=0?'+':'')+asav+' Jt':'—'}</td>
+                  </tr>`;
+                }).join(''):`<tr><td colspan="5" style="padding:6px 8px;color:var(--muted);font-style:italic">Tidak ada data armada</td></tr>`}
+              </tbody>
+            </table>
           </td>
-          <td style="text-align:right;padding:7px 10px;color:var(--txt2)">${j.trips}</td>
-          ${armadaTypesPresent.map(a=>{
-            const d=j.byArmada[a];
-            if(!d) return `<td style="text-align:right;padding:7px 10px;color:var(--muted)">—</td>`;
-            const sav=d.ceCnt>0?+((d.ce-d.ci)/1e6).toFixed(1):null;
-            return `<td style="text-align:right;padding:7px 10px">
-              <div style="font-weight:700;color:${sav!==null?(sav>=0?CGREEN:CRED):'var(--muted)'}">${sav!==null?(sav>=0?'+':'')+sav+' Jt':'—'}</div>
-              <div style="font-size:9px;color:var(--muted)">${d.trips} trip</div>
-            </td>`;
-          }).join('')}
-        </tr>`).join('')}
+        </tr>`;
+        }).join('')}
       </tbody>
     </table></div>
     <div style="font-size:9px;color:var(--muted);font-style:italic;margin-top:6px">
-      *Saving dihitung hanya dari trip yang punya benchmark Cost Ext. "—" artinya tidak ada trip dengan kombinasi Jalur × Armada tersebut, atau belum ada benchmark.
+      *EFISIEN: Gap Cost positif + OLF ≥70% · OPTIMASI OLF: Cost murah tapi muatan belum optimal · PERLU REVIEW: Cost lebih mahal dari external · Klik nama jalur untuk lihat breakdown per Type Armada
     </div>
   </div>`;
 
@@ -2642,7 +2670,7 @@ function renderCostAnalysis(rows){
     </div>
   </div>`;
 
-  document.getElementById('content').innerHTML=kpiHTML+tableHTML+chartHTML+jalurTableHTML+armadaTableHTML+insightHTML;
+  document.getElementById('content').innerHTML=kpiHTML+tableHTML+chartHTML+jalurTableHTML+insightHTML;
 
   // Render charts
   setTimeout(()=>{
