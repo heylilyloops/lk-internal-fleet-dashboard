@@ -251,9 +251,6 @@ canvas{display:block}
   <button class="sb-menu-item" onclick="setMenu('sebaran')">
     <span class="sb-menu-icon">📍</span>Sebaran
   </button>
-  <button class="sb-menu-item" onclick="setMenu('insight')">
-    <span class="sb-menu-icon">💡</span>Insight
-  </button>
   <button class="sb-menu-item" onclick="setMenu('slide')">
     <span class="sb-menu-icon">📑</span>Slide
   </button>
@@ -508,7 +505,7 @@ function getScopeLabel(){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5,bu:6};
+  const idx={overview:0,coverage:1,sebaran:2,slide:3,costanalysis:4,bu:5};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
@@ -616,7 +613,7 @@ function setTrendView(view){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,sebaran:2,insight:3,slide:4,costanalysis:5,bu:6};
+  const idx={overview:0,coverage:1,sebaran:2,slide:3,costanalysis:4,bu:5};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
@@ -684,7 +681,7 @@ function render(){
   const slaAvg=calcSLAAvg(rows);
   const sav=kpi.sav;
 
-  const menuLabels={overview:'Overview',coverage:'Coverage',insight:'Insight',bu:'Summary BU'};
+  const menuLabels={overview:'Overview',coverage:'Coverage',bu:'Summary BU'};
   document.getElementById('mainTitle').textContent=(activeSite==='all'?'Semua NDC':activeSite)+' — '+menuLabels[activeMenu];
   const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
   const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
@@ -710,7 +707,7 @@ function render(){
   if(activeMenu==='overview') renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
   else if(activeMenu==='coverage') renderCoverage(rows,contrib,tInt,tAll,pct);
   else if(activeMenu==='sebaran') renderSebaran(rows);
-  else if(activeMenu==='insight') renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
+
   else if(activeMenu==='slide') renderSlide(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
   else if(activeMenu==='costanalysis') renderCostAnalysis(rows);
   else if(activeMenu==='bu') renderBU();
