@@ -390,12 +390,12 @@ function fmtM(v){return fmtJt(v)}
 function pc(p){return p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'}
 function dc(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
 
-function toggleJalurRow(id){
-  const el=document.getElementById(id);
-  const arrow=document.getElementById(id+'-arrow');
-  if(!el) return;
-  const show=el.style.display==='none';
-  el.style.display=show?'table-row':'none';
+function toggleJalurRow(cls){
+  const els=document.querySelectorAll('.'+cls);
+  if(!els.length) return;
+  const show=els[0].style.display==='none';
+  els.forEach(el=>{el.style.display=show?'table-row':'none';});
+  const arrow=document.getElementById(cls+'-arrow');
   if(arrow) arrow.style.transform=show?'rotate(90deg)':'rotate(0deg)';
 }
 function isScopeRow(r){
@@ -2554,10 +2554,12 @@ function renderCostAnalysis(rows){
       if(!jalurMap[j]) jalurMap[j]={site:s,jalur:j,area:r[1],trips:0,byArmada:{}};
       jalurMap[j].trips++;
       const arm=r[5]&&!['','#N/A','0'].includes(r[5])?r[5]:'Lainnya';
-      if(!jalurMap[j].byArmada[arm]) jalurMap[j].byArmada[arm]={trips:0,ci:0,ce:0,ceCnt:0};
+      if(!jalurMap[j].byArmada[arm]) jalurMap[j].byArmada[arm]={trips:0,ci:0,ce:0,ceCnt:0,cbm:0,olfSum:0,olfN:0};
       jalurMap[j].byArmada[arm].trips++;
       jalurMap[j].byArmada[arm].ci+=r[3]||0;
       if(r[4]){jalurMap[j].byArmada[arm].ce+=r[4];jalurMap[j].byArmada[arm].ceCnt++;}
+      jalurMap[j].byArmada[arm].cbm+=r[9]||0;
+      if(r[14]&&r[9]){jalurMap[j].byArmada[arm].olfSum+=(r[9]/r[14]*100);jalurMap[j].byArmada[arm].olfN++;}
     });
     Object.values(jalurMap).forEach(jv=>jalurArmadaSaving.push(jv));
   });
@@ -2607,34 +2609,30 @@ function renderCostAnalysis(rows){
           <td style="text-align:right;padding:7px 10px;font-weight:700;color:${j.deltaOlf!==null?(j.deltaOlf>=0?CGREEN:CRED):'var(--muted)'}">${j.deltaOlf!==null?(j.deltaOlf>=0?'+':'')+j.deltaOlf+'%':'—'}</td>
           <td style="text-align:center;padding:7px 10px"><span class="status-pill ${statusCls[j.status]}" style="font-size:9px">${statusLbl[j.status]}</span></td>
         </tr>
-        <tr id="${rowId}" style="display:none;background:var(--bg)">
-          <td colspan="10" style="padding:8px 14px 12px 34px">
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:5px;letter-spacing:.5px">Breakdown per Type Armada</div>
-            <table style="width:100%;border-collapse:collapse;font-size:11px;max-width:560px">
-              <thead><tr>
-                <th style="text-align:left;padding:4px 8px;color:var(--muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Armada</th>
-                <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Trip</th>
-                <th style="text-align:right;padding:4px 8px;color:var(--blue);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Cost Int (Jt)</th>
-                <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Cost Ext (Jt)</th>
-                <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border)">Saving</th>
-              </tr></thead>
-              <tbody>
-                ${armadaEntries.length?armadaEntries.map(([arm,d])=>{
-                  const aci_jt=+(d.ci/1e6).toFixed(1);
-                  const ace_jt=d.ceCnt>0?+(d.ce/1e6).toFixed(1):null;
-                  const asav=ace_jt!==null?+(ace_jt-aci_jt).toFixed(1):null;
-                  return `<tr style="border-top:1px solid var(--border)">
-                    <td style="padding:5px 8px;font-weight:600">${arm}</td>
-                    <td style="text-align:right;padding:5px 8px">${d.trips}</td>
-                    <td style="text-align:right;padding:5px 8px;color:var(--blue);font-weight:600">${aci_jt}</td>
-                    <td style="text-align:right;padding:5px 8px;color:var(--muted)">${ace_jt!==null?ace_jt:'—'}</td>
-                    <td style="text-align:right;padding:5px 8px;font-weight:700;color:${asav!==null?(asav>=0?CGREEN:CRED):'var(--muted)'}">${asav!==null?(asav>=0?'+':'')+asav+' Jt':'—'}</td>
-                  </tr>`;
-                }).join(''):`<tr><td colspan="5" style="padding:6px 8px;color:var(--muted);font-style:italic">Tidak ada data armada</td></tr>`}
-              </tbody>
-            </table>
+        <tr class="${rowId}" style="display:none">
+          <td colspan="10" style="padding:0">
+            <div style="padding:5px 10px 3px 34px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;background:var(--bg)">Breakdown per Type Armada</div>
           </td>
-        </tr>`;
+        </tr>
+        ${armadaEntries.length?armadaEntries.map(([arm,d])=>{
+          const aci_jt=+(d.ci/1e6).toFixed(1);
+          const ace_jt=d.ceCnt>0?+(d.ce/1e6).toFixed(1):null;
+          const agap=ace_jt!==null?+(ace_jt-aci_jt).toFixed(1):null;
+          const acostCbm=d.cbm>0?+(d.ci/d.cbm).toFixed(0):null;
+          const aolf=d.olfN>0?+(d.olfSum/d.olfN).toFixed(1):null;
+          return `<tr class="${rowId}" style="display:none;background:var(--bg);border-bottom:1px solid var(--border)">
+            <td style="padding:6px 10px 6px 34px;font-size:11px;color:var(--txt2)">↳ ${arm}</td>
+            <td style="text-align:right;padding:6px 10px;color:var(--txt2);font-size:11px">${d.trips}</td>
+            <td style="text-align:right;padding:6px 10px;font-weight:600;color:var(--blue);font-size:11px">${aci_jt}</td>
+            <td style="text-align:right;padding:6px 10px;color:var(--muted);font-size:11px">${ace_jt!==null?ace_jt:'—'}</td>
+            <td style="text-align:right;padding:6px 10px;font-weight:600;color:${agap!==null?(agap>=0?CGREEN:CRED):'var(--muted)'};font-size:11px">${agap!==null?(agap>=0?'+':'')+agap+' Jt':'—'}</td>
+            <td style="text-align:right;padding:6px 10px;color:var(--orange);font-size:11px">${acostCbm!==null?'Rp '+fmt(acostCbm):'—'}</td>
+            <td style="text-align:right;padding:6px 10px;font-weight:600;color:${aolf!==null?(aolf>=80?CGREEN:aolf>=60?'var(--teal)':'var(--orange)'):'var(--muted)'};font-size:11px">${aolf!==null?aolf+'%':'—'}</td>
+            <td style="padding:6px 10px"></td>
+            <td style="padding:6px 10px"></td>
+            <td style="padding:6px 10px"></td>
+          </tr>`;
+        }).join(''):`<tr class="${rowId}" style="display:none;background:var(--bg)"><td colspan="10" style="padding:6px 10px 6px 34px;color:var(--muted);font-style:italic;font-size:11px">Tidak ada data armada</td></tr>`}`;
         }).join('')}
       </tbody>
     </table></div>
