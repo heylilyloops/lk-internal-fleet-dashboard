@@ -50,6 +50,25 @@ SAVING_SCOPE_PY = {
     'IND Jababeka':  ['Jawa Barat'],
 }
 
+# Sheet External pakai nama armada versi panjang, sheet Internal pakai singkatan —
+# normalisasi ke satu penamaan (mengikuti kode internal) biar breakdown per Type Armada
+# nggak kepecah jadi baris ganda (mis. "CDD LONG CHASSIS" vs "CDDLC").
+ARMADA_NORM = {
+    'CDD LONG CHASSIS':  'CDDLC',
+    'CDE LONG CHASSIS':  'CDELC',
+    'CDD LONG CHASIS':   'CDDLC',
+    'CDE LONG CHASIS':   'CDELC',
+    'MINI VAN BOX':      'MVB',
+    'CDD PICK UP':       'CDD PICK UP',
+    'PICK UP':           'PICKUP',
+    'PICKUP':            'PICKUP',
+}
+def norm_armada(name):
+    if not name:
+        return name
+    key = name.strip().upper()
+    return ARMADA_NORM.get(key, key)
+
 # ── FETCH SHEETS ─────────────────────────────────────────────────
 print("Fetching Google Sheets data...")
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
@@ -85,7 +104,7 @@ for line in int_data[1:]:
     jalur = line[3].strip()
     ci_raw = line[4].strip().replace(',','')
     ce_raw = line[5].strip().replace(',','')
-    armada   = line[7].strip()
+    armada   = norm_armada(line[7].strip())
     del_type = line[9].strip()
     del_date_raw = line[10].strip()
     do_raw   = line[11].strip()
@@ -173,7 +192,7 @@ for line in ext_data[1:]:
     cbm_raw2 = get_col('CBM', 11)
     kap_raw2 = get_col('Kapasitas Armada', 12)
     bu_raw   = get_col('BU', 14).strip()
-    arm_raw  = get_col('TYPE ARMADA', 4).strip()
+    arm_raw  = norm_armada(get_col('TYPE ARMADA', 4).strip())
     try: cbm2 = float(cbm_raw2.replace(',','')) if cbm_raw2 else 0.0
     except: cbm2 = 0.0
     try: kap2 = float(kap_raw2.replace(',','')) if kap_raw2 and kap_raw2 not in ('#N/A','#VALUE!','#REF!','') else 0.0
@@ -263,7 +282,7 @@ for line in rdc_data[1:]:
     cbm_rdc_raw = get_rdc('CBM', 11)
     try: cbm_rdc = float(cbm_rdc_raw.replace(',','')) if cbm_rdc_raw else 0.0
     except: cbm_rdc = 0.0
-    arm_rdc_raw = get_rdc('TYPE ARMADA', 4).strip()
+    arm_rdc_raw = norm_armada(get_rdc('TYPE ARMADA', 4).strip())
     ext_agg_area[site][del_date][area_key][0] += 1
     ext_agg_area[site][del_date][area_key][1] += cbm_rdc
     if jalur_r:
