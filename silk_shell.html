@@ -403,6 +403,17 @@ function isScopeRow(r){
   return s.includes(r[1]);
 }
 
+// Khusus buat Trend "Total LK" & "Internal vs Eksternal" — cuma 3 area Jabar+Lampung+Jatim,
+// TIDAK termasuk Sumatera Utara (Tamora) / Sulawesi Selatan (Tallo) walau itu scope resmi site-nya juga.
+function isJbLpJtRow(r){
+  const s=SAVING_SCOPE[r[0]];
+  if(!s) return false;
+  if(s.includes('Jawa Barat') && r[1]==='Jawa Barat') return true;
+  if(s.includes('Lampung') && r[2]==='Lampung') return true;
+  if(s.includes('Jawa Timur') && r[1]==='Jawa Timur') return true;
+  return false;
+}
+
 function getRows(){
   let rows=RAW;
   if(activeSite!=='all') rows=rows.filter(r=>r[0]===activeSite);
@@ -578,12 +589,26 @@ function renderTrendChart(view){
       });
     });
   } else if(view==='kontrib'){
-    // Internal vs Eksternal per bulan (stacked bar) + trend %Internal
+    // Internal vs Eksternal per bulan (stacked bar) + trend %Internal — scope Jabar+Lampung+Jatim aja
     const extByMonth={};
     (typeof EXT_AGG!=='undefined'?EXT_AGG:[]).forEach(e=>{
       if(activeSite!=='all'&&e.site!==activeSite) return;
       if(dateFrom&&e.date<dateFrom) return;
       if(dateTo&&e.date>dateTo) return;
+      const scope=SAVING_SCOPE[e.site]||[];
+      if(e.area!=='Jawa Barat'&&e.area!=='Jawa Timur') return; // batasi ke 2 area ini aja (Lampung ditangani terpisah lewat EXT_JALUR)
+      if(!scope.includes(e.area)) return; // bukan scope resmi site ini (hindari anomali data entry)
+      const m=e.date.slice(0,7);
+      extByMonth[m]=(extByMonth[m]||0)+e.trips;
+    });
+    (typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]).forEach(e=>{
+      if(activeSite!=='all'&&e.site!==activeSite) return;
+      if(dateFrom&&e.date<dateFrom) return;
+      if(dateTo&&e.date>dateTo) return;
+      const scope=SAVING_SCOPE[e.site]||[];
+      if(e.jalur!=='Lampung'||!scope.includes('Lampung')) return;
+      // EXT_AGG tidak pernah punya area='Lampung' (sama seperti data internal, Lampung cuma
+      // kebaca dari kolom Jalur) — jadi trip ini belum ke-hitung di loop EXT_AGG di atas, aman ditambah di sini.
       const m=e.date.slice(0,7);
       extByMonth[m]=(extByMonth[m]||0)+e.trips;
     });
@@ -982,6 +1007,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const ARMADA_TYPES=['CDDLC','CDELC','WINGBOX','FUSO'];
   const ARMADA_COLORS={'CDDLC':'#266CA9','CDELC':'#5ba4f5','WINGBOX':'#00c49a','FUSO':'#f5a623'};
   rows.forEach(r=>{
+    if(!isJbLpJtRow(r)) return;
     const arm=r[5]||'Other';
     const m=r[7].slice(0,7);
     if(!byMonthArmada[arm]) byMonthArmada[arm]={};
@@ -994,8 +1020,9 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     const m=r[7].slice(0,7);
     const key_total='__total__';
     const scope=SAVING_SCOPE[r[0]]||[];
-    // Cuma masukkan ke bucket area kalau area itu scope resmi site-nya (mirror isScopeRow) —
-    // menghindari anomali data entry (mis. AHI Jababeka ke-tag 'Jawa Timur').
+    // Cuma masukkan ke bucket area (termasuk __total__) kalau area itu scope resmi site-nya
+    // (mirror isScopeRow) — trend "Total LK" ini scope Jabar+Lampung+Jatim aja, bukan semua destinasi.
+    if(!isJbLpJtRow(r)) return;
     const keys=new Set([key_total]);
     if(scope.includes(r[1])) keys.add(r[1]);
     if(scope.includes('Lampung') && r[2]==='Lampung') keys.add('Lampung');
@@ -1004,10 +1031,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       if(!byMonthArea[k][m]) byMonthArea[k][m]={trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0};
       byMonthArea[k][m].trips++;
       byMonthArea[k][m].cbm+=(r[9]||0);
-      if(isScopeRow(r)){
-        byMonthArea[k][m].ci_s+=r[3]||0;
-        if(r[4]){byMonthArea[k][m].ce_s+=r[4];byMonthArea[k][m].ceS_n++;}
-      }
+      byMonthArea[k][m].ci_s+=r[3]||0;
+      if(r[4]){byMonthArea[k][m].ce_s+=r[4];byMonthArea[k][m].ceS_n++;}
     });
   });
 
@@ -1146,11 +1171,34 @@ function computeYoySeries(segment){
   });
   const scopeSum25=areaCards.reduce((s,c)=>s+c.s25,0);
   const scopeSum26=areaCards.reduce((s,c)=>s+c.s26,0);
+
+  // Monthly %Internal (scope Jabar+Lampung+Jatim gabungan) — buat tooltip di chart Total
+  const ext25ByMonth={},ext26ByMonth={};
+  YOY_AREAS.forEach(a=>{
+    let sitesForArea=scopeSitesForArea(a);
+    if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>s===activeSite);
+    if(segment!=='all') sitesForArea=sitesForArea.filter(s=>siteSegment(s)===segment);
+    const m25=areaExtTripsMonthly(a,sitesForArea,'2025');
+    const m26=areaExtTripsMonthly(a,sitesForArea,'2026');
+    Object.entries(m25).forEach(([m,v])=>{ext25ByMonth[m]=(ext25ByMonth[m]||0)+v;});
+    Object.entries(m26).forEach(([m,v])=>{ext26ByMonth[m]=(ext26ByMonth[m]||0)+v;});
+  });
+  const pctInt25Series=monthKeys.map(m=>{
+    const iN=YOY_AREAS.reduce((s,a)=>s+((by25Area[a]&&by25Area[a][m])||0),0);
+    const eN=ext25ByMonth[m]||0;
+    return (iN+eN)>0?Math.round(iN/(iN+eN)*100):null;
+  });
+  const pctInt26Series=monthKeys.map((m,i)=>{
+    if(!monthMask[i]) return null;
+    const iN=YOY_AREAS.reduce((s,a)=>s+((by26Area[a]&&by26Area[a][m])||0),0);
+    const eN=ext26ByMonth[m]||0;
+    return (iN+eN)>0?Math.round(iN/(iN+eN)*100):null;
+  });
   let sum25ov=0,sum26ov=0;
   monthKeys.forEach((m,i)=>{if(monthMask[i]){sum25ov+=data25[i];sum26ov+=data26[i]||0;}});
   const growth=sum25ov>0?Math.round((sum26ov-sum25ov)/sum25ov*100):null;
 
-  return{monthKeys,MLBL12,YOY_AREAS,ovLabel,data25,data26,by25Area,by26Area,areaCards,scopeSum25,scopeSum26,sum25ov,sum26ov,growth};
+  return{monthKeys,MLBL12,YOY_AREAS,ovLabel,data25,data26,by25Area,by26Area,areaCards,scopeSum25,scopeSum26,sum25ov,sum26ov,growth,pctInt25Series,pctInt26Series};
 }
 
 function yoyFooterText(){
@@ -1283,6 +1331,27 @@ function areaExtTrips(area,sites,year){
   return (typeof EXT_AGG!=='undefined'?EXT_AGG:[]).filter(e=>sites.includes(e.site)&&e.area===area&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
 }
 
+function areaExtTripsMonthly(area,sites,year){
+  const out={};
+  if(year==='2025'){
+    (typeof EXT2025_AREA!=='undefined'?EXT2025_AREA:[]).forEach(e=>{
+      if(!sites.includes(e.site)||e.area!==area) return;
+      out[e.m]=(out[e.m]||0)+e.trips;
+    });
+    return out;
+  }
+  const src=area==='Lampung'?(typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]):(typeof EXT_AGG!=='undefined'?EXT_AGG:[]);
+  src.forEach(e=>{
+    if(!sites.includes(e.site)) return;
+    if(area==='Lampung'){ if(e.jalur!=='Lampung') return; } else { if(e.area!==area) return; }
+    if(dateFrom&&e.date<dateFrom) return;
+    if(dateTo&&e.date>dateTo) return;
+    const m=e.date.slice(5,7);
+    out[m]=(out[m]||0)+e.trips;
+  });
+  return out;
+}
+
 function computeKontribusiArea(segment,areas,year){
   year=year||'2026';
   return areas.map(area=>{
@@ -1339,7 +1408,7 @@ function setYoySegment(segment){
 
 function renderYoYChart(view){
   if(!window._yoyData) return;
-  const {MLBL12,data25,data26,by25Area,by26Area,YOY_AREAS}=window._yoyData;
+  const {MLBL12,data25,data26,by25Area,by26Area,YOY_AREAS,pctInt25Series,pctInt26Series}=window._yoyData;
   ['cYoY','cYoY_0','cYoY_1','cYoY_2'].forEach(dc);
   const wrap=document.getElementById('yoyChartWrap');
   if(!wrap) return;
@@ -1356,7 +1425,17 @@ function renderYoYChart(view){
       options:{
         responsive:true,maintainAspectRatio:false,
         interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
+        plugins:{
+          legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
+          tooltip:{callbacks:{
+            footer:items=>{
+              if(!items.length||!pctInt25Series) return '';
+              const i=items[0].dataIndex;
+              const p25=pctInt25Series[i],p26=pctInt26Series[i];
+              return `%Kontribusi (Jabar+Lampung+Jatim): 2025 ${p25!==null?p25+'%':'—'} · 2026 ${p26!==null?p26+'%':'—'}`;
+            }
+          }}
+        },
         scales:{
           x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
           y:{ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Trip',color:'#637d9a',font:{size:10}}}
