@@ -1882,6 +1882,15 @@ function renderContribExpandable(rows){
     if(!extJalurMap[k]) extJalurMap[k]={trips:0,cbm:0};
     extJalurMap[k].trips+=(e.trips||0);
     extJalurMap[k].cbm+=(e.cbm||0);});
+  let ea=(typeof EXT_ARMADA!=='undefined'?EXT_ARMADA:[]);
+  if(activeSite!=='all') ea=ea.filter(e=>siteInFilter(e.site));
+  if(dateFrom) ea=ea.filter(e=>e.date>=dateFrom);
+  if(dateTo)   ea=ea.filter(e=>e.date<=dateTo);
+  const extArmadaMap={};
+  ea.forEach(e=>{const k=e.jalur+'||'+e.armada;
+    if(!extArmadaMap[k]) extArmadaMap[k]={trips:0,cbm:0};
+    extArmadaMap[k].trips+=(e.trips||0);
+    extArmadaMap[k].cbm+=(e.cbm||0);});
   const allAreas=new Set([...Object.keys(areaMap),...Object.keys(extAreaMap)]);
   const data=[...allAreas].map(area=>{
     const v=areaMap[area]||{int:0,ci:0,ce:0,ceCnt:0,ltS:0,ltN:0,jalurs:{}};
@@ -1893,7 +1902,12 @@ function renderContribExpandable(rows){
       const lt_int=jv.ltN>0?+(jv.ltS/jv.ltN).toFixed(2):null;
       const lt_ext=extLtByJalur[jname]?+(extLtByJalur[jname].reduce((s,v)=>s+v,0)/extLtByJalur[jname].length).toFixed(2):null;
       const lt_delta=lt_int!==null&&lt_ext!==null?+(lt_ext-lt_int).toFixed(2):null;
-      const armadaList=Object.entries(jv.armadas||{}).map(([arm,av])=>({arm,int:av.int,ci:av.ci,ce:av.ceCnt>0?av.ce:null,intCbm:av.intCbm||0})).sort((a,b)=>b.int-a.int);
+      const armadaNames=new Set([...Object.keys(jv.armadas||{}),...Object.keys(extArmadaMap).filter(k=>k.startsWith(jname+'||')).map(k=>k.slice(jname.length+2))]);
+      const armadaList=[...armadaNames].map(arm=>{
+        const av=(jv.armadas||{})[arm]||{int:0,ci:0,ce:0,ceCnt:0,intCbm:0};
+        const extAv=extArmadaMap[jname+'||'+arm]||{trips:0,cbm:0};
+        return{arm,int:av.int,ci:av.ci,ce:av.ceCnt>0?av.ce:null,intCbm:av.intCbm||0,ext:extAv.trips,extCbm:extAv.cbm};
+      }).sort((a,b)=>(b.int+b.ext)-(a.int+a.ext));
       const jOlf=jv.olfN>0?+(jv.olfSum/jv.olfN).toFixed(1):null;
       const jOlfExt=extJalurV.olf_ext||null;
       return{name:jname,int:jv.int,ext:extJalurV.trips,extCbm:extJalurV.cbm,intCbm:jv.intCbm||0,total:jv.int+extJalurV.trips,ci:jv.ci,ce:jv.ceCnt>0?jv.ce:null,lt_int,lt_ext,lt_delta,armadas:armadaList,olf:jOlf,olf_ext:jOlfExt};
@@ -1963,17 +1977,19 @@ function renderContribExpandable(rows){
         +'</tr>';
       if(hasArmada){
         j.armadas.forEach(av=>{
+          const avTotal=av.int+av.ext;
           const avPct=j.int>0?Math.round(av.int/j.int*100):0;
           const avSavPct=savPct(av.ci,av.ce);
+          const avCbmTotal=av.intCbm+(av.extCbm||0);
           rows_html+='<tr class="row-armada-g hidden" data-cg="'+ai+'" data-ag="'+jKey+'">'
             +'<td><div class="area-cell-inner"><span style="width:13px;display:inline-block"></span><span style="padding-left:14px;font-size:11px;color:var(--txt2)">&#8618; '+av.arm+'</span></div></td>'
-            +'<td style="text-align:right">'+fmt(av.int)+' <span style="color:var(--muted);font-size:10px">('+avPct+'%)</span></td>'
-            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
-            +'<td style="text-align:right">'+fmt(av.int)+'</td>'
+            +'<td style="text-align:right">'+(av.int>0?fmt(av.int)+' <span style="color:var(--muted);font-size:10px">('+avPct+'%)</span>':'<span style="color:var(--muted)">&#8212;</span>')+'</td>'
+            +'<td style="text-align:right">'+(av.ext>0?fmt(av.ext):'<span style="color:var(--muted)">&#8212;</span>')+'</td>'
+            +'<td style="text-align:right">'+fmt(avTotal)+'</td>'
             +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
             +'<td style="text-align:right;color:var(--blue)">'+(av.intCbm>0?av.intCbm.toFixed(1):'&#8212;')+'</td>'
-            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
-            +'<td style="text-align:right">'+(av.intCbm>0?av.intCbm.toFixed(1):'&#8212;')+'</td>'
+            +'<td style="text-align:right;color:var(--muted)">'+(av.extCbm>0?av.extCbm.toFixed(1):'&#8212;')+'</td>'
+            +'<td style="text-align:right">'+(avCbmTotal>0?avCbmTotal.toFixed(1):'&#8212;')+'</td>'
             +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
             +'<td style="text-align:right">'+fj(av.ci)+'</td>'
             +'<td style="text-align:right">'+fj(av.ce)+'</td>'
