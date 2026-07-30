@@ -133,6 +133,7 @@ print(f"EXT header cols: {list(col.keys())[:12]}")
 ext_agg_area  = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))  # [trips, cbm]
 ext_agg_jalur = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0, 0.0, 0]))))  # [trips, cbm, olf_sum, olf_n]
 ext_agg_owner = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))  # [site][date][owner/BU] = [trips, cbm] — only filled where BU column present (currently Corp Sidoarjo)
+ext_agg_armada = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0]))))  # [site][date][jalur][armada] = [trips, cbm] — buat Demand Trip Internal vs External
 
 skipped = 0
 for line in ext_data[1:]:
@@ -172,6 +173,7 @@ for line in ext_data[1:]:
     cbm_raw2 = get_col('CBM', 11)
     kap_raw2 = get_col('Kapasitas Armada', 12)
     bu_raw   = get_col('BU', 14).strip()
+    arm_raw  = get_col('TYPE ARMADA', 4).strip()
     try: cbm2 = float(cbm_raw2.replace(',','')) if cbm_raw2 else 0.0
     except: cbm2 = 0.0
     try: kap2 = float(kap_raw2.replace(',','')) if kap_raw2 and kap_raw2 not in ('#N/A','#VALUE!','#REF!','') else 0.0
@@ -188,6 +190,9 @@ for line in ext_data[1:]:
         if olf_ext > 0:
             ext_agg_jalur[site][del_date][area][jalur][2] += olf_ext
             ext_agg_jalur[site][del_date][area][jalur][3] += 1
+        if arm_raw:
+            ext_agg_armada[site][del_date][jalur][arm_raw][0] += 1
+            ext_agg_armada[site][del_date][jalur][arm_raw][1] += cbm2
 
 print(f"EXT skipped: {skipped}")
 
@@ -258,11 +263,15 @@ for line in rdc_data[1:]:
     cbm_rdc_raw = get_rdc('CBM', 11)
     try: cbm_rdc = float(cbm_rdc_raw.replace(',','')) if cbm_rdc_raw else 0.0
     except: cbm_rdc = 0.0
+    arm_rdc_raw = get_rdc('TYPE ARMADA', 4).strip()
     ext_agg_area[site][del_date][area_key][0] += 1
     ext_agg_area[site][del_date][area_key][1] += cbm_rdc
     if jalur_r:
         ext_agg_jalur[site][del_date][area_key][jalur_r][0] += 1
         ext_agg_jalur[site][del_date][area_key][jalur_r][1] += cbm_rdc
+        if arm_rdc_raw:
+            ext_agg_armada[site][del_date][jalur_r][arm_rdc_raw][0] += 1
+            ext_agg_armada[site][del_date][jalur_r][arm_rdc_raw][1] += cbm_rdc
 
     # Collect LT for benchmark
     try:
@@ -292,7 +301,14 @@ ext_list_owner = [
     for d, owners in dates.items()
     for o, v in owners.items()
 ]
-print(f"EXT area entries (incl RDC): {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}, EXT owner (BU) entries: {len(ext_list_owner)}")
+ext_list_armada = [
+    {"site":s,"date":d,"jalur":j,"armada":a,"trips":v[0],"cbm":round(v[1],2)}
+    for s, dates in ext_agg_armada.items()
+    for d, jalurs in dates.items()
+    for j, armadas in jalurs.items()
+    for a, v in armadas.items()
+]
+print(f"EXT area entries (incl RDC): {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}, EXT owner (BU) entries: {len(ext_list_owner)}, EXT armada entries: {len(ext_list_armada)}")
 
 # ── BUILD EXT_LT FROM MASTER LEAD TIME ───────────────────────────
 ORIGIN_SITE_MAP = {
@@ -446,7 +462,8 @@ data_block = (
     'const EXT_OWNER = '  + json.dumps(ext_list_owner,  ensure_ascii=False) + ';\n' +
     'const TRIP2025 = '   + json.dumps(trip_2025_list,  ensure_ascii=False) + ';\n' +
     'const TRIP2025_AREA = ' + json.dumps(trip_2025_area_list, ensure_ascii=False) + ';\n' +
-    'const EXT2025_AREA = ' + json.dumps(ext_2025_area_list, ensure_ascii=False) + ';\n'
+    'const EXT2025_AREA = ' + json.dumps(ext_2025_area_list, ensure_ascii=False) + ';\n' +
+    'const EXT_ARMADA = ' + json.dumps(ext_list_armada, ensure_ascii=False) + ';\n'
 )
 
 # ── INJECT KE HTML ────────────────────────────────────────────────
