@@ -20,6 +20,7 @@ GID_EXTERNAL   = 1514192890
 GID_MASTER_LT  = 963114842
 GID_EXT_RDC    = 1448086752
 GID_INTERNAL_2025 = 1000808421
+GID_EXTERNAL_2025 = 1015095105
 
 SITE_MAP = {
     'NDC HCI CIKUPA'    : 'HCI Cikupa',
@@ -29,6 +30,11 @@ SITE_MAP = {
     'NDC CORP SIDOARJO' : 'Corp Sidoarjo',
     'IND JABABEKA'      : 'IND Jababeka',
     'NDC IND JABABEKA'  : 'IND Jababeka',
+    'DC HCI CIKUPA'     : 'HCI Cikupa',
+    'DC HCI JABABEKA'   : 'HCI Jababeka',
+    'DC AHI JABABEKA'   : 'AHI Jababeka',
+    'DC AHI SIDOARJO'   : 'Corp Sidoarjo',
+    'DC HCI SIDOARJO'   : 'Corp Sidoarjo',
 }
 MONTH_MAP = {}
 
@@ -53,13 +59,15 @@ ws_ext = spreadsheet.get_worksheet_by_id(GID_EXTERNAL)
 ws_lt  = spreadsheet.get_worksheet_by_id(GID_MASTER_LT)
 ws_rdc = spreadsheet.get_worksheet_by_id(GID_EXT_RDC)
 ws_2025 = spreadsheet.get_worksheet_by_id(GID_INTERNAL_2025)
+ws_ext2025 = spreadsheet.get_worksheet_by_id(GID_EXTERNAL_2025)
 
 int_data = ws_int.get_all_values()
 ext_data = ws_ext.get_all_values()
 lt_data  = ws_lt.get_all_values()
 rdc_data = ws_rdc.get_all_values()
 data_2025 = ws_2025.get_all_values()
-print(f"Internal rows: {len(int_data)-1}, External rows: {len(ext_data)-1}, Master LT rows: {len(lt_data)}, External RDC rows: {len(rdc_data)-1}, Internal 2025 rows: {len(data_2025)-1}")
+data_ext2025 = ws_ext2025.get_all_values()
+print(f"Internal rows: {len(int_data)-1}, External rows: {len(ext_data)-1}, Master LT rows: {len(lt_data)}, External RDC rows: {len(rdc_data)-1}, Internal 2025 rows: {len(data_2025)-1}, External 2025 rows: {len(data_ext2025)-1}")
 
 # ── PARSE INTERNAL ────────────────────────────────────────────────
 int_header = int_data[0]
@@ -374,6 +382,61 @@ trip_2025_area_list = [
 print(f"TRIP2025 entries: {len(trip_2025_list)} (sites: {sorted(agg_2025.keys())})")
 print(f"TRIP2025_AREA entries: {len(trip_2025_area_list)}")
 
+# ── PARSE EXTERNAL 2025 (trip volume only, no cost — YoY & Kontribusi comparison) ──
+hExt25 = data_ext2025[0]
+colExt25 = {h.strip(): i for i, h in enumerate(hExt25)}
+SITE_IDX_E25  = colExt25.get('SITE NAME', 0)
+AREA_IDX_E25  = colExt25.get('Area', 2)
+JALUR_IDX_E25 = colExt25.get('Jalur', 3)
+MODA_IDX_E25  = colExt25.get('MODA', 6)
+DATE_IDX_E25  = colExt25.get('DELIVERY DATE', 7)
+CBM_IDX_E25   = colExt25.get('CBM', 11)
+
+def parse_date_e25(d):
+    """DELIVERY DATE format M/D/YYYY -> YYYY-MM-DD, month only really needed."""
+    d = d.strip()
+    if not d:
+        return None
+    try:
+        mm, dd, yyyy = d.split('/')
+        return f"{yyyy}-{int(mm):02d}"
+    except:
+        return None
+
+agg_ext2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][month][area] = trips
+skipped_e25 = 0
+for line in data_ext2025[1:]:
+    if len(line) <= max(SITE_IDX_E25, MODA_IDX_E25, DATE_IDX_E25):
+        skipped_e25 += 1
+        continue
+    site_e25 = line[SITE_IDX_E25].strip()
+    if not site_e25 or site_e25 == 'SITE NAME':
+        skipped_e25 += 1
+        continue
+    site_e25 = SITE_MAP.get(site_e25, site_e25)
+    moda_e25 = line[MODA_IDX_E25].strip().lower() if len(line) > MODA_IDX_E25 else ''
+    if moda_e25 != 'land':
+        continue  # cuma darat, biar apples-to-apples sama armada internal
+    ym = parse_date_e25(line[DATE_IDX_E25]) if len(line) > DATE_IDX_E25 else None
+    if not ym:
+        skipped_e25 += 1
+        continue
+    m = ym.split('-')[1]
+    area_e25 = line[AREA_IDX_E25].strip() if len(line) > AREA_IDX_E25 else ''
+    jalur_e25 = line[JALUR_IDX_E25].strip().title() if len(line) > JALUR_IDX_E25 else ''
+    if jalur_e25 == 'Lampung':
+        area_e25 = 'Lampung'
+    if area_e25 and area_e25 in SAVING_SCOPE_PY.get(site_e25, []):
+        agg_ext2025_area[site_e25][m][area_e25] += 1
+
+ext_2025_area_list = [
+    {"site": s, "m": m, "area": a, "trips": v}
+    for s, months in agg_ext2025_area.items()
+    for m, areas in months.items()
+    for a, v in areas.items()
+]
+print(f"EXT2025_AREA entries: {len(ext_2025_area_list)} (skipped rows: {skipped_e25})")
+
 # ── BUILD data_block.js ───────────────────────────────────────────
 data_block = (
     'const RAW = '       + json.dumps(int_rows,        ensure_ascii=False) + ';\n' +
@@ -382,7 +445,8 @@ data_block = (
     'const EXT_LT = '    + json.dumps(ext_lt_list,     ensure_ascii=False) + ';\n' +
     'const EXT_OWNER = '  + json.dumps(ext_list_owner,  ensure_ascii=False) + ';\n' +
     'const TRIP2025 = '   + json.dumps(trip_2025_list,  ensure_ascii=False) + ';\n' +
-    'const TRIP2025_AREA = ' + json.dumps(trip_2025_area_list, ensure_ascii=False) + ';\n'
+    'const TRIP2025_AREA = ' + json.dumps(trip_2025_area_list, ensure_ascii=False) + ';\n' +
+    'const EXT2025_AREA = ' + json.dumps(ext_2025_area_list, ensure_ascii=False) + ';\n'
 )
 
 # ── INJECT KE HTML ────────────────────────────────────────────────
