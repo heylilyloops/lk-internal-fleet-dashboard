@@ -378,6 +378,16 @@ const BU_COL={'AHI':'#f5a623','HCI':'#5ba4f5','Corp':'#8b6cf7','IND':'#e24b4b','
 function siteSegment(site){return site==='IND Jababeka'?'Industrial':'Retail';}
 
 let activeSite='all', activeMenu='overview', CH={};
+
+function siteInFilter(site){
+  return activeSite==='all'||activeSite.includes(site);
+}
+function sitesToShowList(){
+  return activeSite==='all'?ALL_SITES:activeSite;
+}
+function isMultiSiteView(){
+  return activeSite==='all'||activeSite.length>1;
+}
 let dateFrom='', dateTo='';
 
 // HELPERS
@@ -416,7 +426,7 @@ function isJbLpJtRow(r){
 
 function getRows(){
   let rows=RAW;
-  if(activeSite!=='all') rows=rows.filter(r=>r[0]===activeSite);
+  if(activeSite!=='all') rows=rows.filter(r=>siteInFilter(r[0]));
   if(dateFrom) rows=rows.filter(r=>r[7]>=dateFrom);
   if(dateTo)   rows=rows.filter(r=>r[7]<=dateTo);
   return rows;
@@ -437,7 +447,7 @@ function calcContrib(rows){
   const intMap={};
   rows.forEach(r=>{if(!intMap[r[1]]) intMap[r[1]]=0;intMap[r[1]]++;});
   let ef=EXT_AGG;
-  if(activeSite!=='all') ef=ef.filter(e=>e.site===activeSite);
+  if(activeSite!=='all') ef=ef.filter(e=>siteInFilter(e.site));
   if(dateFrom) ef=ef.filter(e=>e.date>=dateFrom);
   if(dateTo)   ef=ef.filter(e=>e.date<=dateTo);
   const extMap={};
@@ -481,7 +491,7 @@ function calcJalur(rows,site){
 }
 
 function calcSLAAvg(rows){
-  const sitesToUse=activeSite==='all'?ALL_SITES:[activeSite];
+  const sitesToUse=sitesToShowList();
   let total=0,cnt=0;
   sitesToUse.forEach(s=>{
     calcJalur(rows.filter(r=>r[0]===s),s).forEach(j=>{
@@ -506,8 +516,8 @@ function calcOutOfScope(rows){
 
 function getScopeLabel(){
   if(activeSite==='all') return 'Jabar+Lampung (JKT) · Jatim (SDJ)';
-  const sc=SAVING_SCOPE[activeSite];
-  return sc?sc.join(' + '):'semua area';
+  const areas=[...new Set(activeSite.flatMap(s=>SAVING_SCOPE[s]||[]))];
+  return areas.length?areas.join(' + '):'semua area';
 }
 
 // NAVIGATION
@@ -523,8 +533,21 @@ function setMenu(menu){
 }
 
 function navTo(s){
-  activeSite=s;
-  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.toggle('active',el.dataset.site===s));
+  if(s==='all'){
+    activeSite='all';
+  } else if(activeSite==='all'){
+    activeSite=[s];
+  } else {
+    const arr=activeSite.slice();
+    const idx=arr.indexOf(s);
+    if(idx>=0) arr.splice(idx,1); else arr.push(s);
+    activeSite=arr.length?arr:'all';
+  }
+  document.querySelectorAll('.sb-site-item').forEach(el=>{
+    const site=el.dataset.site;
+    const isActive=site==='all'?activeSite==='all':(activeSite!=='all'&&activeSite.includes(site));
+    el.classList.toggle('active',isActive);
+  });
   render();
 }
 
@@ -592,7 +615,7 @@ function renderTrendChart(view){
     // Internal vs Eksternal per bulan (stacked bar) + trend %Internal — scope Jabar+Lampung+Jatim aja
     const extByMonth={};
     (typeof EXT_AGG!=='undefined'?EXT_AGG:[]).forEach(e=>{
-      if(activeSite!=='all'&&e.site!==activeSite) return;
+      if(activeSite!=='all'&&!siteInFilter(e.site)) return;
       if(dateFrom&&e.date<dateFrom) return;
       if(dateTo&&e.date>dateTo) return;
       const scope=SAVING_SCOPE[e.site]||[];
@@ -602,7 +625,7 @@ function renderTrendChart(view){
       extByMonth[m]=(extByMonth[m]||0)+e.trips;
     });
     (typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]).forEach(e=>{
-      if(activeSite!=='all'&&e.site!==activeSite) return;
+      if(activeSite!=='all'&&!siteInFilter(e.site)) return;
       if(dateFrom&&e.date<dateFrom) return;
       if(dateTo&&e.date>dateTo) return;
       const scope=SAVING_SCOPE[e.site]||[];
@@ -671,8 +694,21 @@ function setMenu(menu){
 }
 
 function navTo(s){
-  activeSite=s;
-  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.toggle('active',el.dataset.site===s));
+  if(s==='all'){
+    activeSite='all';
+  } else if(activeSite==='all'){
+    activeSite=[s];
+  } else {
+    const arr=activeSite.slice();
+    const idx=arr.indexOf(s);
+    if(idx>=0) arr.splice(idx,1); else arr.push(s);
+    activeSite=arr.length?arr:'all';
+  }
+  document.querySelectorAll('.sb-site-item').forEach(el=>{
+    const site=el.dataset.site;
+    const isActive=site==='all'?activeSite==='all':(activeSite!=='all'&&activeSite.includes(site));
+    el.classList.toggle('active',isActive);
+  });
   render();
 }
 
@@ -733,7 +769,8 @@ function render(){
   const sav=kpi.sav;
 
   const menuLabels={overview:'Overview',coverage:'Coverage',bu:'Summary BU'};
-  document.getElementById('mainTitle').textContent=(activeSite==='all'?'Semua NDC':activeSite)+' — '+menuLabels[activeMenu];
+  const siteTitleLabel=activeSite==='all'?'Semua NDC':(activeSite.length===1?activeSite[0]:`${activeSite.length} Site (${activeSite.map(s=>SSHORT[s]||s).join(', ')})`);
+  document.getElementById('mainTitle').textContent=siteTitleLabel+' — '+menuLabels[activeMenu];
   const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
   const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
   document.getElementById('mainSub').textContent=`${dFrom} – ${dTo} · Armada internal luar kota`;
@@ -766,7 +803,7 @@ function render(){
 
 // ── OVERVIEW ─────────────────────────────────────────────────────
 function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
-  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
+  const sitesToShow=sitesToShowList();
   const scopeLabel=getScopeLabel();
   const cpdo=kpi.tDO>0?kpi.tCI/kpi.tDO:0;
 
@@ -800,9 +837,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   </div>`;
 
   // 2. Alert banners
-  const jalurAll=activeSite==='all'
-    ?ALL_SITES.flatMap(s=>calcJalur(rows.filter(r=>r[0]===s),s).map(j=>({...j,site:s})))
-    :calcJalur(rows,activeSite).map(j=>({...j,site:activeSite}));
+  const jalurAll=sitesToShowList().flatMap(s=>calcJalur(rows.filter(r=>r[0]===s),s).map(j=>({...j,site:s})));
   const kritis=jalurAll.filter(j=>j.alert==='kritis');
   const warn=jalurAll.filter(j=>j.alert==='warning');
   let alertHTML='';
@@ -821,13 +856,14 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     const monthKeys=idxKeep.map(i=>monthKeysAll[i]);
     const MLBL12=idxKeep.map(i=>MLBL_ALL[i]);
 
-    const has2025=activeSite==='all'||TRIP2025.some(e=>e.site===activeSite);
+    const has2025=activeSite==='all'||TRIP2025.some(e=>siteInFilter(e.site));
     if(!has2025){
-      return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${SSHORT[activeSite]||activeSite} (site baru di 2026).</div>`;
+      const siteNames=activeSite==='all'?'':activeSite.map(s=>SSHORT[s]||s).join(', ');
+      return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${siteNames} (site baru di 2026).</div>`;
     }
-    const list25All=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>e.site===activeSite)).filter(e=>monthKeys.includes(e.m));
-    const raw26All=(activeSite==='all'?RAW:RAW.filter(r=>r[0]===activeSite)).filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
-    const list25AreaAll=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>e.site===activeSite)).filter(e=>monthKeys.includes(e.m)):[];
+    const list25All=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>siteInFilter(e.site))).filter(e=>monthKeys.includes(e.m));
+    const raw26All=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+    const list25AreaAll=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>siteInFilter(e.site))).filter(e=>monthKeys.includes(e.m)):[];
     const YOY_AREAS=['Jawa Barat','Lampung','Jawa Timur'];
 
     // Bulan mana yg sudah punya data 2026 (dari dataset penuh, tanpa filter segmen) — dipakai sbg null-mask konsisten
@@ -1161,7 +1197,7 @@ function computeYoySeries(segment){
     let s25=0,s26=0;
     monthKeys.forEach((m,i)=>{if(monthMask[i]){s25+=(by25Area[a]&&by25Area[a][m])||0;s26+=(by26Area[a]&&by26Area[a][m])||0;}});
     let sitesForArea=scopeSitesForArea(a);
-    if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>s===activeSite);
+    if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>siteInFilter(s));
     if(segment!=='all') sitesForArea=sitesForArea.filter(s=>siteSegment(s)===segment);
     const ext25=areaExtTrips(a,sitesForArea,'2025');
     const ext26=areaExtTrips(a,sitesForArea,'2026');
@@ -1176,7 +1212,7 @@ function computeYoySeries(segment){
   const ext25ByMonth={},ext26ByMonth={};
   YOY_AREAS.forEach(a=>{
     let sitesForArea=scopeSitesForArea(a);
-    if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>s===activeSite);
+    if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>siteInFilter(s));
     if(segment!=='all') sitesForArea=sitesForArea.filter(s=>siteSegment(s)===segment);
     const m25=areaExtTripsMonthly(a,sitesForArea,'2025');
     const m26=areaExtTripsMonthly(a,sitesForArea,'2026');
@@ -1356,7 +1392,7 @@ function computeKontribusiArea(segment,areas,year){
   year=year||'2026';
   return areas.map(area=>{
     let sites=scopeSitesForArea(area);
-    if(activeSite!=='all') sites=sites.filter(s=>s===activeSite);
+    if(activeSite!=='all') sites=sites.filter(s=>siteInFilter(s));
     if(segment!=='all') sites=sites.filter(s=>siteSegment(s)===segment);
     const intTrips=areaIntTrips(area,sites,year);
     const extTrips=areaExtTrips(area,sites,year);
@@ -1685,7 +1721,7 @@ function renderBU(){
 }
 
 function renderCoverage(rows,contrib,tInt,tAll,pct){
-  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
+  const sitesToShow=sitesToShowList();
   const oosData=calcOutOfScope(rows);
 
   let covHTML='';
@@ -1800,7 +1836,7 @@ function renderContribExpandable(rows){
   });
 
   // Build EXT_LT lookup by area (avg of all jalurs in area) and by jalur
-  const sitesToUse=activeSite==='all'?ALL_SITES:[activeSite];
+  const sitesToUse=sitesToShowList();
   const extLtByJalur={};
   const extLtByArea={};
   (typeof EXT_LT!=='undefined'?EXT_LT:[]).filter(e=>sitesToUse.includes(e.site)).forEach(e=>{
@@ -1821,7 +1857,7 @@ function renderContribExpandable(rows){
   });
 
   let ef=EXT_AGG;
-  if(activeSite!=='all') ef=ef.filter(e=>e.site===activeSite);
+  if(activeSite!=='all') ef=ef.filter(e=>siteInFilter(e.site));
   if(dateFrom) ef=ef.filter(e=>e.date>=dateFrom);
   if(dateTo)   ef=ef.filter(e=>e.date<=dateTo);
   const extAreaMap={};
@@ -1829,7 +1865,7 @@ function renderContribExpandable(rows){
     extAreaMap[e.area].trips+=e.trips;
     extAreaMap[e.area].cbm+=(e.cbm||0);});
   let efj=EXT_JALUR;
-  if(activeSite!=='all') efj=efj.filter(e=>e.site===activeSite);
+  if(activeSite!=='all') efj=efj.filter(e=>siteInFilter(e.site));
   if(dateFrom) efj=efj.filter(e=>e.date>=dateFrom);
   if(dateTo)   efj=efj.filter(e=>e.date<=dateTo);
   const extJalurMap={};
@@ -1961,7 +1997,7 @@ function toggleArmada(jKey){
 
 // ── INSIGHT ──────────────────────────────────────────────────────
 function renderInsight(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
-  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
+  const sitesToShow=sitesToShowList();
   const oosData=calcOutOfScope(rows);
   const insights=[];
 
@@ -2156,7 +2192,7 @@ const CITY_COORDS={
 let silkMap=null;
 
 function renderSebaran(rows){
-  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
+  const sitesToShow=sitesToShowList();
 
   // Build per-jalur data grouped by jalur name
   const jalurMap={};
@@ -2181,8 +2217,8 @@ function renderSebaran(rows){
     <div class="map-legend-item"><div class="map-dot" style="background:#5ba4f5"></div>REVIEW (perlu kajian)</div>
     <div class="map-legend-item"><div class="map-dot" style="background:#e24b4b"></div>EVALUASI (mahal+lambat)</div>
     <div class="map-legend-item"><div class="map-dot" style="background:#637d9a"></div>No data benchmark</div>
-    ${activeSite==='all'?`<span style="margin-left:auto;font-size:10px;color:var(--muted)">Warna border = site origin</span>`:''}
-    <span style="font-size:10px;color:var(--muted);margin-left:${activeSite==='all'?'4':'auto'}px">${withCoord}/${total} jalur terpetakan${noCoord>0?' · '+noCoord+' jalur tidak ada koordinat':''}</span>
+    ${isMultiSiteView()?`<span style="margin-left:auto;font-size:10px;color:var(--muted)">Warna border = site origin</span>`:''}
+    <span style="font-size:10px;color:var(--muted);margin-left:${isMultiSiteView()?'4':'auto'}px">${withCoord}/${total} jalur terpetakan${noCoord>0?' · '+noCoord+' jalur tidak ada koordinat':''}</span>
   </div>`;
 
   document.getElementById('content').innerHTML=legendHTML+`<div class="map-wrap"><div id="silk-map"></div></div>`;
@@ -2213,7 +2249,7 @@ function renderSebaran(rows){
       const statusPriority={eval:0,review:1,worthit:2,nodata:3};
       const worstEntry=entries.sort((a,b)=>(statusPriority[a.status]||3)-(statusPriority[b.status]||3))[0];
       const fillColor=statColor[worstEntry.status]||'#637d9a';
-      const borderColor=activeSite==='all'?SCOL[worstEntry.site]||'#266CA9':SCOL[activeSite]||'#266CA9';
+      const borderColor=SCOL[worstEntry.site]||'#266CA9';
 
       const marker=L.circleMarker(coords,{
         radius,
@@ -2227,7 +2263,7 @@ function renderSebaran(rows){
       // Build popup content
       let popupHTML=`<div class="popup-jalur">${jalur}</div>`;
       entries.forEach(e=>{
-        if(activeSite==='all'){
+        if(isMultiSiteView()){
           popupHTML+=`<div class="popup-site" style="background:${SCOL[e.site]}">${e.site}</div><br>`;
         }
         popupHTML+=`<div class="popup-area">${e.area}${!e.inScope?' · <span style="color:#f59e0b">out-scope</span>':''}</div>`;
@@ -2262,7 +2298,7 @@ function renderSebaran(rows){
 
 // ── SLIDE ────────────────────────────────────────────────────────
 function buildSlideData(rows,kpi,tInt,tAll,pct,sav){
-  const sitesToShow=activeSite==='all'?ALL_SITES:[activeSite];
+  const sitesToShow=sitesToShowList();
   const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'—';
   const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'—';
   const periode=`${dFrom} s/d ${dTo}`;
@@ -2306,8 +2342,8 @@ function buildSlideData(rows,kpi,tInt,tAll,pct,sav){
       const aSLA=aJalurs.length?+(aJalurs.reduce((s,j)=>s+j.lt_delta,0)/aJalurs.length).toFixed(2):null;
       // % trip — ext trips for Lampung match by jalur in EXT_JALUR
       const extTripsArea=isLampung
-        ?EXT_JALUR.filter(e=>(activeSite==='all'||e.site===s)&&e.jalur==='Lampung'&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0)
-        :EXT_AGG.filter(e=>(activeSite==='all'||e.site===s)&&e.area===area&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
+        ?EXT_JALUR.filter(e=>e.site===s&&e.jalur==='Lampung'&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0)
+        :EXT_AGG.filter(e=>e.site===s&&e.area===area&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
       const totalArea=aRows.length+extTripsArea;
       const pctArea=totalArea?Math.round(aRows.length/totalArea*100):0;
       return{area,intTrip:aRows.length,ci:aCI,ce:aCECnt>0?aCE:null,savPct,sla:aSLA,pct:pctArea};
@@ -2554,7 +2590,7 @@ function calcCostSite(rows, site){
 }
 
 function renderCostAnalysis(rows){
-  const sitesToShow = activeSite==='all'?ALL_SITES:[activeSite];
+  const sitesToShow = sitesToShowList();
   const siteData = sitesToShow.map(s=>calcCostSite(rows,s)).filter(d=>d.trips>0);
 
   if(!siteData.length){
@@ -2784,9 +2820,10 @@ function renderCostAnalysis(rows){
           const agap=ace_jt!==null?+(ace_jt-aci_jt).toFixed(1):null;
           const acostCbm=d.cbm>0?+(d.ci/d.cbm).toFixed(0):null;
           const aolf=d.olfN>0?+(d.olfSum/d.olfN).toFixed(1):null;
+          const apct=j.trips>0?Math.round(d.trips/j.trips*100):0;
           return `<tr class="${rowId}" style="display:none;background:var(--bg);border-bottom:1px solid var(--border)">
             <td style="padding:6px 10px 6px 34px;font-size:11px;color:var(--txt2)">↳ ${arm}</td>
-            <td style="text-align:right;padding:6px 10px;color:var(--txt2);font-size:11px">${d.trips}</td>
+            <td style="text-align:right;padding:6px 10px;color:var(--txt2);font-size:11px">${d.trips} <span style="color:var(--muted)">(${apct}%)</span></td>
             <td style="text-align:right;padding:6px 10px;font-weight:600;color:var(--blue);font-size:11px">${aci_jt}</td>
             <td style="text-align:right;padding:6px 10px;color:var(--muted);font-size:11px">${ace_jt!==null?ace_jt:'—'}</td>
             <td style="text-align:right;padding:6px 10px;font-weight:600;color:${agap!==null?(agap>=0?CGREEN:CRED):'var(--muted)'};font-size:11px">${agap!==null?(agap>=0?'+':'')+agap+' Jt':'—'}</td>
