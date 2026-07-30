@@ -1952,6 +1952,31 @@ function renderContribExpandable(rows){
         +'<td style="text-align:right;color:var(--muted)">'+(j.lt_ext!==null?String(j.lt_ext):'<span style="color:var(--muted)">&#8212;</span>')+'</td>'
         +'<td style="text-align:right">'+fltd(j.lt_delta)+'</td>'
         +'</tr>';
+      if(hasArmada){
+        j.armadas.forEach(av=>{
+          const avPct=j.int>0?Math.round(av.int/j.int*100):0;
+          const avSavPct=savPct(av.ci,av.ce);
+          rows_html+='<tr class="row-armada-g hidden" data-cg="'+ai+'" data-ag="'+jKey+'">'
+            +'<td><div class="area-cell-inner"><span style="width:13px;display:inline-block"></span><span style="padding-left:14px;font-size:11px;color:var(--txt2)">&#8618; '+av.arm+'</span></div></td>'
+            +'<td style="text-align:right">'+fmt(av.int)+' <span style="color:var(--muted);font-size:10px">('+avPct+'%)</span></td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'<td style="text-align:right">'+fmt(av.int)+'</td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'<td style="text-align:right;color:var(--blue)">'+(av.intCbm>0?av.intCbm.toFixed(1):'&#8212;')+'</td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'<td style="text-align:right">'+(av.intCbm>0?av.intCbm.toFixed(1):'&#8212;')+'</td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'<td style="text-align:right">'+fj(av.ci)+'</td>'
+            +'<td style="text-align:right">'+fj(av.ce)+'</td>'
+            +'<td style="text-align:right">'+avSavPct+'</td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'<td style="text-align:right;color:var(--muted)">&#8212;</td>'
+            +'</tr>';
+        });
+      }
       // end armada
     });
   });
@@ -1974,7 +1999,7 @@ function renderContribExpandable(rows){
 }
 
 function toggleContrib(ai){
-  const rows=document.querySelectorAll('[data-cg="'+ai+'"]');
+  const rows=document.querySelectorAll('.row-jalur-g[data-cg="'+ai+'"]');
   const icon=document.getElementById('tch-'+ai);
   const isOpen=icon.classList.contains('open');
   rows.forEach(r=>r.classList.toggle('hidden',isOpen));
