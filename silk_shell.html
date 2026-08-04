@@ -845,61 +845,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   if(warn.length) alertHTML+=`<div class="alert-banner mon"><span class="alert-icon">🟡</span><div class="alert-content"><div class="alert-title">MONITORING — Cost internal melebihi benchmark eksternal</div><div class="alert-items">${warn.map(j=>`<span class="alert-tag warning">${SSHORT[j.site]} · ${j.j} (${j.pct_ef}%)</span>`).join('')}</div></div></div>`;
 
   // 2.5 YoY 2025 vs 2026 (trip volume only, no cost)
-  const yoyHTML=(()=>{
-    if(typeof TRIP2025==='undefined') return '';
-    const MLBL_ALL=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    const monthKeysAll=MLBL_ALL.map((_,i)=>String(i+1).padStart(2,'0'));
-    // Ikutin filter Delivery Date (dari-sampai) di topbar — batasi bulan yg dibandingkan
-    const mFrom=dateFrom?dateFrom.slice(5,7):'01';
-    const mTo=dateTo?dateTo.slice(5,7):'12';
-    const idxKeep=monthKeysAll.map((m,i)=>m>=mFrom&&m<=mTo?i:-1).filter(i=>i>=0);
-    const monthKeys=idxKeep.map(i=>monthKeysAll[i]);
-    const MLBL12=idxKeep.map(i=>MLBL_ALL[i]);
-
-    const has2025=activeSite==='all'||TRIP2025.some(e=>siteInFilter(e.site));
-    if(!has2025){
-      const siteNames=activeSite==='all'?'':activeSite.map(s=>SSHORT[s]||s).join(', ');
-      return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${siteNames} (site baru di 2026).</div>`;
-    }
-    const list25All=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>siteInFilter(e.site))).filter(e=>monthKeys.includes(e.m));
-    const raw26All=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
-    const list25AreaAll=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>siteInFilter(e.site))).filter(e=>monthKeys.includes(e.m)):[];
-    const YOY_AREAS=['Jawa Barat','Lampung','Jawa Timur'];
-
-    // Bulan mana yg sudah punya data 2026 (dari dataset penuh, tanpa filter segmen) — dipakai sbg null-mask konsisten
-    const by26Mask={}; raw26All.forEach(r=>{const m=r[7].slice(5,7); by26Mask[m]=(by26Mask[m]||0)+1;});
-    const monthMask=monthKeys.map(m=>m in by26Mask);
-    let nOv=0; monthMask.forEach(v=>{if(v) nOv++;});
-    const ovLabel=nOv>0?(nOv===1?MLBL12[monthMask.indexOf(true)]:`${MLBL12[monthMask.indexOf(true)]}\u2013${MLBL12[monthMask.lastIndexOf(true)]}`):'-';
-
-    window._yoyBase={monthKeys,MLBL12,YOY_AREAS,monthMask,ovLabel,raw26All,list25All,list25AreaAll};
-    window._yoySegment=window._yoySegment||'all';
-    window._yoyView=window._yoyView||'total';
-    window._yoyData=computeYoySeries(window._yoySegment);
-
-    const badge=window._yoyData.growth===null?'':`<span id="yoyBadge" class="pill ${window._yoyData.growth>=0?'phi':'pvlo'}" style="margin-left:8px">${window._yoyData.growth>=0?'▲':'▼'} ${Math.abs(window._yoyData.growth)}% YoY (${ovLabel})</span>`;
-    const yoyKpiHTML=`<div id="yoyKpiWrap">${buildYoyKpiHTML()}</div>`;
-
-    return `<div class="card mb12">
-      <div class="card-title">Perbandingan Trip Internal — 2025 vs 2026${badge}
-        <span class="card-badge">volume trip saja, tanpa cost</span>
-        <span style="float:right;display:flex;gap:6px;align-items:center">
-          <span style="display:inline-flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px">
-            <button id="yoyToggleTotal" onclick="setYoyView('total')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--card);color:var(--txt);font-family:var(--font);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)">Total</button>
-            <button id="yoyToggleArea" onclick="setYoyView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
-          </span>
-          <span style="display:inline-flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px">
-            <button id="yoySegAll" onclick="setYoySegment('all')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--card);color:var(--txt);font-family:var(--font);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)">Semua</button>
-            <button id="yoySegRetail" onclick="setYoySegment('Retail')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Retail</button>
-            <button id="yoySegIndustrial" onclick="setYoySegment('Industrial')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Industrial</button>
-          </span>
-        </span>
-      </div>
-      ${yoyKpiHTML}
-      <div id="yoyChartWrap" style="position:relative;min-height:230px"><canvas id="cYoY"></canvas></div>
-      <div id="yoyFooter" style="font-size:10px;color:var(--muted);margin-top:6px">${yoyFooterText()}</div>
-    </div>`;
-  })();
+  const yoyHTML=buildYoyHTML();
 
   // 3. Site cards
   let siteHTML=`<div class="grid4" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
@@ -1127,11 +1073,83 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   </div>`;
 
   // 2.6 Kontribusi % Internal per Area — sekarang bisa 2025 vs 2026, section terpisah dari YoY
-  const kontribAreas=['Jawa Barat','Lampung','Jawa Timur'];
+  const kontribHTML=buildKontribHTML();
+
+  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+kontribHTML+alertHTML+siteHTML+scHTML+momHTML;
+
+  // Store data for toggle
+  window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
+  window._trendView='total';
+
+  setTimeout(()=>{
+    dc('cTrend');
+    renderTrendChart('total');
+
+    if(window._yoyData) renderYoYChart(window._yoyView||'total');
+
+    renderKontribChart();
+  },30);
+}
+
+function buildYoyHTML(){
+  if(typeof TRIP2025==='undefined') return '';
+  const MLBL_ALL=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const monthKeysAll=MLBL_ALL.map((_,i)=>String(i+1).padStart(2,'0'));
+  const mFrom=dateFrom?dateFrom.slice(5,7):'01';
+  const mTo=dateTo?dateTo.slice(5,7):'12';
+  const idxKeep=monthKeysAll.map((m,i)=>m>=mFrom&&m<=mTo?i:-1).filter(i=>i>=0);
+  const monthKeys=idxKeep.map(i=>monthKeysAll[i]);
+  const MLBL12=idxKeep.map(i=>MLBL_ALL[i]);
+
+  const has2025=activeSite==='all'||TRIP2025.some(e=>siteInFilter(e.site));
+  if(!has2025){
+    const siteNames=activeSite==='all'?'':activeSite.map(s=>SSHORT[s]||s).join(', ');
+    return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${siteNames} (site baru di 2026).</div>`;
+  }
+  const list25All=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>siteInFilter(e.site))).filter(e=>monthKeys.includes(e.m));
+  const raw26All=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+  const list25AreaAll=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>siteInFilter(e.site))).filter(e=>monthKeys.includes(e.m)):[];
+  const YOY_AREAS=['Jawa Barat','Lampung','Jawa Timur'];
+
+  const by26Mask={}; raw26All.forEach(r=>{const m=r[7].slice(5,7); by26Mask[m]=(by26Mask[m]||0)+1;});
+  const monthMask=monthKeys.map(m=>m in by26Mask);
+  let nOv=0; monthMask.forEach(v=>{if(v) nOv++;});
+  const ovLabel=nOv>0?(nOv===1?MLBL12[monthMask.indexOf(true)]:`${MLBL12[monthMask.indexOf(true)]}\u2013${MLBL12[monthMask.lastIndexOf(true)]}`):'-';
+
+  window._yoyBase={monthKeys,MLBL12,YOY_AREAS,monthMask,ovLabel,raw26All,list25All,list25AreaAll};
+  window._yoySegment=window._yoySegment||'all';
+  window._yoyView=window._yoyView||'total';
+  window._yoyData=computeYoySeries(window._yoySegment);
+
+  const badge=window._yoyData.growth===null?'':`<span id="yoyBadge" class="pill ${window._yoyData.growth>=0?'phi':'pvlo'}" style="margin-left:8px">${window._yoyData.growth>=0?'▲':'▼'} ${Math.abs(window._yoyData.growth)}% YoY (${ovLabel})</span>`;
+  const yoyKpiHTML=`<div id="yoyKpiWrap">${buildYoyKpiHTML()}</div>`;
+
+  return `<div class="card mb12">
+    <div class="card-title">Perbandingan Trip Internal — 2025 vs 2026${badge}
+      <span class="card-badge">volume trip saja, tanpa cost</span>
+      <span style="float:right;display:flex;gap:6px;align-items:center">
+        <span style="display:inline-flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px">
+          <button id="yoyToggleTotal" onclick="setYoyView('total')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--card);color:var(--txt);font-family:var(--font);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)">Total</button>
+          <button id="yoyToggleArea" onclick="setYoyView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
+        </span>
+        <span style="display:inline-flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px">
+          <button id="yoySegAll" onclick="setYoySegment('all')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--card);color:var(--txt);font-family:var(--font);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)">Semua</button>
+          <button id="yoySegRetail" onclick="setYoySegment('Retail')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Retail</button>
+          <button id="yoySegIndustrial" onclick="setYoySegment('Industrial')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Industrial</button>
+        </span>
+      </span>
+    </div>
+    ${yoyKpiHTML}
+    <div id="yoyChartWrap" style="position:relative;min-height:230px"><canvas id="cYoY"></canvas></div>
+    <div id="yoyFooter" style="font-size:10px;color:var(--muted);margin-top:6px">${yoyFooterText()}</div>
+  </div>`;
+}
+
+function buildKontribHTML(){
   window._kontribSegment=window._kontribSegment||'all';
   window._kontribYear=window._kontribYear||'2026';
   const hasExt2025=typeof EXT2025_AREA!=='undefined';
-  const kontribHTML=`<div class="card mb12">
+  return `<div class="card mb12">
     <div class="card-title">Kontribusi Internal per Area
       <span class="card-badge">% trip internal dari total trip (internal+eksternal)</span>
       <span style="float:right;display:flex;gap:6px;align-items:center">
@@ -1149,21 +1167,6 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     <div id="kontribChartWrap" style="position:relative;min-height:230px"><canvas id="cKontrib"></canvas></div>
     <div id="kontribFooter" style="display:flex;justify-content:center;gap:18px;margin-top:8px;font-size:10px;color:var(--muted)"></div>
   </div>`;
-
-  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+kontribHTML+alertHTML+siteHTML+scHTML+momHTML;
-
-  // Store data for toggle
-  window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
-  window._trendView='total';
-
-  setTimeout(()=>{
-    dc('cTrend');
-    renderTrendChart('total');
-
-    if(window._yoyData) renderYoYChart(window._yoyView||'total');
-
-    renderKontribChart();
-  },30);
 }
 
 function computeYoySeries(segment){
@@ -1661,6 +1664,10 @@ function renderBU(){
   });
   html+=`</tbody></table></div></div>`;
 
+  // 5. YoY 2025 vs 2026 + Kontribusi Internal per Area (sama seperti di Overview)
+  html+=buildYoyHTML();
+  html+=buildKontribHTML();
+
   document.getElementById('content').innerHTML=html;
 
   setTimeout(()=>{
@@ -1717,6 +1724,9 @@ function renderBU(){
         }
       });
     }
+
+    if(window._yoyData) renderYoYChart(window._yoyView||'total');
+    renderKontribChart();
   },30);
 }
 
