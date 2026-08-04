@@ -382,6 +382,37 @@ let activeSite='all', activeMenu='overview', CH={};
 function siteInFilter(site){
   return activeSite==='all'||activeSite.includes(site);
 }
+// Kalau ada filter BU aktif (klik BU di Summary BU), row Corp Sidoarjo perlu dibatasi lagi
+// per kolom Owner (r[15]) — soalnya site-nya dipakai bareng 4 BU (AHI/HCI/FBI/KLS).
+function rowMatchesBUOwner(r){
+  if(!window._buFilter) return true;
+  if(r[0]!=='Corp Sidoarjo') return true;
+  const comps=BU_DEF[window._buFilter]||[];
+  const sidComp=comps.find(c=>c.site==='Corp Sidoarjo');
+  if(!sidComp||sidComp.owner===null) return true;
+  if(sidComp.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(r[15]);
+  return r[15]===sidComp.owner;
+}
+// Sama seperti rowMatchesBUOwner, tapi buat entri TRIP2025/TRIP2025_AREA yang formatnya {site,owner,...}
+// (bukan array baris RAW). Kalau kolom Owner di sheet 2025 belum ada sama sekali (semua entri owner=''),
+// dianggap match-all (fallback ke behavior lama). Kalau kolomnya udah ada, blank berarti "belum ada owner
+// spesifik" dan cuma masuk hitungan bucket __OTHER__ (Corp), bukan match-all.
+function has2025OwnerData(){
+  if(window._has2025Owner!==undefined) return window._has2025Owner;
+  const list=(typeof TRIP2025!=='undefined')?TRIP2025:[];
+  window._has2025Owner=list.some(e=>e.site==='Corp Sidoarjo'&&e.owner);
+  return window._has2025Owner;
+}
+function entryMatchesBUOwner(e){
+  if(!window._buFilter) return true;
+  if(e.site!=='Corp Sidoarjo') return true;
+  const comps=BU_DEF[window._buFilter]||[];
+  const sidComp=comps.find(c=>c.site==='Corp Sidoarjo');
+  if(!sidComp||sidComp.owner===null) return true;
+  if(!has2025OwnerData()) return true; // kolom Owner belum ada di sheet 2025 — jangan buang data
+  if(sidComp.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(e.owner);
+  return e.owner===sidComp.owner;
+}
 function sitesToShowList(){
   return activeSite==='all'?ALL_SITES:activeSite;
 }
@@ -1106,9 +1137,9 @@ function buildYoyHTML(){
     const siteNames=activeSite==='all'?'':activeSite.map(s=>SSHORT[s]||s).join(', ');
     return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${siteNames} (site baru di 2026).</div>`;
   }
-  const list25All=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>siteInFilter(e.site))).filter(e=>monthKeys.includes(e.m));
-  const raw26All=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
-  const list25AreaAll=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>siteInFilter(e.site))).filter(e=>monthKeys.includes(e.m)):[];
+  const list25All=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>siteInFilter(e.site))).filter(e=>entryMatchesBUOwner(e)&&monthKeys.includes(e.m));
+  const raw26All=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>rowMatchesBUOwner(r)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+  const list25AreaAll=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>siteInFilter(e.site))).filter(e=>entryMatchesBUOwner(e)&&monthKeys.includes(e.m)):[];
   const YOY_AREAS=['Jawa Barat','Lampung','Jawa Timur'];
 
   const by26Mask={}; raw26All.forEach(r=>{const m=r[7].slice(5,7); by26Mask[m]=(by26Mask[m]||0)+1;});
@@ -1355,9 +1386,9 @@ function scopeSitesForArea(area){
 
 function areaIntTrips(area,sites,year){
   if(year==='2025'){
-    return (typeof TRIP2025_AREA!=='undefined'?TRIP2025_AREA:[]).filter(e=>sites.includes(e.site)&&e.area===area).reduce((s,e)=>s+e.trips,0);
+    return (typeof TRIP2025_AREA!=='undefined'?TRIP2025_AREA:[]).filter(e=>sites.includes(e.site)&&entryMatchesBUOwner(e)&&e.area===area).reduce((s,e)=>s+e.trips,0);
   }
-  return RAW.filter(r=>sites.includes(r[0])&&(area==='Lampung'?r[2]==='Lampung':r[1]===area)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo)).length;
+  return RAW.filter(r=>sites.includes(r[0])&&rowMatchesBUOwner(r)&&(area==='Lampung'?r[2]==='Lampung':r[1]===area)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo)).length;
 }
 
 function areaExtTrips(area,sites,year){
