@@ -1595,6 +1595,32 @@ function calcBU(buKey){
   return{key:buKey,intTrips,extTrips,ci,sav:ceS-ciS,hasSav,pctInt,comps:compDetail};
 }
 
+function setBUFilter(buKey){
+  if(window._buFilter===buKey){
+    clearBUFilter();
+    return;
+  }
+  window._buFilter=buKey;
+  const comps=BU_DEF[buKey]||[];
+  const sites=[...new Set(comps.map(c=>c.site))];
+  activeSite=sites.length?sites:'all';
+  document.querySelectorAll('.sb-site-item').forEach(el=>{
+    const site=el.dataset.site;
+    const isActive=site==='all'?activeSite==='all':(activeSite!=='all'&&activeSite.includes(site));
+    el.classList.toggle('active',isActive);
+  });
+  render();
+}
+
+function clearBUFilter(){
+  window._buFilter=null;
+  activeSite='all';
+  document.querySelectorAll('.sb-site-item').forEach(el=>{
+    el.classList.toggle('active',el.dataset.site==='all');
+  });
+  render();
+}
+
 function renderBU(){
   const buKeys=Object.keys(BU_DEF);
   let buData=buKeys.map(calcBU).filter(b=>b.intTrips>0||b.extTrips>0);
@@ -1602,19 +1628,31 @@ function renderBU(){
   buData=buData.sort((a,b)=>(b.pctInt??-1)-(a.pctInt??-1));
   const rankIcon=(i)=>i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);
 
+  const buFilter=window._buFilter||null;
+  const buDataFull=buData; // simpan versi lengkap buat komparasi chart tetap ada konteks
+  const buDataShow=buFilter?buData.filter(b=>b.key===buFilter):buData;
+
   let html=`<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">
-    Summary BU mengelompokkan trip per Business Unit pemilik, diurutkan dari yang paling efisien (%internal tertinggi). Corp Sidoarjo dipecah berdasarkan kolom Owner (HCI/AHI/FBI/KLS) dan digabung ke BU aslinya. Corp Tamora &amp; Corp Tallo belum dipecah (masuk bucket Corp).
+    Summary BU mengelompokkan trip per Business Unit pemilik, diurutkan dari yang paling efisien (%internal tertinggi). Corp Sidoarjo dipecah berdasarkan kolom Owner (HCI/AHI/FBI/KLS) dan digabung ke BU aslinya. Corp Tamora &amp; Corp Tallo belum dipecah (masuk bucket Corp). <b>Klik nama BU</b> buat filter halaman ini (termasuk YoY &amp; Kontribusi di bawah) ke BU itu aja.
   </div>`;
 
+  if(buFilter){
+    html+=`<div class="card mb12" style="padding:9px 16px;display:flex;align-items:center;gap:10px;border-left:3px solid ${BU_COL[buFilter]||'#266CA9'}">
+      <span style="font-size:11px;color:var(--txt2)">Filter aktif: <b style="color:${BU_COL[buFilter]||'#266CA9'}">${buFilter}</b></span>
+      <button onclick="clearBUFilter()" style="margin-left:auto;padding:3px 10px;border-radius:5px;font-size:10px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--txt2);font-family:var(--font)">✕ Reset filter</button>
+    </div>`;
+  }
+
   // 1. RANKING KPI CARDS
-  html+=`<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(buData.length,4)},1fr)">`;
-  buData.forEach((b,i)=>{
+  html+=`<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(buDataShow.length,4)},1fr)">`;
+  buDataShow.forEach((b)=>{
+    const i=buDataFull.indexOf(b);
     const col=BU_COL[b.key]||'#266CA9';
     const pctTxt=b.pctInt!==null?b.pctInt+'%':'—';
     const pCls=pc(b.pctInt||0);
     html+=`<div class="kpi" style="border-left:3px solid ${col};position:relative">
       <div style="position:absolute;top:10px;right:12px;font-size:13px">${rankIcon(i)}</div>
-      <div class="kpi-label">${b.key}</div>
+      <div class="kpi-label" style="cursor:pointer" onclick="setBUFilter('${b.key}')" title="Klik buat filter ke ${b.key}">${b.key} 🔎</div>
       <div class="kpi-value">${fmt(b.intTrips)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> trip int</span></div>
       <div class="kpi-sub"><span class="pill ${pCls}">${pctTxt} internal</span> · ${b.hasSav?(b.sav>=0?'Hemat '+fmtM(b.sav):fmtM(Math.abs(b.sav))+' lebih mahal'):'—'}</div>
     </div>`;
@@ -1634,8 +1672,9 @@ function renderBU(){
   // 3. INSIGHT CARDS
   html+=`<div class="card mt12">
     <div class="card-title">Insight per BU</div>
-    <div style="display:grid;grid-template-columns:repeat(${Math.min(buData.length,2)},1fr);gap:10px">
-    ${buData.map((b,i)=>{
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(buDataShow.length,2)},1fr);gap:10px">
+    ${buDataShow.map((b)=>{
+      const i=buDataFull.indexOf(b);
       const col=BU_COL[b.key]||'#266CA9';
       return`<div style="font-size:11.5px;color:var(--txt2);line-height:1.5;padding:9px 11px;background:var(--bg);border-radius:6px;border-left:3px solid ${col}">
         <div style="font-weight:700;color:${col};font-size:11px;margin-bottom:3px">${rankIcon(i)} ${b.key}</div>
@@ -1656,12 +1695,12 @@ function renderBU(){
         ${th('BU','left')}${th('Komponen','left')}${th('Trip Int','right')}${th('Trip Ext','right')}${th('%Internal','right')}${th('Cost Int','right')}${th('Saving','right')}
       </tr></thead>
       <tbody>`;
-  buData.forEach(b=>{
+  buDataShow.forEach(b=>{
     const col=BU_COL[b.key]||'#266CA9';
     b.comps.forEach((c,i)=>{
       const p=(c.int+c.ext)>0?Math.round(c.int/(c.int+c.ext)*100):null;
       html+=`<tr style="border-bottom:1px solid #f0f4f9">
-        ${i===0?`<td rowspan="${b.comps.length}" style="padding:7px 10px;font-weight:700;color:${col};vertical-align:top">${b.key}</td>`:''}
+        ${i===0?`<td rowspan="${b.comps.length}" style="padding:7px 10px;font-weight:700;color:${col};vertical-align:top;cursor:pointer" onclick="setBUFilter('${b.key}')" title="Klik buat filter ke ${b.key}">${b.key} 🔎</td>`:''}
         <td style="padding:7px 10px;color:var(--txt2)">${c.label}</td>
         <td style="padding:7px 10px;text-align:right">${fmt(c.int)}</td>
         <td style="padding:7px 10px;text-align:right">${fmt(c.ext)}</td>
@@ -1685,11 +1724,11 @@ function renderBU(){
     if(elC){
       CH['cBUCompare']=new Chart(elC,{
         data:{
-          labels:buData.map(b=>b.key),
+          labels:buDataShow.map(b=>b.key),
           datasets:[
-            {label:'Trip Internal',type:'bar',data:buData.map(b=>b.intTrips),backgroundColor:buData.map(b=>(BU_COL[b.key]||'#266CA9')+'b3'),borderColor:buData.map(b=>BU_COL[b.key]||'#266CA9'),borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
-            {label:'Trip Eksternal',type:'bar',data:buData.map(b=>b.extTrips),backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,yAxisID:'y',order:3},
-            {label:'%Internal',type:'line',data:buData.map(b=>b.pctInt),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y2',order:1,spanGaps:true}
+            {label:'Trip Internal',type:'bar',data:buDataShow.map(b=>b.intTrips),backgroundColor:buDataShow.map(b=>(BU_COL[b.key]||'#266CA9')+'b3'),borderColor:buDataShow.map(b=>BU_COL[b.key]||'#266CA9'),borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
+            {label:'Trip Eksternal',type:'bar',data:buDataShow.map(b=>b.extTrips),backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,yAxisID:'y',order:3},
+            {label:'%Internal',type:'line',data:buDataShow.map(b=>b.pctInt),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y2',order:1,spanGaps:true}
           ]
         },
         options:{
@@ -1715,7 +1754,7 @@ function renderBU(){
       CH['cBUTrend']=new Chart(elT,{
         data:{
           labels:mLabels,
-          datasets:buData.map(b=>({
+          datasets:buDataShow.map(b=>({
             label:b.key,type:'line',
             data:calcBUMonthlySeries(b.key,allMonths),
             borderColor:BU_COL[b.key]||'#266CA9',backgroundColor:'transparent',
