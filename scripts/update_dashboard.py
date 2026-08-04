@@ -377,9 +377,10 @@ SITE_IDX_25  = col2025.get('Site', 0)
 MONTH_IDX_25 = col2025.get('Month', 6)
 AREA_IDX_25  = col2025.get('Area', 2)
 DEST_IDX_25  = col2025.get('Destination', 3)
+OWNER_IDX_25 = col2025.get('Owner', 12)  # kolom 'Owner' cuma muncul di header block Corp Sidoarjo (kolom M), bukan di row 1 sheet — default ke index 12
 
-agg_2025 = defaultdict(lambda: defaultdict(int))  # [site][month(1-12)] = trips
-agg_2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][month][area] = trips
+agg_2025 = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][month][owner] = trips
+agg_2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int))))  # [site][month][area][owner] = trips
 for line in data_2025[1:]:
     if len(line) <= max(SITE_IDX_25, MONTH_IDX_25): continue
     site25 = line[SITE_IDX_25].strip()
@@ -391,7 +392,8 @@ for line in data_2025[1:]:
     except:
         continue
     if not (1 <= m <= 12): continue
-    agg_2025[site25][m] += 1
+    owner25 = line[OWNER_IDX_25].strip() if OWNER_IDX_25 >= 0 and len(line) > OWNER_IDX_25 else ''
+    agg_2025[site25][m][owner25] += 1
     # Area untuk breakdown "Per Area": Lampung tidak pernah muncul sbg nilai Area mentah
     # (sama seperti data 2026), tapi keisi di kolom Destination — override ke 'Lampung' kalau match.
     area25 = line[AREA_IDX_25].strip() if len(line) > AREA_IDX_25 else ''
@@ -401,19 +403,22 @@ for line in data_2025[1:]:
     # Hanya masukkan kalau area itu memang scope resmi site-nya — data entry error
     # (mis. AHI Jababeka ke-tag 'Jawa Timur') difilter di sini.
     if area25 and area25 in SAVING_SCOPE_PY.get(site25, []):
-        agg_2025_area[site25][m][area25] += 1
+        agg_2025_area[site25][m][area25][owner25] += 1
 
 trip_2025_list = [
-    {"site": s, "m": f"{m:02d}", "trips": v}
+    {"site": s, "m": f"{m:02d}", "owner": o, "trips": v}
     for s, months in agg_2025.items()
-    for m, v in months.items()
+    for m, owners in months.items()
+    for o, v in owners.items()
 ]
 trip_2025_area_list = [
-    {"site": s, "m": f"{m:02d}", "area": a, "trips": v}
+    {"site": s, "m": f"{m:02d}", "area": a, "owner": o, "trips": v}
     for s, months in agg_2025_area.items()
     for m, areas in months.items()
-    for a, v in areas.items()
+    for a, owners in areas.items()
+    for o, v in owners.items()
 ]
+print(f"Internal 2025 — Owner column {'ditemukan di idx '+str(OWNER_IDX_25) if OWNER_IDX_25>=0 else 'BELUM ada di sheet'}")
 print(f"TRIP2025 entries: {len(trip_2025_list)} (sites: {sorted(agg_2025.keys())})")
 print(f"TRIP2025_AREA entries: {len(trip_2025_area_list)}")
 
