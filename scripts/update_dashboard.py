@@ -378,22 +378,38 @@ MONTH_IDX_25 = col2025.get('Month', 6)
 AREA_IDX_25  = col2025.get('Area', 2)
 DEST_IDX_25  = col2025.get('Destination', 3)
 OWNER_IDX_25 = col2025.get('Owner', 12)  # kolom 'Owner' cuma muncul di header block Corp Sidoarjo (kolom M), bukan di row 1 sheet — default ke index 12
+DATE_IDX_25  = col2025.get('Delivery Date', 9)
 
-agg_2025 = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][month][owner] = trips
-agg_2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int))))  # [site][month][area][owner] = trips
+def parse_ddate_25(d):
+    """Delivery Date format M/D/YYYY -> YYYY-MM-DD (presisi harian, biar bisa difilter date range persis)."""
+    d = d.strip()
+    if not d:
+        return None
+    try:
+        mm, dd, yyyy = d.split('/')
+        return f"{yyyy}-{int(mm):02d}-{int(dd):02d}"
+    except:
+        return None
+
+agg_2025 = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][date][owner] = trips
+agg_2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int))))  # [site][date][area][owner] = trips
 for line in data_2025[1:]:
     if len(line) <= max(SITE_IDX_25, MONTH_IDX_25): continue
     site25 = line[SITE_IDX_25].strip()
     if not site25 or site25 == 'Site': continue
     site25 = SITE_MAP.get(site25, site25)
-    m_raw = line[MONTH_IDX_25].strip()
-    try:
-        m = int(float(m_raw))
-    except:
-        continue
-    if not (1 <= m <= 12): continue
+    ddate25 = parse_ddate_25(line[DATE_IDX_25]) if len(line) > DATE_IDX_25 else None
+    if not ddate25:
+        # fallback: Delivery Date kosong/rusak — pakai tengah bulan dari kolom Month biar tetap kehitung
+        m_raw = line[MONTH_IDX_25].strip()
+        try:
+            m_fb = int(float(m_raw))
+        except:
+            continue
+        if not (1 <= m_fb <= 12): continue
+        ddate25 = f"2025-{m_fb:02d}-15"
     owner25 = line[OWNER_IDX_25].strip() if OWNER_IDX_25 >= 0 and len(line) > OWNER_IDX_25 else ''
-    agg_2025[site25][m][owner25] += 1
+    agg_2025[site25][ddate25][owner25] += 1
     # Area untuk breakdown "Per Area": Lampung tidak pernah muncul sbg nilai Area mentah
     # (sama seperti data 2026), tapi keisi di kolom Destination — override ke 'Lampung' kalau match.
     area25 = line[AREA_IDX_25].strip() if len(line) > AREA_IDX_25 else ''
@@ -403,18 +419,18 @@ for line in data_2025[1:]:
     # Hanya masukkan kalau area itu memang scope resmi site-nya — data entry error
     # (mis. AHI Jababeka ke-tag 'Jawa Timur') difilter di sini.
     if area25 and area25 in SAVING_SCOPE_PY.get(site25, []):
-        agg_2025_area[site25][m][area25][owner25] += 1
+        agg_2025_area[site25][ddate25][area25][owner25] += 1
 
 trip_2025_list = [
-    {"site": s, "m": f"{m:02d}", "owner": o, "trips": v}
-    for s, months in agg_2025.items()
-    for m, owners in months.items()
+    {"site": s, "date": d, "m": d[5:7], "owner": o, "trips": v}
+    for s, dates in agg_2025.items()
+    for d, owners in dates.items()
     for o, v in owners.items()
 ]
 trip_2025_area_list = [
-    {"site": s, "m": f"{m:02d}", "area": a, "owner": o, "trips": v}
-    for s, months in agg_2025_area.items()
-    for m, areas in months.items()
+    {"site": s, "date": d, "m": d[5:7], "area": a, "owner": o, "trips": v}
+    for s, dates in agg_2025_area.items()
+    for d, areas in dates.items()
     for a, owners in areas.items()
     for o, v in owners.items()
 ]
@@ -433,17 +449,17 @@ DATE_IDX_E25  = colExt25.get('DELIVERY DATE', 7)
 CBM_IDX_E25   = colExt25.get('CBM', 11)
 
 def parse_date_e25(d):
-    """DELIVERY DATE format M/D/YYYY -> YYYY-MM-DD, month only really needed."""
+    """DELIVERY DATE format M/D/YYYY -> YYYY-MM-DD (presisi harian)."""
     d = d.strip()
     if not d:
         return None
     try:
         mm, dd, yyyy = d.split('/')
-        return f"{yyyy}-{int(mm):02d}"
+        return f"{yyyy}-{int(mm):02d}-{int(dd):02d}"
     except:
         return None
 
-agg_ext2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][month][area] = trips
+agg_ext2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][date][area] = trips
 skipped_e25 = 0
 for line in data_ext2025[1:]:
     if len(line) <= max(SITE_IDX_E25, MODA_IDX_E25, DATE_IDX_E25):
@@ -457,22 +473,21 @@ for line in data_ext2025[1:]:
     moda_e25 = line[MODA_IDX_E25].strip().lower() if len(line) > MODA_IDX_E25 else ''
     if moda_e25 != 'land':
         continue  # cuma darat, biar apples-to-apples sama armada internal
-    ym = parse_date_e25(line[DATE_IDX_E25]) if len(line) > DATE_IDX_E25 else None
-    if not ym:
+    ddate_e25 = parse_date_e25(line[DATE_IDX_E25]) if len(line) > DATE_IDX_E25 else None
+    if not ddate_e25:
         skipped_e25 += 1
         continue
-    m = ym.split('-')[1]
     area_e25 = line[AREA_IDX_E25].strip() if len(line) > AREA_IDX_E25 else ''
     jalur_e25 = line[JALUR_IDX_E25].strip().title() if len(line) > JALUR_IDX_E25 else ''
     if jalur_e25 == 'Lampung':
         area_e25 = 'Lampung'
     if area_e25 and area_e25 in SAVING_SCOPE_PY.get(site_e25, []):
-        agg_ext2025_area[site_e25][m][area_e25] += 1
+        agg_ext2025_area[site_e25][ddate_e25][area_e25] += 1
 
 ext_2025_area_list = [
-    {"site": s, "m": m, "area": a, "trips": v}
-    for s, months in agg_ext2025_area.items()
-    for m, areas in months.items()
+    {"site": s, "date": d, "m": d[5:7], "area": a, "trips": v}
+    for s, dates in agg_ext2025_area.items()
+    for d, areas in dates.items()
     for a, v in areas.items()
 ]
 print(f"EXT2025_AREA entries: {len(ext_2025_area_list)} (skipped rows: {skipped_e25})")
