@@ -49,6 +49,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);display:flex;
 .sb-site-item.sb-sub{padding-left:30px;font-size:11px}
 .sb-site-item.sb-sub .sb-dot{width:6px;height:6px}
 .sb-site-item.sb-sub.active{background:rgba(38,108,169,.12)}
+.sb-check{font-size:12px;color:rgba(255,255,255,.35);cursor:pointer;padding:2px 4px;flex-shrink:0}
+.sb-check:hover{color:rgba(255,255,255,.7)}
+.sb-check.checked{color:var(--blue)}
 .sb-divider{height:1px;background:rgba(255,255,255,.06);margin:5px 12px}
 .sb-info{padding:10px 14px 14px;font-size:10px;color:rgba(255,255,255,.2);line-height:1.7;margin-top:auto}
 
@@ -265,55 +268,67 @@ canvas{display:block}
 
   <div class="sb-group">
     <button class="sb-site-item" data-group="jababeka" onclick="navToGroup('jababeka')">
+      <span class="sb-check" onclick="event.stopPropagation();toggleCheck('group:jababeka')" id="chk-group:jababeka">☐</span>
       <span class="sb-dot" style="background:#f5a623"></span>Jababeka
       <span class="sb-badge" id="badge-grp-jababeka">—</span>
       <span class="sb-expand-arrow" id="grp-arrow-jababeka" onclick="event.stopPropagation();toggleGroupExpand('jababeka')">▸</span>
     </button>
     <div class="sb-subgroup" id="grp-jababeka" style="display:none">
       <button class="sb-site-item sb-sub" data-group="jababeka" data-bu="0" onclick="navToGroupBU('jababeka',0)">
+        <span class="sb-check" onclick="event.stopPropagation();toggleCheck('bu:jababeka:0')" id="chk-bu:jababeka:0">☐</span>
         <span class="sb-dot" style="background:#5ba4f5"></span>HCI
       </button>
       <button class="sb-site-item sb-sub" data-group="jababeka" data-bu="1" onclick="navToGroupBU('jababeka',1)">
+        <span class="sb-check" onclick="event.stopPropagation();toggleCheck('bu:jababeka:1')" id="chk-bu:jababeka:1">☐</span>
         <span class="sb-dot" style="background:#f5a623"></span>AHI
       </button>
       <button class="sb-site-item sb-sub" data-group="jababeka" data-bu="2" onclick="navToGroupBU('jababeka',2)">
+        <span class="sb-check" onclick="event.stopPropagation();toggleCheck('bu:jababeka:2')" id="chk-bu:jababeka:2">☐</span>
         <span class="sb-dot" style="background:#e24b4b"></span>KLS/Industrial
       </button>
     </div>
   </div>
 
   <button class="sb-site-item" data-group="cikupa" onclick="navToGroup('cikupa')">
+    <span class="sb-check" onclick="event.stopPropagation();toggleCheck('group:cikupa')" id="chk-group:cikupa">☐</span>
     <span class="sb-dot" style="background:#00c49a"></span>Cikupa
     <span class="sb-badge" id="badge-grp-cikupa">—</span>
   </button>
 
   <div class="sb-group">
     <button class="sb-site-item" data-group="sidoarjo" onclick="navToGroup('sidoarjo')">
+      <span class="sb-check" onclick="event.stopPropagation();toggleCheck('group:sidoarjo')" id="chk-group:sidoarjo">☐</span>
       <span class="sb-dot" style="background:#8b6cf7"></span>Sidoarjo
       <span class="sb-badge" id="badge-grp-sidoarjo">—</span>
       <span class="sb-expand-arrow" id="grp-arrow-sidoarjo" onclick="event.stopPropagation();toggleGroupExpand('sidoarjo')">▸</span>
     </button>
     <div class="sb-subgroup" id="grp-sidoarjo" style="display:none">
       <button class="sb-site-item sb-sub" data-group="sidoarjo" data-bu="0" onclick="navToGroupBU('sidoarjo',0)">
+        <span class="sb-check" onclick="event.stopPropagation();toggleCheck('bu:sidoarjo:0')" id="chk-bu:sidoarjo:0">☐</span>
         <span class="sb-dot" style="background:#5ba4f5"></span>HCI
       </button>
       <button class="sb-site-item sb-sub" data-group="sidoarjo" data-bu="1" onclick="navToGroupBU('sidoarjo',1)">
+        <span class="sb-check" onclick="event.stopPropagation();toggleCheck('bu:sidoarjo:1')" id="chk-bu:sidoarjo:1">☐</span>
         <span class="sb-dot" style="background:#f5a623"></span>AHI
       </button>
       <button class="sb-site-item sb-sub" data-group="sidoarjo" data-bu="2" onclick="navToGroupBU('sidoarjo',2)">
+        <span class="sb-check" onclick="event.stopPropagation();toggleCheck('bu:sidoarjo:2')" id="chk-bu:sidoarjo:2">☐</span>
         <span class="sb-dot" style="background:#00c49a"></span>FBI
       </button>
       <button class="sb-site-item sb-sub" data-group="sidoarjo" data-bu="3" onclick="navToGroupBU('sidoarjo',3)">
+        <span class="sb-check" onclick="event.stopPropagation();toggleCheck('bu:sidoarjo:3')" id="chk-bu:sidoarjo:3">☐</span>
         <span class="sb-dot" style="background:#e879f9"></span>KLS
       </button>
     </div>
   </div>
 
   <button class="sb-site-item" data-group="tallo" onclick="navToGroup('tallo')">
+    <span class="sb-check" onclick="event.stopPropagation();toggleCheck('group:tallo')" id="chk-group:tallo">☐</span>
     <span class="sb-dot" style="background:#fb923c"></span>Tallo
     <span class="sb-badge" id="badge-grp-tallo">—</span>
   </button>
   <button class="sb-site-item" data-group="tamora" onclick="navToGroup('tamora')">
+    <span class="sb-check" onclick="event.stopPropagation();toggleCheck('group:tamora')" id="chk-group:tamora">☐</span>
     <span class="sb-dot" style="background:#e879f9"></span>Tamora
     <span class="sb-badge" id="badge-grp-tamora">—</span>
   </button>
@@ -348,6 +363,11 @@ canvas{display:block}
       <div class="date-input-wrap"><label>Sampai</label><input type="date" id="dateTo" onchange="onDateChange()"></div>
     </div>
     <div class="date-quick" id="quickBtns"></div>
+    <div id="sb-multiselect-bar" style="display:none;align-items:center;gap:6px;margin-left:10px">
+      <span style="font-size:10.5px;color:var(--muted)" id="sb-multiselect-count">0 site dipilih</span>
+      <button onclick="applySelection()" style="padding:5px 12px;border-radius:6px;font-size:10.5px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-family:var(--font);font-weight:600">Terapkan</button>
+      <button onclick="resetSelection()" style="padding:5px 10px;border-radius:6px;font-size:10.5px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:var(--font)">Reset</button>
+    </div>
     <div class="date-count" id="dateCount"></div>
   </div>
 
@@ -439,6 +459,11 @@ function rowMatchesBUOwner(r){
     if(sidComp.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(r[15]);
     return r[15]===sidComp.owner;
   }
+  if(window._siteOwnerMap&&window._siteOwnerMap['Corp Sidoarjo']!==undefined){
+    const owners=window._siteOwnerMap['Corp Sidoarjo'];
+    if(owners===null) return true; // dipilih tanpa batasan owner (grup penuh)
+    return owners.includes(r[15]);
+  }
   if(window._sidebarOwner) return r[15]===window._sidebarOwner;
   return true;
 }
@@ -461,6 +486,11 @@ function entryMatchesBUOwner(e){
     if(!sidComp||sidComp.owner===null) return true;
     if(sidComp.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(e.owner);
     return e.owner===sidComp.owner;
+  }
+  if(window._siteOwnerMap&&window._siteOwnerMap['Corp Sidoarjo']!==undefined){
+    const owners=window._siteOwnerMap['Corp Sidoarjo'];
+    if(owners===null) return true;
+    return owners.includes(e.owner);
   }
   if(window._sidebarOwner) return e.owner===window._sidebarOwner;
   return true;
@@ -619,39 +649,43 @@ function setMenu(menu){
 function updateSidebarActive(){
   document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.sb-expand-arrow').forEach(el=>el.classList.remove('open'));
-  if(activeSite==='all'&&!window._sidebarOwner){
+  if(activeSite==='all'&&!window._sidebarOwner&&!window._siteOwnerMap){
     const el=document.querySelector('.sb-site-item[data-site="all"]');
     if(el) el.classList.add('active');
     return;
   }
-  // Cari grup mana yg cocok sama activeSite/owner saat ini, buat highlight
-  Object.entries(SITE_GROUPS).forEach(([key,g])=>{
-    const groupMatchesFull=Array.isArray(activeSite)&&activeSite.length===g.sites.length&&g.sites.every(s=>activeSite.includes(s))&&!window._sidebarOwner;
-    if(g.bus){
-      let subActive=-1;
-      if(Array.isArray(activeSite)&&activeSite.length===1){
-        subActive=g.bus.findIndex(b=>b.site===activeSite[0]&&(b.owner||null)===(window._sidebarOwner||null));
+  // Cari grup mana yg cocok sama activeSite/owner saat ini, buat highlight (cuma buat single-select nav biasa)
+  if(!window._siteOwnerMap){
+    Object.entries(SITE_GROUPS).forEach(([key,g])=>{
+      const groupMatchesFull=Array.isArray(activeSite)&&activeSite.length===g.sites.length&&g.sites.every(s=>activeSite.includes(s))&&!window._sidebarOwner;
+      if(g.bus){
+        let subActive=-1;
+        if(Array.isArray(activeSite)&&activeSite.length===1){
+          subActive=g.bus.findIndex(b=>b.site===activeSite[0]&&(b.owner||null)===(window._sidebarOwner||null));
+        }
+        if(subActive>=0){
+          const subEl=document.querySelector('.sb-site-item.sb-sub[data-group="'+key+'"][data-bu="'+subActive+'"]');
+          if(subEl) subEl.classList.add('active');
+          const wrap=document.getElementById('grp-'+key);
+          if(wrap) wrap.style.display='flex';
+          const arrow=document.getElementById('grp-arrow-'+key);
+          if(arrow) arrow.classList.add('open');
+          return;
+        }
       }
-      if(subActive>=0){
-        const subEl=document.querySelector('.sb-site-item.sb-sub[data-group="'+key+'"][data-bu="'+subActive+'"]');
-        if(subEl) subEl.classList.add('active');
-        const wrap=document.getElementById('grp-'+key);
-        if(wrap) wrap.style.display='flex';
-        const arrow=document.getElementById('grp-arrow-'+key);
-        if(arrow) arrow.classList.add('open');
-        return;
+      if(groupMatchesFull){
+        const el=document.querySelector('.sb-site-item[data-group="'+key+'"]');
+        if(el) el.classList.add('active');
       }
-    }
-    if(groupMatchesFull){
-      const el=document.querySelector('.sb-site-item[data-group="'+key+'"]');
-      if(el) el.classList.add('active');
-    }
-  });
+    });
+  }
 }
 
 function navToGroup(groupKey){
   window._buFilter=null;
   window._sidebarOwner=null;
+  window._siteOwnerMap=null;
+  clearAllChecks();
   if(groupKey==='all'){
     activeSite='all';
   } else {
@@ -669,6 +703,8 @@ function navToGroupBU(groupKey,buIdx){
   const bu=g.bus[buIdx];
   if(!bu) return;
   window._buFilter=null;
+  window._siteOwnerMap=null;
+  clearAllChecks();
   activeSite=[bu.site];
   window._sidebarOwner=bu.owner||null;
   updateSidebarActive();
@@ -682,6 +718,65 @@ function toggleGroupExpand(groupKey){
   const isOpen=wrap.style.display==='flex';
   wrap.style.display=isOpen?'none':'flex';
   if(arrow) arrow.classList.toggle('open',!isOpen);
+}
+
+// ── MULTI-SELECT (checkbox + Terapkan) ──────────────────────────
+window._pendingCheck=window._pendingCheck||new Set();
+
+function toggleCheck(key){
+  if(window._pendingCheck.has(key)) window._pendingCheck.delete(key);
+  else window._pendingCheck.add(key);
+  const el=document.getElementById('chk-'+key);
+  if(el){el.textContent=window._pendingCheck.has(key)?'☑':'☐';el.classList.toggle('checked',window._pendingCheck.has(key));}
+  const bar=document.getElementById('sb-multiselect-bar');
+  const countEl=document.getElementById('sb-multiselect-count');
+  if(bar) bar.style.display=window._pendingCheck.size>0?'flex':'none';
+  if(countEl) countEl.textContent=window._pendingCheck.size+' dipilih';
+}
+
+function clearAllChecks(){
+  window._pendingCheck.clear();
+  document.querySelectorAll('.sb-check').forEach(el=>{el.textContent='☐';el.classList.remove('checked');});
+  const bar=document.getElementById('sb-multiselect-bar');
+  if(bar) bar.style.display='none';
+}
+
+function resetSelection(){
+  clearAllChecks();
+  navToGroup('all');
+}
+
+function applySelection(){
+  if(window._pendingCheck.size===0){ navToGroup('all'); return; }
+  const sites=new Set();
+  const siteOwners={}; // site -> Set(owner) | 'ALL'
+  window._pendingCheck.forEach(key=>{
+    if(key.startsWith('group:')){
+      const gk=key.slice(6);
+      const g=SITE_GROUPS[gk];
+      if(!g) return;
+      g.sites.forEach(s=>{sites.add(s);siteOwners[s]='ALL';});
+    } else if(key.startsWith('bu:')){
+      const parts=key.split(':');
+      const gk=parts[1], buIdx=parseInt(parts[2]);
+      const g=SITE_GROUPS[gk];
+      if(!g||!g.bus) return;
+      const bu=g.bus[buIdx];
+      if(!bu) return;
+      sites.add(bu.site);
+      if(siteOwners[bu.site]!=='ALL'){
+        if(!siteOwners[bu.site]) siteOwners[bu.site]=new Set();
+        if(bu.owner) siteOwners[bu.site].add(bu.owner);
+      }
+    }
+  });
+  window._buFilter=null;
+  window._sidebarOwner=null;
+  activeSite=[...sites];
+  window._siteOwnerMap={};
+  Object.entries(siteOwners).forEach(([s,v])=>{window._siteOwnerMap[s]=(v==='ALL')?null:[...v];});
+  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.remove('active'));
+  render();
 }
 
 function renderTrendChart(view){
@@ -829,39 +924,43 @@ function setMenu(menu){
 function updateSidebarActive(){
   document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.sb-expand-arrow').forEach(el=>el.classList.remove('open'));
-  if(activeSite==='all'&&!window._sidebarOwner){
+  if(activeSite==='all'&&!window._sidebarOwner&&!window._siteOwnerMap){
     const el=document.querySelector('.sb-site-item[data-site="all"]');
     if(el) el.classList.add('active');
     return;
   }
-  // Cari grup mana yg cocok sama activeSite/owner saat ini, buat highlight
-  Object.entries(SITE_GROUPS).forEach(([key,g])=>{
-    const groupMatchesFull=Array.isArray(activeSite)&&activeSite.length===g.sites.length&&g.sites.every(s=>activeSite.includes(s))&&!window._sidebarOwner;
-    if(g.bus){
-      let subActive=-1;
-      if(Array.isArray(activeSite)&&activeSite.length===1){
-        subActive=g.bus.findIndex(b=>b.site===activeSite[0]&&(b.owner||null)===(window._sidebarOwner||null));
+  // Cari grup mana yg cocok sama activeSite/owner saat ini, buat highlight (cuma buat single-select nav biasa)
+  if(!window._siteOwnerMap){
+    Object.entries(SITE_GROUPS).forEach(([key,g])=>{
+      const groupMatchesFull=Array.isArray(activeSite)&&activeSite.length===g.sites.length&&g.sites.every(s=>activeSite.includes(s))&&!window._sidebarOwner;
+      if(g.bus){
+        let subActive=-1;
+        if(Array.isArray(activeSite)&&activeSite.length===1){
+          subActive=g.bus.findIndex(b=>b.site===activeSite[0]&&(b.owner||null)===(window._sidebarOwner||null));
+        }
+        if(subActive>=0){
+          const subEl=document.querySelector('.sb-site-item.sb-sub[data-group="'+key+'"][data-bu="'+subActive+'"]');
+          if(subEl) subEl.classList.add('active');
+          const wrap=document.getElementById('grp-'+key);
+          if(wrap) wrap.style.display='flex';
+          const arrow=document.getElementById('grp-arrow-'+key);
+          if(arrow) arrow.classList.add('open');
+          return;
+        }
       }
-      if(subActive>=0){
-        const subEl=document.querySelector('.sb-site-item.sb-sub[data-group="'+key+'"][data-bu="'+subActive+'"]');
-        if(subEl) subEl.classList.add('active');
-        const wrap=document.getElementById('grp-'+key);
-        if(wrap) wrap.style.display='flex';
-        const arrow=document.getElementById('grp-arrow-'+key);
-        if(arrow) arrow.classList.add('open');
-        return;
+      if(groupMatchesFull){
+        const el=document.querySelector('.sb-site-item[data-group="'+key+'"]');
+        if(el) el.classList.add('active');
       }
-    }
-    if(groupMatchesFull){
-      const el=document.querySelector('.sb-site-item[data-group="'+key+'"]');
-      if(el) el.classList.add('active');
-    }
-  });
+    });
+  }
 }
 
 function navToGroup(groupKey){
   window._buFilter=null;
   window._sidebarOwner=null;
+  window._siteOwnerMap=null;
+  clearAllChecks();
   if(groupKey==='all'){
     activeSite='all';
   } else {
@@ -879,6 +978,8 @@ function navToGroupBU(groupKey,buIdx){
   const bu=g.bus[buIdx];
   if(!bu) return;
   window._buFilter=null;
+  window._siteOwnerMap=null;
+  clearAllChecks();
   activeSite=[bu.site];
   window._sidebarOwner=bu.owner||null;
   updateSidebarActive();
@@ -892,6 +993,65 @@ function toggleGroupExpand(groupKey){
   const isOpen=wrap.style.display==='flex';
   wrap.style.display=isOpen?'none':'flex';
   if(arrow) arrow.classList.toggle('open',!isOpen);
+}
+
+// ── MULTI-SELECT (checkbox + Terapkan) ──────────────────────────
+window._pendingCheck=window._pendingCheck||new Set();
+
+function toggleCheck(key){
+  if(window._pendingCheck.has(key)) window._pendingCheck.delete(key);
+  else window._pendingCheck.add(key);
+  const el=document.getElementById('chk-'+key);
+  if(el){el.textContent=window._pendingCheck.has(key)?'☑':'☐';el.classList.toggle('checked',window._pendingCheck.has(key));}
+  const bar=document.getElementById('sb-multiselect-bar');
+  const countEl=document.getElementById('sb-multiselect-count');
+  if(bar) bar.style.display=window._pendingCheck.size>0?'flex':'none';
+  if(countEl) countEl.textContent=window._pendingCheck.size+' dipilih';
+}
+
+function clearAllChecks(){
+  window._pendingCheck.clear();
+  document.querySelectorAll('.sb-check').forEach(el=>{el.textContent='☐';el.classList.remove('checked');});
+  const bar=document.getElementById('sb-multiselect-bar');
+  if(bar) bar.style.display='none';
+}
+
+function resetSelection(){
+  clearAllChecks();
+  navToGroup('all');
+}
+
+function applySelection(){
+  if(window._pendingCheck.size===0){ navToGroup('all'); return; }
+  const sites=new Set();
+  const siteOwners={}; // site -> Set(owner) | 'ALL'
+  window._pendingCheck.forEach(key=>{
+    if(key.startsWith('group:')){
+      const gk=key.slice(6);
+      const g=SITE_GROUPS[gk];
+      if(!g) return;
+      g.sites.forEach(s=>{sites.add(s);siteOwners[s]='ALL';});
+    } else if(key.startsWith('bu:')){
+      const parts=key.split(':');
+      const gk=parts[1], buIdx=parseInt(parts[2]);
+      const g=SITE_GROUPS[gk];
+      if(!g||!g.bus) return;
+      const bu=g.bus[buIdx];
+      if(!bu) return;
+      sites.add(bu.site);
+      if(siteOwners[bu.site]!=='ALL'){
+        if(!siteOwners[bu.site]) siteOwners[bu.site]=new Set();
+        if(bu.owner) siteOwners[bu.site].add(bu.owner);
+      }
+    }
+  });
+  window._buFilter=null;
+  window._sidebarOwner=null;
+  activeSite=[...sites];
+  window._siteOwnerMap={};
+  Object.entries(siteOwners).forEach(([s,v])=>{window._siteOwnerMap[s]=(v==='ALL')?null:[...v];});
+  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.remove('active'));
+  render();
 }
 
 // DATE
