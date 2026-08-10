@@ -1154,7 +1154,11 @@ function buildYoyHTML(){
   const monthMask=monthKeys.map(m=>monthsWithData.has(m));
   let nOv=0; monthMask.forEach(v=>{if(v) nOv++;});
   const rangeLabel=dayFrom==='01'&&dayTo==='31'?'':` (tgl ${dayFrom}\u2013${dayTo})`;
-  const ovLabel=nOv>0?(nOv===1?MLBL12[monthMask.indexOf(true)]:`${MLBL12[monthMask.indexOf(true)]}\u2013${MLBL12[monthMask.lastIndexOf(true)]}`):'-';
+  // ovLabel dipakai buat badge/KPI card = periode literal yg dipilih di topbar (bukan rentang bulan chart)
+  const MLBL_SHORT=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const fmtLitDate=d=>d?`${parseInt(d.slice(8,10))} ${MLBL_SHORT[parseInt(d.slice(5,7))-1]}`:null;
+  const litF=fmtLitDate(dateFrom), litT=fmtLitDate(dateTo);
+  const ovLabel=(litF&&litT)?(litF===litT?litF:`${litF}\u2013${litT}`):(nOv>0?(nOv===1?MLBL12[monthMask.indexOf(true)]:`${MLBL12[monthMask.indexOf(true)]}\u2013${MLBL12[monthMask.lastIndexOf(true)]}`):'-');
 
   window._yoyBase={monthKeys,MLBL12,YOY_AREAS,monthMask,ovLabel,dayFrom,dayTo,allRaw26,allList25,allList25Area};
   window._yoySegment=window._yoySegment||'all';
@@ -1254,13 +1258,14 @@ function computeYoySeries(segment){
 
   const aColorsK={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
   const areaCards=YOY_AREAS.map(a=>{
-    let s25=0,s26=0;
-    monthKeys.forEach((m,i)=>{if(monthMask[i]){s25+=(by25Area[a]&&by25Area[a][m])||0;s26+=(by26Area[a]&&by26Area[a][m])||0;}});
     let sitesForArea=scopeSitesForArea(a);
     if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>siteInFilter(s));
     if(segment!=='all') sitesForArea=sitesForArea.filter(s=>siteSegment(s)===segment);
-    const ext25=Object.values(areaExtTripsMonthly(a,sitesForArea,'2025')).reduce((s,v)=>s+v,0);
-    const ext26=Object.values(areaExtTripsMonthly(a,sitesForArea,'2026')).reduce((s,v)=>s+v,0);
+    // KPI card = periode literal yang dipilih di topbar (bukan jumlah rolling per bulan)
+    const s25=areaIntTrips(a,sitesForArea,'2025');
+    const s26=areaIntTrips(a,sitesForArea,'2026');
+    const ext25=areaExtTrips(a,sitesForArea,'2025');
+    const ext26=areaExtTrips(a,sitesForArea,'2026');
     const pctInt25=(s25+ext25)>0?Math.round(s25/(s25+ext25)*100):null;
     const pctInt26=(s26+ext26)>0?Math.round(s26/(s26+ext26)*100):null;
     return{key:a,col:aColorsK[a],s25,s26,ext25,ext26,pctInt25,pctInt26};
@@ -1290,8 +1295,11 @@ function computeYoySeries(segment){
     const eN=ext26ByMonth[m]||0;
     return (iN+eN)>0?Math.round(iN/(iN+eN)*100):null;
   });
-  let sum25ov=0,sum26ov=0;
-  monthKeys.forEach((m,i)=>{if(monthMask[i]){sum25ov+=data25[i];sum26ov+=data26[i]||0;}});
+  // Total Keseluruhan card = periode literal (sama kayak topbar), bukan jumlah rolling per bulan
+  const litFrom26=dateFrom||null, litTo26=dateTo||null;
+  const sum26ov=raw26.filter(r=>(!litFrom26||r[7]>=litFrom26)&&(!litTo26||r[7]<=litTo26)).length;
+  const in25Lit=date25Range();
+  const sum25ov=list25.filter(e=>in25Lit(e)).reduce((s,e)=>s+e.trips,0);
   const growth=sum25ov>0?Math.round((sum26ov-sum25ov)/sum25ov*100):null;
 
   return{monthKeys,MLBL12,YOY_AREAS,ovLabel,data25,data26,by25Area,by26Area,areaCards,scopeSum25,scopeSum26,sum25ov,sum26ov,growth,pctInt25Series,pctInt26Series};
@@ -1300,7 +1308,7 @@ function computeYoySeries(segment){
 function yoyFooterText(){
   const d=window._yoyData;
   if(!d) return '';
-  return `Total 2025: ${fmt(d.data25.reduce((s,v)=>s+v,0))} trip · Total 2026 (s/d ${d.ovLabel.split('\u2013').pop()}): ${fmt(d.sum26ov)} trip`;
+  return `Total 2025 (${d.ovLabel}): ${fmt(d.sum25ov)} trip · Total 2026 (${d.ovLabel}): ${fmt(d.sum26ov)} trip`;
 }
 
 function buildYoyKpiHTML(){
@@ -1519,6 +1527,27 @@ function renderYoYChart(view){
   const wrap=document.getElementById('yoyChartWrap');
   if(!wrap) return;
 
+  const dataLabelPlugin={
+    id:'yoyDataLabel',
+    afterDatasetsDraw(chart){
+      const ctx=chart.ctx;
+      chart.data.datasets.forEach((ds,dsIdx)=>{
+        const meta=chart.getDatasetMeta(dsIdx);
+        if(meta.hidden) return;
+        ctx.save();
+        ctx.font='600 10px Helvetica Neue,Arial,sans-serif';
+        ctx.textAlign='center';
+        ctx.fillStyle=ds.borderColor||'#333';
+        meta.data.forEach((point,i)=>{
+          const v=ds.data[i];
+          if(v===null||v===undefined) return;
+          ctx.fillText(fmt(v),point.x,point.y-9);
+        });
+        ctx.restore();
+      });
+    }
+  };
+
   if(view==='total'){
     wrap.innerHTML=`<div style="position:relative;height:230px"><canvas id="cYoY"></canvas></div>`;
     const el=document.getElementById('cYoY');
@@ -1528,8 +1557,10 @@ function renderYoYChart(view){
         {label:'2025',data:data25,borderColor:'#9fb3c8',backgroundColor:'rgba(159,179,200,.1)',borderWidth:2,borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#9fb3c8',tension:0.3,spanGaps:true},
         {label:'2026',data:data26,borderColor:'#266CA9',backgroundColor:'rgba(38,108,169,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#266CA9',tension:0.3,spanGaps:false}
       ]},
+      plugins:[dataLabelPlugin],
       options:{
         responsive:true,maintainAspectRatio:false,
+        layout:{padding:{top:16}},
         interaction:{mode:'index',intersect:false},
         plugins:{
           legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
