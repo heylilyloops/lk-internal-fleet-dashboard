@@ -1126,38 +1126,42 @@ function buildYoyHTML(){
   if(typeof TRIP2025==='undefined') return '';
   const MLBL_ALL=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const monthKeysAll=MLBL_ALL.map((_,i)=>String(i+1).padStart(2,'0'));
-  const mFrom=dateFrom?dateFrom.slice(5,7):'01';
-  const mTo=dateTo?dateTo.slice(5,7):'12';
-  const idxKeep=monthKeysAll.map((m,i)=>m>=mFrom&&m<=mTo?i:-1).filter(i=>i>=0);
-  const monthKeys=idxKeep.map(i=>monthKeysAll[i]);
-  const MLBL12=idxKeep.map(i=>MLBL_ALL[i]);
 
   const has2025=activeSite==='all'||TRIP2025.some(e=>siteInFilter(e.site));
   if(!has2025){
     const siteNames=activeSite==='all'?'':activeSite.map(s=>SSHORT[s]||s).join(', ');
     return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${siteNames} (site baru di 2026).</div>`;
   }
-  // Terjemahin date range yg dipilih (dari-sampai) ke tahun 2025, biar perbandingan presisi harian
-  // (bukan bulan penuh) — mis. filter 10 Jan - 20 Jul 2026 -> 10 Jan - 20 Jul 2025 buat pembanding.
-  const dateFrom25=dateFrom?'2025'+dateFrom.slice(4):null;
-  const dateTo25=dateTo?'2025'+dateTo.slice(4):null;
-  const in25Range=e=>(!e.date)||((!dateFrom25||e.date>=dateFrom25)&&(!dateTo25||e.date<=dateTo25));
-  const list25All=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>siteInFilter(e.site))).filter(e=>entryMatchesBUOwner(e)&&monthKeys.includes(e.m)&&in25Range(e));
-  const raw26All=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>rowMatchesBUOwner(r)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
-  const list25AreaAll=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>siteInFilter(e.site))).filter(e=>entryMatchesBUOwner(e)&&monthKeys.includes(e.m)&&in25Range(e)):[];
+
+  // Ini chart TREND, jadi kalau user pilih range hari tertentu (mis. 1-7 Agustus), tiap bulan (Jan..Agu)
+  // tetap ditampilin, tapi masing-masing cuma dihitung tanggal 1-7 aja (apple-to-apple per bulan) —
+  // bukan cuma nunjukin 1 bulan yang dipilih doang.
+  const dayFrom=dateFrom?dateFrom.slice(8,10):'01';
+  const dayTo=dateTo?dateTo.slice(8,10):'31';
+
+  const allRaw26=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>rowMatchesBUOwner(r));
+  const allList25=(activeSite==='all'?TRIP2025:TRIP2025.filter(e=>siteInFilter(e.site))).filter(e=>entryMatchesBUOwner(e));
+  const allList25Area=(typeof TRIP2025_AREA!=='undefined')?(activeSite==='all'?TRIP2025_AREA:TRIP2025_AREA.filter(e=>siteInFilter(e.site))).filter(e=>entryMatchesBUOwner(e)):[];
+
+  // Bulan yang ditampilkan: Jan s/d bulan terakhir yang beneran ada data 2026 (atau s/d bulan "sampai" kalau dipilih)
+  const monthsWithData=new Set(allRaw26.map(r=>r[7].slice(5,7)));
+  const capTo=dateTo?dateTo.slice(5,7):([...monthsWithData].sort().pop()||'12');
+  const idxKeep=monthKeysAll.map((m,i)=>m<=capTo?i:-1).filter(i=>i>=0);
+  const monthKeys=idxKeep.map(i=>monthKeysAll[i]);
+  const MLBL12=idxKeep.map(i=>MLBL_ALL[i]);
   const YOY_AREAS=['Jawa Barat','Lampung','Jawa Timur'];
 
-  const by26Mask={}; raw26All.forEach(r=>{const m=r[7].slice(5,7); by26Mask[m]=(by26Mask[m]||0)+1;});
-  const monthMask=monthKeys.map(m=>m in by26Mask);
+  const monthMask=monthKeys.map(m=>monthsWithData.has(m));
   let nOv=0; monthMask.forEach(v=>{if(v) nOv++;});
+  const rangeLabel=dayFrom==='01'&&dayTo==='31'?'':` (tgl ${dayFrom}\u2013${dayTo})`;
   const ovLabel=nOv>0?(nOv===1?MLBL12[monthMask.indexOf(true)]:`${MLBL12[monthMask.indexOf(true)]}\u2013${MLBL12[monthMask.lastIndexOf(true)]}`):'-';
 
-  window._yoyBase={monthKeys,MLBL12,YOY_AREAS,monthMask,ovLabel,raw26All,list25All,list25AreaAll};
+  window._yoyBase={monthKeys,MLBL12,YOY_AREAS,monthMask,ovLabel,dayFrom,dayTo,allRaw26,allList25,allList25Area};
   window._yoySegment=window._yoySegment||'all';
   window._yoyView=window._yoyView||'total';
   window._yoyData=computeYoySeries(window._yoySegment);
 
-  const badge=window._yoyData.growth===null?'':`<span id="yoyBadge" class="pill ${window._yoyData.growth>=0?'phi':'pvlo'}" style="margin-left:8px">${window._yoyData.growth>=0?'▲':'▼'} ${Math.abs(window._yoyData.growth)}% YoY (${ovLabel})</span>`;
+  const badge=window._yoyData.growth===null?'':`<span id="yoyBadge" class="pill ${window._yoyData.growth>=0?'phi':'pvlo'}" style="margin-left:8px">${window._yoyData.growth>=0?'▲':'▼'} ${Math.abs(window._yoyData.growth)}% YoY (${ovLabel}${rangeLabel})</span>`;
   const yoyKpiHTML=`<div id="yoyKpiWrap">${buildYoyKpiHTML()}</div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin:-4px 0 12px 2px;font-size:9.5px;color:var(--muted)">
       <span><span style="color:${CGREEN}">▲/▼ X% YoY</span> = pertumbuhan volume trip 2026 vs 2025 (periode sama)</span>
@@ -1166,7 +1170,7 @@ function buildYoyHTML(){
 
   return `<div class="card mb12">
     <div class="card-title">Perbandingan Trip Internal — 2025 vs 2026${badge}
-      <span class="card-badge">volume trip saja, tanpa cost</span>
+      <span class="card-badge">volume trip saja, tanpa cost${rangeLabel?' · tiap bulan dihitung tgl '+dayFrom+'\u2013'+dayTo:''}</span>
       <span style="float:right;display:flex;gap:6px;align-items:center">
         <span style="display:inline-flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px">
           <button id="yoyToggleTotal" onclick="setYoyView('total')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--card);color:var(--txt);font-family:var(--font);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)">Total</button>
@@ -1212,26 +1216,39 @@ function buildKontribHTML(){
 function computeYoySeries(segment){
   const b=window._yoyBase;
   if(!b) return null;
-  const {monthKeys,MLBL12,YOY_AREAS,monthMask,ovLabel}=b;
-  const raw26=segment==='all'?b.raw26All:b.raw26All.filter(r=>siteSegment(r[0])===segment);
-  const list25=segment==='all'?b.list25All:b.list25All.filter(e=>siteSegment(e.site)===segment);
-  const list25Area=segment==='all'?b.list25AreaAll:b.list25AreaAll.filter(e=>siteSegment(e.site)===segment);
+  const {monthKeys,MLBL12,YOY_AREAS,monthMask,ovLabel,dayFrom,dayTo}=b;
+  const raw26=segment==='all'?b.allRaw26:b.allRaw26.filter(r=>siteSegment(r[0])===segment);
+  const list25=segment==='all'?b.allList25:b.allList25.filter(e=>siteSegment(e.site)===segment);
+  const list25Area=segment==='all'?b.allList25Area:b.allList25Area.filter(e=>siteSegment(e.site)===segment);
 
-  const by26={}; raw26.forEach(r=>{const m=r[7].slice(5,7); by26[m]=(by26[m]||0)+1;});
-  const by25={}; list25.forEach(e=>{by25[e.m]=(by25[e.m]||0)+e.trips;});
+  const by26={}; monthKeys.forEach(m=>{
+    const lo='2026-'+m+'-'+dayFrom, hi='2026-'+m+'-'+dayTo;
+    by26[m]=raw26.filter(r=>r[7]>=lo&&r[7]<=hi).length;
+  });
+  const by25={}; monthKeys.forEach(m=>{
+    const lo='2025-'+m+'-'+dayFrom, hi='2025-'+m+'-'+dayTo;
+    by25[m]=list25.filter(e=>e.date&&e.date>=lo&&e.date<=hi).reduce((s,e)=>s+e.trips,0);
+  });
   const data25=monthKeys.map(m=>by25[m]||0);
   const data26=monthKeys.map((m,i)=>monthMask[i]?(by26[m]||0):null);
 
   const by25Area={}; YOY_AREAS.forEach(a=>by25Area[a]={});
-  list25Area.forEach(e=>{if(by25Area[e.area]) by25Area[e.area][e.m]=(by25Area[e.area][e.m]||0)+e.trips;});
-  const by26Area={}; YOY_AREAS.forEach(a=>by26Area[a]={});
-  raw26.forEach(r=>{
-    const m=r[7].slice(5,7);
-    const scope=SAVING_SCOPE[r[0]]||[];
+  monthKeys.forEach(m=>{
+    const lo='2025-'+m+'-'+dayFrom, hi='2025-'+m+'-'+dayTo;
     YOY_AREAS.forEach(a=>{
-      if(!scope.includes(a)) return; // bukan scope resmi site ini — kemungkinan anomali data entry
-      const match=a==='Lampung'?r[2]==='Lampung':r[1]===a;
-      if(match) by26Area[a][m]=(by26Area[a][m]||0)+1;
+      by25Area[a][m]=list25Area.filter(e=>e.area===a&&e.date&&e.date>=lo&&e.date<=hi).reduce((s,e)=>s+e.trips,0);
+    });
+  });
+  const by26Area={}; YOY_AREAS.forEach(a=>by26Area[a]={});
+  monthKeys.forEach(m=>{
+    const lo='2026-'+m+'-'+dayFrom, hi='2026-'+m+'-'+dayTo;
+    raw26.filter(r=>r[7]>=lo&&r[7]<=hi).forEach(r=>{
+      const scope=SAVING_SCOPE[r[0]]||[];
+      YOY_AREAS.forEach(a=>{
+        if(!scope.includes(a)) return; // bukan scope resmi site ini — kemungkinan anomali data entry
+        const match=a==='Lampung'?r[2]==='Lampung':r[1]===a;
+        if(match) by26Area[a][m]=(by26Area[a][m]||0)+1;
+      });
     });
   });
 
@@ -1242,8 +1259,8 @@ function computeYoySeries(segment){
     let sitesForArea=scopeSitesForArea(a);
     if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>siteInFilter(s));
     if(segment!=='all') sitesForArea=sitesForArea.filter(s=>siteSegment(s)===segment);
-    const ext25=areaExtTrips(a,sitesForArea,'2025');
-    const ext26=areaExtTrips(a,sitesForArea,'2026');
+    const ext25=Object.values(areaExtTripsMonthly(a,sitesForArea,'2025')).reduce((s,v)=>s+v,0);
+    const ext26=Object.values(areaExtTripsMonthly(a,sitesForArea,'2026')).reduce((s,v)=>s+v,0);
     const pctInt25=(s25+ext25)>0?Math.round(s25/(s25+ext25)*100):null;
     const pctInt26=(s26+ext26)>0?Math.round(s26/(s26+ext26)*100):null;
     return{key:a,col:aColorsK[a],s25,s26,ext25,ext26,pctInt25,pctInt26};
@@ -1419,23 +1436,24 @@ function areaExtTrips(area,sites,year){
 }
 
 function areaExtTripsMonthly(area,sites,year){
+  const b=window._yoyBase;
+  const monthKeys=b?b.monthKeys:['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const dayFrom=b?b.dayFrom:'01';
+  const dayTo=b?b.dayTo:'31';
   const out={};
   if(year==='2025'){
-    const in25=date25Range();
-    (typeof EXT2025_AREA!=='undefined'?EXT2025_AREA:[]).forEach(e=>{
-      if(!sites.includes(e.site)||e.area!==area||!in25(e)) return;
-      out[e.m]=(out[e.m]||0)+e.trips;
+    const src=(typeof EXT2025_AREA!=='undefined'?EXT2025_AREA:[]).filter(e=>sites.includes(e.site)&&e.area===area);
+    monthKeys.forEach(m=>{
+      const lo='2025-'+m+'-'+dayFrom, hi='2025-'+m+'-'+dayTo;
+      out[m]=src.filter(e=>e.date&&e.date>=lo&&e.date<=hi).reduce((s,e)=>s+e.trips,0);
     });
     return out;
   }
   const src=area==='Lampung'?(typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]):(typeof EXT_AGG!=='undefined'?EXT_AGG:[]);
-  src.forEach(e=>{
-    if(!sites.includes(e.site)) return;
-    if(area==='Lampung'){ if(e.jalur!=='Lampung') return; } else { if(e.area!==area) return; }
-    if(dateFrom&&e.date<dateFrom) return;
-    if(dateTo&&e.date>dateTo) return;
-    const m=e.date.slice(5,7);
-    out[m]=(out[m]||0)+e.trips;
+  const filtered=src.filter(e=>sites.includes(e.site)&&(area==='Lampung'?e.jalur==='Lampung':e.area===area));
+  monthKeys.forEach(m=>{
+    const lo='2026-'+m+'-'+dayFrom, hi='2026-'+m+'-'+dayTo;
+    out[m]=filtered.filter(e=>e.date>=lo&&e.date<=hi).reduce((s,e)=>s+e.trips,0);
   });
   return out;
 }
