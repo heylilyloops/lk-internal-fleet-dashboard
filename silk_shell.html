@@ -42,6 +42,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);display:flex;
 .sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .sb-badge{margin-left:auto;font-size:9.5px;padding:1px 6px;border-radius:8px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.35)}
 .sb-site-item.active .sb-badge{background:rgba(38,108,169,.35);color:rgba(255,255,255,.75)}
+.sb-group{display:flex;flex-direction:column}
+.sb-expand-arrow{margin-left:auto;font-size:8px;color:rgba(255,255,255,.35);padding:2px 4px;transition:transform .15s}
+.sb-expand-arrow.open{transform:rotate(90deg)}
+.sb-subgroup{display:flex;flex-direction:column}
+.sb-site-item.sb-sub{padding-left:30px;font-size:11px}
+.sb-site-item.sb-sub .sb-dot{width:6px;height:6px}
+.sb-site-item.sb-sub.active{background:rgba(38,108,169,.12)}
 .sb-divider{height:1px;background:rgba(255,255,255,.06);margin:5px 12px}
 .sb-info{padding:10px 14px 14px;font-size:10px;color:rgba(255,255,255,.2);line-height:1.7;margin-top:auto}
 
@@ -245,58 +252,70 @@ canvas{display:block}
   <button class="sb-menu-item active" onclick="setMenu('overview')">
     <span class="sb-menu-icon">📊</span>Overview
   </button>
-  <button class="sb-menu-item" onclick="setMenu('coverage')">
-    <span class="sb-menu-icon">🗺️</span>Coverage
-  </button>
-  <button class="sb-menu-item" onclick="setMenu('sebaran')">
-    <span class="sb-menu-icon">📍</span>Sebaran
-  </button>
-  <button class="sb-menu-item" onclick="setMenu('slide')">
-    <span class="sb-menu-icon">📑</span>Slide
-  </button>
-  <button class="sb-menu-item" onclick="setMenu('costanalysis')">
-    <span class="sb-menu-icon">💰</span>Cost Analysis
-  </button>
-  <button class="sb-menu-item" onclick="setMenu('bu')">
-    <span class="sb-menu-icon">🏢</span>Summary BU
+  <button class="sb-menu-item" onclick="setMenu('detail')">
+    <span class="sb-menu-icon">📋</span>Detail Metrik
   </button>
 
   <div class="sb-divider"></div>
-  <div class="sb-section">NDC Sites</div>
-  <button class="sb-site-item active" data-site="all" onclick="navTo('all')">
-    <span class="sb-dot" style="background:#266CA9"></span>Semua NDC
+  <div class="sb-section">SITE</div>
+  <button class="sb-site-item active" data-site="all" onclick="navToGroup('all')">
+    <span class="sb-dot" style="background:#266CA9"></span>Semua Site
     <span class="sb-badge" id="badge-all">—</span>
   </button>
-  <button class="sb-site-item" data-site="AHI Jababeka" onclick="navTo('AHI Jababeka')">
-    <span class="sb-dot" style="background:#f5a623"></span>AHI Jababeka
-    <span class="sb-badge" id="badge-AHI Jababeka">—</span>
-  </button>
-  <button class="sb-site-item" data-site="HCI Jababeka" onclick="navTo('HCI Jababeka')">
-    <span class="sb-dot" style="background:#5ba4f5"></span>HCI Jababeka
-    <span class="sb-badge" id="badge-HCI Jababeka">—</span>
-  </button>
-  <button class="sb-site-item" data-site="HCI Cikupa" onclick="navTo('HCI Cikupa')">
-    <span class="sb-dot" style="background:#00c49a"></span>HCI Cikupa
-    <span class="sb-badge" id="badge-HCI Cikupa">—</span>
-  </button>
-  <button class="sb-site-item" data-site="Corp Sidoarjo" onclick="navTo('Corp Sidoarjo')">
-    <span class="sb-dot" style="background:#8b6cf7"></span>Corp Sidoarjo
-    <span class="sb-badge" id="badge-Corp Sidoarjo">—</span>
-  </button>
-  <button class="sb-site-item" data-site="IND Jababeka" onclick="navTo('IND Jababeka')">
-    <span class="sb-dot" style="background:#e24b4b"></span>IND Jababeka
-    <span class="sb-badge" id="badge-IND Jababeka">—</span>
+
+  <div class="sb-group">
+    <button class="sb-site-item" data-group="jababeka" onclick="navToGroup('jababeka')">
+      <span class="sb-dot" style="background:#f5a623"></span>Jababeka
+      <span class="sb-badge" id="badge-grp-jababeka">—</span>
+      <span class="sb-expand-arrow" id="grp-arrow-jababeka" onclick="event.stopPropagation();toggleGroupExpand('jababeka')">▸</span>
+    </button>
+    <div class="sb-subgroup" id="grp-jababeka" style="display:none">
+      <button class="sb-site-item sb-sub" data-group="jababeka" data-bu="0" onclick="navToGroupBU('jababeka',0)">
+        <span class="sb-dot" style="background:#5ba4f5"></span>HCI
+      </button>
+      <button class="sb-site-item sb-sub" data-group="jababeka" data-bu="1" onclick="navToGroupBU('jababeka',1)">
+        <span class="sb-dot" style="background:#f5a623"></span>AHI
+      </button>
+      <button class="sb-site-item sb-sub" data-group="jababeka" data-bu="2" onclick="navToGroupBU('jababeka',2)">
+        <span class="sb-dot" style="background:#e24b4b"></span>KLS/Industrial
+      </button>
+    </div>
+  </div>
+
+  <button class="sb-site-item" data-group="cikupa" onclick="navToGroup('cikupa')">
+    <span class="sb-dot" style="background:#00c49a"></span>Cikupa
+    <span class="sb-badge" id="badge-grp-cikupa">—</span>
   </button>
 
-  <div class="sb-divider"></div>
-  <div class="sb-section">RDC Sites</div>
-  <button class="sb-site-item" data-site="Corp Tamora" onclick="navTo('Corp Tamora')">
-    <span class="sb-dot" style="background:#e879f9"></span>Corp Tamora
-    <span class="sb-badge" id="badge-Corp Tamora">—</span>
+  <div class="sb-group">
+    <button class="sb-site-item" data-group="sidoarjo" onclick="navToGroup('sidoarjo')">
+      <span class="sb-dot" style="background:#8b6cf7"></span>Sidoarjo
+      <span class="sb-badge" id="badge-grp-sidoarjo">—</span>
+      <span class="sb-expand-arrow" id="grp-arrow-sidoarjo" onclick="event.stopPropagation();toggleGroupExpand('sidoarjo')">▸</span>
+    </button>
+    <div class="sb-subgroup" id="grp-sidoarjo" style="display:none">
+      <button class="sb-site-item sb-sub" data-group="sidoarjo" data-bu="0" onclick="navToGroupBU('sidoarjo',0)">
+        <span class="sb-dot" style="background:#5ba4f5"></span>HCI
+      </button>
+      <button class="sb-site-item sb-sub" data-group="sidoarjo" data-bu="1" onclick="navToGroupBU('sidoarjo',1)">
+        <span class="sb-dot" style="background:#f5a623"></span>AHI
+      </button>
+      <button class="sb-site-item sb-sub" data-group="sidoarjo" data-bu="2" onclick="navToGroupBU('sidoarjo',2)">
+        <span class="sb-dot" style="background:#00c49a"></span>FBI
+      </button>
+      <button class="sb-site-item sb-sub" data-group="sidoarjo" data-bu="3" onclick="navToGroupBU('sidoarjo',3)">
+        <span class="sb-dot" style="background:#e879f9"></span>KLS
+      </button>
+    </div>
+  </div>
+
+  <button class="sb-site-item" data-group="tallo" onclick="navToGroup('tallo')">
+    <span class="sb-dot" style="background:#fb923c"></span>Tallo
+    <span class="sb-badge" id="badge-grp-tallo">—</span>
   </button>
-  <button class="sb-site-item" data-site="Corp Tallo" onclick="navTo('Corp Tallo')">
-    <span class="sb-dot" style="background:#fb923c"></span>Corp Tallo
-    <span class="sb-badge" id="badge-Corp Tallo">—</span>
+  <button class="sb-site-item" data-group="tamora" onclick="navToGroup('tamora')">
+    <span class="sb-dot" style="background:#e879f9"></span>Tamora
+    <span class="sb-badge" id="badge-grp-tamora">—</span>
   </button>
 
   <div class="sb-info">
@@ -374,6 +393,18 @@ const BU_DEF={
 };
 const BU_COL={'AHI':'#f5a623','HCI':'#5ba4f5','Corp':'#8b6cf7','IND':'#e24b4b','FBI':'#00c49a','KLS':'#e879f9'};
 
+// Grouping lokasi buat sidebar Site (klik nama grup = semua site di dalamnya, expand = breakdown per BU).
+// Beda dari BU_DEF (yg grouping-nya per BU lintas lokasi) — ini grouping per LOKASI FISIK.
+const SITE_GROUPS={
+  jababeka:{label:'Jababeka',sites:['HCI Jababeka','AHI Jababeka','IND Jababeka'],
+    bus:[{label:'HCI',site:'HCI Jababeka',owner:null},{label:'AHI',site:'AHI Jababeka',owner:null},{label:'KLS/Industrial',site:'IND Jababeka',owner:null}]},
+  cikupa:{label:'Cikupa',sites:['HCI Cikupa'],bus:null},
+  sidoarjo:{label:'Sidoarjo',sites:['Corp Sidoarjo'],
+    bus:[{label:'HCI',site:'Corp Sidoarjo',owner:'HCI'},{label:'AHI',site:'Corp Sidoarjo',owner:'AHI'},{label:'FBI',site:'Corp Sidoarjo',owner:'FBI'},{label:'KLS',site:'Corp Sidoarjo',owner:'KLS'}]},
+  tallo:{label:'Tallo',sites:['Corp Tallo'],bus:null},
+  tamora:{label:'Tamora',sites:['Corp Tamora'],bus:null}
+};
+
 // Segmen bisnis untuk toggle YoY: semua site Retail kecuali IND Jababeka (Industrial)
 function siteSegment(site){return site==='IND Jababeka'?'Industrial':'Retail';}
 
@@ -382,16 +413,25 @@ let activeSite='all', activeMenu='overview', CH={};
 function siteInFilter(site){
   return activeSite==='all'||activeSite.includes(site);
 }
+// Detail Metrik pakai sub-tab (Coverage/Sebaran/Cost/BU) di dalam 1 menu — fungsi render yg lama
+// (renderCoverage/renderSebaran/renderCostAnalysis/renderBU) nulis ke sini instead of 'content' langsung,
+// biar gak nimpa tombol tab-nya.
+function contentTargetId(){
+  return activeMenu==='detail'?'detailTabContent':'content';
+}
 // Kalau ada filter BU aktif (klik BU di Summary BU), row Corp Sidoarjo perlu dibatasi lagi
 // per kolom Owner (r[15]) — soalnya site-nya dipakai bareng 4 BU (AHI/HCI/FBI/KLS).
 function rowMatchesBUOwner(r){
-  if(!window._buFilter) return true;
   if(r[0]!=='Corp Sidoarjo') return true;
-  const comps=BU_DEF[window._buFilter]||[];
-  const sidComp=comps.find(c=>c.site==='Corp Sidoarjo');
-  if(!sidComp||sidComp.owner===null) return true;
-  if(sidComp.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(r[15]);
-  return r[15]===sidComp.owner;
+  if(window._buFilter){
+    const comps=BU_DEF[window._buFilter]||[];
+    const sidComp=comps.find(c=>c.site==='Corp Sidoarjo');
+    if(!sidComp||sidComp.owner===null) return true;
+    if(sidComp.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(r[15]);
+    return r[15]===sidComp.owner;
+  }
+  if(window._sidebarOwner) return r[15]===window._sidebarOwner;
+  return true;
 }
 // Sama seperti rowMatchesBUOwner, tapi buat entri TRIP2025/TRIP2025_AREA yang formatnya {site,owner,...}
 // (bukan array baris RAW). Kalau kolom Owner di sheet 2025 belum ada sama sekali (semua entri owner=''),
@@ -404,14 +444,17 @@ function has2025OwnerData(){
   return window._has2025Owner;
 }
 function entryMatchesBUOwner(e){
-  if(!window._buFilter) return true;
   if(e.site!=='Corp Sidoarjo') return true;
-  const comps=BU_DEF[window._buFilter]||[];
-  const sidComp=comps.find(c=>c.site==='Corp Sidoarjo');
-  if(!sidComp||sidComp.owner===null) return true;
   if(!has2025OwnerData()) return true; // kolom Owner belum ada di sheet 2025 — jangan buang data
-  if(sidComp.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(e.owner);
-  return e.owner===sidComp.owner;
+  if(window._buFilter){
+    const comps=BU_DEF[window._buFilter]||[];
+    const sidComp=comps.find(c=>c.site==='Corp Sidoarjo');
+    if(!sidComp||sidComp.owner===null) return true;
+    if(sidComp.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(e.owner);
+    return e.owner===sidComp.owner;
+  }
+  if(window._sidebarOwner) return e.owner===window._sidebarOwner;
+  return true;
 }
 function sitesToShowList(){
   return activeSite==='all'?ALL_SITES:activeSite;
@@ -458,6 +501,7 @@ function isJbLpJtRow(r){
 function getRows(){
   let rows=RAW;
   if(activeSite!=='all') rows=rows.filter(r=>siteInFilter(r[0]));
+  rows=rows.filter(r=>rowMatchesBUOwner(r));
   if(dateFrom) rows=rows.filter(r=>r[7]>=dateFrom);
   if(dateTo)   rows=rows.filter(r=>r[7]<=dateTo);
   return rows;
@@ -557,29 +601,78 @@ function getScopeLabel(){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,sebaran:2,slide:3,costanalysis:4,bu:5};
+  const idx={overview:0,detail:1};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
 }
 
-function navTo(s){
-  if(s==='all'){
-    activeSite='all';
-  } else if(activeSite==='all'){
-    activeSite=[s];
-  } else {
-    const arr=activeSite.slice();
-    const idx=arr.indexOf(s);
-    if(idx>=0) arr.splice(idx,1); else arr.push(s);
-    activeSite=arr.length?arr:'all';
+function updateSidebarActive(){
+  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.sb-expand-arrow').forEach(el=>el.classList.remove('open'));
+  if(activeSite==='all'&&!window._sidebarOwner){
+    const el=document.querySelector('.sb-site-item[data-site="all"]');
+    if(el) el.classList.add('active');
+    return;
   }
-  document.querySelectorAll('.sb-site-item').forEach(el=>{
-    const site=el.dataset.site;
-    const isActive=site==='all'?activeSite==='all':(activeSite!=='all'&&activeSite.includes(site));
-    el.classList.toggle('active',isActive);
+  // Cari grup mana yg cocok sama activeSite/owner saat ini, buat highlight
+  Object.entries(SITE_GROUPS).forEach(([key,g])=>{
+    const groupMatchesFull=Array.isArray(activeSite)&&activeSite.length===g.sites.length&&g.sites.every(s=>activeSite.includes(s))&&!window._sidebarOwner;
+    if(g.bus){
+      let subActive=-1;
+      if(Array.isArray(activeSite)&&activeSite.length===1){
+        subActive=g.bus.findIndex(b=>b.site===activeSite[0]&&(b.owner||null)===(window._sidebarOwner||null));
+      }
+      if(subActive>=0){
+        const subEl=document.querySelector('.sb-site-item.sb-sub[data-group="'+key+'"][data-bu="'+subActive+'"]');
+        if(subEl) subEl.classList.add('active');
+        const wrap=document.getElementById('grp-'+key);
+        if(wrap) wrap.style.display='flex';
+        const arrow=document.getElementById('grp-arrow-'+key);
+        if(arrow) arrow.classList.add('open');
+        return;
+      }
+    }
+    if(groupMatchesFull){
+      const el=document.querySelector('.sb-site-item[data-group="'+key+'"]');
+      if(el) el.classList.add('active');
+    }
   });
+}
+
+function navToGroup(groupKey){
+  window._buFilter=null;
+  window._sidebarOwner=null;
+  if(groupKey==='all'){
+    activeSite='all';
+  } else {
+    const g=SITE_GROUPS[groupKey];
+    if(!g) return;
+    activeSite=g.sites.slice();
+  }
+  updateSidebarActive();
   render();
+}
+
+function navToGroupBU(groupKey,buIdx){
+  const g=SITE_GROUPS[groupKey];
+  if(!g||!g.bus) return;
+  const bu=g.bus[buIdx];
+  if(!bu) return;
+  window._buFilter=null;
+  activeSite=[bu.site];
+  window._sidebarOwner=bu.owner||null;
+  updateSidebarActive();
+  render();
+}
+
+function toggleGroupExpand(groupKey){
+  const wrap=document.getElementById('grp-'+groupKey);
+  const arrow=document.getElementById('grp-arrow-'+groupKey);
+  if(!wrap) return;
+  const isOpen=wrap.style.display==='flex';
+  wrap.style.display=isOpen?'none':'flex';
+  if(arrow) arrow.classList.toggle('open',!isOpen);
 }
 
 function renderTrendChart(view){
@@ -718,29 +811,78 @@ function setTrendView(view){
 function setMenu(menu){
   activeMenu=menu;
   document.querySelectorAll('.sb-menu-item').forEach(b=>b.classList.remove('active'));
-  const idx={overview:0,coverage:1,sebaran:2,slide:3,costanalysis:4,bu:5};
+  const idx={overview:0,detail:1};
   const btns=document.querySelectorAll('.sb-menu-item');
   if(btns[idx[menu]]!==undefined) btns[idx[menu]].classList.add('active');
   render();
 }
 
-function navTo(s){
-  if(s==='all'){
-    activeSite='all';
-  } else if(activeSite==='all'){
-    activeSite=[s];
-  } else {
-    const arr=activeSite.slice();
-    const idx=arr.indexOf(s);
-    if(idx>=0) arr.splice(idx,1); else arr.push(s);
-    activeSite=arr.length?arr:'all';
+function updateSidebarActive(){
+  document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.sb-expand-arrow').forEach(el=>el.classList.remove('open'));
+  if(activeSite==='all'&&!window._sidebarOwner){
+    const el=document.querySelector('.sb-site-item[data-site="all"]');
+    if(el) el.classList.add('active');
+    return;
   }
-  document.querySelectorAll('.sb-site-item').forEach(el=>{
-    const site=el.dataset.site;
-    const isActive=site==='all'?activeSite==='all':(activeSite!=='all'&&activeSite.includes(site));
-    el.classList.toggle('active',isActive);
+  // Cari grup mana yg cocok sama activeSite/owner saat ini, buat highlight
+  Object.entries(SITE_GROUPS).forEach(([key,g])=>{
+    const groupMatchesFull=Array.isArray(activeSite)&&activeSite.length===g.sites.length&&g.sites.every(s=>activeSite.includes(s))&&!window._sidebarOwner;
+    if(g.bus){
+      let subActive=-1;
+      if(Array.isArray(activeSite)&&activeSite.length===1){
+        subActive=g.bus.findIndex(b=>b.site===activeSite[0]&&(b.owner||null)===(window._sidebarOwner||null));
+      }
+      if(subActive>=0){
+        const subEl=document.querySelector('.sb-site-item.sb-sub[data-group="'+key+'"][data-bu="'+subActive+'"]');
+        if(subEl) subEl.classList.add('active');
+        const wrap=document.getElementById('grp-'+key);
+        if(wrap) wrap.style.display='flex';
+        const arrow=document.getElementById('grp-arrow-'+key);
+        if(arrow) arrow.classList.add('open');
+        return;
+      }
+    }
+    if(groupMatchesFull){
+      const el=document.querySelector('.sb-site-item[data-group="'+key+'"]');
+      if(el) el.classList.add('active');
+    }
   });
+}
+
+function navToGroup(groupKey){
+  window._buFilter=null;
+  window._sidebarOwner=null;
+  if(groupKey==='all'){
+    activeSite='all';
+  } else {
+    const g=SITE_GROUPS[groupKey];
+    if(!g) return;
+    activeSite=g.sites.slice();
+  }
+  updateSidebarActive();
   render();
+}
+
+function navToGroupBU(groupKey,buIdx){
+  const g=SITE_GROUPS[groupKey];
+  if(!g||!g.bus) return;
+  const bu=g.bus[buIdx];
+  if(!bu) return;
+  window._buFilter=null;
+  activeSite=[bu.site];
+  window._sidebarOwner=bu.owner||null;
+  updateSidebarActive();
+  render();
+}
+
+function toggleGroupExpand(groupKey){
+  const wrap=document.getElementById('grp-'+groupKey);
+  const arrow=document.getElementById('grp-arrow-'+groupKey);
+  if(!wrap) return;
+  const isOpen=wrap.style.display==='flex';
+  wrap.style.display=isOpen?'none':'flex';
+  if(arrow) arrow.classList.toggle('open',!isOpen);
 }
 
 // DATE
@@ -799,8 +941,8 @@ function render(){
   const slaAvg=calcSLAAvg(rows);
   const sav=kpi.sav;
 
-  const menuLabels={overview:'Overview',coverage:'Coverage',bu:'Summary BU'};
-  const siteTitleLabel=activeSite==='all'?'Semua NDC':(activeSite.length===1?activeSite[0]:`${activeSite.length} Site (${activeSite.map(s=>SSHORT[s]||s).join(', ')})`);
+  const menuLabels={overview:'Overview',detail:'Detail Metrik'};
+  const siteTitleLabel=activeSite==='all'?'Semua Site':(activeSite.length===1?(window._sidebarOwner?SSHORT[activeSite[0]]+' — '+window._sidebarOwner:activeSite[0]):`${activeSite.length} Site (${activeSite.map(s=>SSHORT[s]||s).join(', ')})`);
   document.getElementById('mainTitle').textContent=siteTitleLabel+' — '+menuLabels[activeMenu];
   const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
   const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
@@ -814,25 +956,51 @@ function render(){
   document.getElementById('chipSLA').className='chip '+(slaAvg!==null&&slaAvg>0?'hi':'neu');
   document.getElementById('dateCount').innerHTML=`Filter: <b>${rows.length.toLocaleString('id-ID')}</b> trip · <b>${dateFrom}</b> s/d <b>${dateTo}</b>`;
 
-  ALL_SITES.forEach(s=>{
-    const sr=RAW.filter(r=>r[0]===s&&r[7]>=dateFrom&&r[7]<=dateTo);
-    const el=document.getElementById('badge-'+s);if(el) el.textContent=sr.length||'—';
+  Object.entries(SITE_GROUPS).forEach(([key,g])=>{
+    const sr=RAW.filter(r=>g.sites.includes(r[0])&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+    const el=document.getElementById('badge-grp-'+key);if(el) el.textContent=sr.length||'—';
   });
   const elAll=document.getElementById('badge-all');
-  if(elAll) elAll.textContent=RAW.filter(r=>r[7]>=dateFrom&&r[7]<=dateTo).length||'—';
+  if(elAll) elAll.textContent=RAW.filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo)).length||'—';
 
-  if(rows.length===0){document.getElementById('content').innerHTML=`<div class="no-data">Tidak ada data untuk range tanggal yang dipilih.</div>`;return;}
+  if(rows.length===0){document.getElementById(contentTargetId()).innerHTML=`<div class="no-data">Tidak ada data untuk range tanggal yang dipilih.</div>`;return;}
 
   if(activeMenu==='overview') renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
-  else if(activeMenu==='coverage') renderCoverage(rows,contrib,tInt,tAll,pct);
-  else if(activeMenu==='sebaran') renderSebaran(rows);
-
-  else if(activeMenu==='slide') renderSlide(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
-  else if(activeMenu==='costanalysis') renderCostAnalysis(rows);
-  else if(activeMenu==='bu') renderBU();
+  else if(activeMenu==='detail') renderDetailMetrik(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg);
 }
 
-// ── OVERVIEW ─────────────────────────────────────────────────────
+// ── DETAIL METRIK (gabungan Coverage + Sebaran + Cost Analysis + Summary BU, sub-tab) ──
+function renderDetailMetrik(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
+  window._detailTab=window._detailTab||'coverage';
+  const tabs=[
+    {key:'coverage',label:'Coverage',icon:'📋'},
+    {key:'sebaran',label:'Sebaran',icon:'📍'},
+    {key:'cost',label:'Cost Detail',icon:'💰'},
+    {key:'bu',label:'Summary BU',icon:'🏢'}
+  ];
+  const tabHTML=`<div class="card mb12" style="padding:8px 12px">
+    <div style="display:inline-flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px">
+      ${tabs.map(t=>{
+        const active=window._detailTab===t.key;
+        return `<button onclick="setDetailTab('${t.key}')" id="dtab-${t.key}" style="padding:6px 14px;border-radius:6px;font-size:11.5px;cursor:pointer;border:none;background:${active?'var(--card)':'transparent'};color:${active?'var(--txt)':'var(--muted)'};font-family:var(--font);font-weight:${active?'700':'500'};box-shadow:${active?'0 1px 3px rgba(0,0,0,.1)':'none'}">${t.icon} ${t.label}</button>`;
+      }).join('')}
+    </div>
+  </div>
+  <div id="detailTabContent"></div>`;
+  document.getElementById('content').innerHTML=tabHTML;
+
+  if(window._detailTab==='coverage') renderCoverage(rows,contrib,tInt,tAll,pct);
+  else if(window._detailTab==='sebaran') renderSebaran(rows);
+  else if(window._detailTab==='cost') renderCostAnalysis(rows);
+  else if(window._detailTab==='bu') renderBU();
+}
+
+function setDetailTab(key){
+  window._detailTab=key;
+  render();
+}
+
+
 function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const sitesToShow=sitesToShowList();
   const scopeLabel=getScopeLabel();
@@ -846,7 +1014,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
 
   </div>
-  <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-top:8px">
+  <div class="kpi-row" style="grid-template-columns:repeat(6,1fr);margin-top:8px">
     ${(()=>{
       const totalDO=rows.reduce((s,r)=>s+(r[8]||0),0);
       const avgDOPerTrip=rows.length>0?+(totalDO/rows.length).toFixed(1):0;
@@ -862,6 +1030,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       <div class="kpi c-blue"><div class="kpi-label">Total DO Internal</div><div class="kpi-value">${fmt(totalDO)}</div><div class="kpi-sub">avg ${avgDOPerTrip} DO/trip</div></div>
       <div class="kpi c-${savAll>=0?'green':'red'}"><div class="kpi-label">Saving All Area</div><div class="kpi-value" style="color:${savAll>=0?CGREEN:CRED}">${savAll>=0?'+':''}${fmtM(savAll)}</div><div class="kpi-sub">semua jalur yg ada rate ext</div></div>
       <div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${+(tUJP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
+      <div class="kpi c-teal"><div class="kpi-label">Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${+(tSewa/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
       <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${+(tMPP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
       <div class="kpi ${olfCls}"><div class="kpi-label">OLF Avg Int</div><div class="kpi-value">${olfVal!==null?olfVal+'%':'—'}</div><div class="kpi-sub">CBM/Kapasitas · ${olfRows.length} trip</div></div>`;
     })()}
@@ -1690,23 +1859,19 @@ function setBUFilter(buKey){
     return;
   }
   window._buFilter=buKey;
+  window._sidebarOwner=null;
   const comps=BU_DEF[buKey]||[];
   const sites=[...new Set(comps.map(c=>c.site))];
   activeSite=sites.length?sites:'all';
-  document.querySelectorAll('.sb-site-item').forEach(el=>{
-    const site=el.dataset.site;
-    const isActive=site==='all'?activeSite==='all':(activeSite!=='all'&&activeSite.includes(site));
-    el.classList.toggle('active',isActive);
-  });
+  updateSidebarActive();
   render();
 }
 
 function clearBUFilter(){
   window._buFilter=null;
+  window._sidebarOwner=null;
   activeSite='all';
-  document.querySelectorAll('.sb-site-item').forEach(el=>{
-    el.classList.toggle('active',el.dataset.site==='all');
-  });
+  updateSidebarActive();
   render();
 }
 
@@ -1801,11 +1966,9 @@ function renderBU(){
   });
   html+=`</tbody></table></div></div>`;
 
-  // 5. YoY 2025 vs 2026 + Kontribusi Internal per Area (sama seperti di Overview)
-  html+=buildYoyHTML();
-  html+=buildKontribHTML();
+  // (YoY 2025 vs 2026 & Kontribusi Internal per Area udah ada di Overview — gak diduplikat di sini)
 
-  document.getElementById('content').innerHTML=html;
+  document.getElementById(contentTargetId()).innerHTML=html;
 
   setTimeout(()=>{
     dc('cBUCompare');
@@ -1861,9 +2024,6 @@ function renderBU(){
         }
       });
     }
-
-    if(window._yoyData) renderYoYChart(window._yoyView||'total');
-    renderKontribChart();
   },30);
 }
 
@@ -1957,7 +2117,7 @@ function renderCoverage(rows,contrib,tInt,tAll,pct){
 
   // Kontribusi expandable
   const contribHTML=renderContribExpandable(rows);
-  document.getElementById('content').innerHTML=covHTML+oosHTML+contribHTML;
+  document.getElementById(contentTargetId()).innerHTML=covHTML+oosHTML+contribHTML;
 }
 
 function renderContribExpandable(rows){
@@ -2409,7 +2569,7 @@ function renderSebaran(rows){
     <span style="font-size:10px;color:var(--muted);margin-left:${isMultiSiteView()?'4':'auto'}px">${withCoord}/${total} jalur terpetakan${noCoord>0?' · '+noCoord+' jalur tidak ada koordinat':''}</span>
   </div>`;
 
-  document.getElementById('content').innerHTML=legendHTML+`<div class="map-wrap"><div id="silk-map"></div></div>`;
+  document.getElementById(contentTargetId()).innerHTML=legendHTML+`<div class="map-wrap"><div id="silk-map"></div></div>`;
 
   // Init or reset map
   setTimeout(()=>{
@@ -2782,7 +2942,7 @@ function renderCostAnalysis(rows){
   const siteData = sitesToShow.map(s=>calcCostSite(rows,s)).filter(d=>d.trips>0);
 
   if(!siteData.length){
-    document.getElementById('content').innerHTML=`<div class="no-data">Tidak ada data untuk filter yang dipilih.</div>`;
+    document.getElementById(contentTargetId()).innerHTML=`<div class="no-data">Tidak ada data untuk filter yang dipilih.</div>`;
     return;
   }
 
@@ -3057,7 +3217,7 @@ function renderCostAnalysis(rows){
     </div>
   </div>`;
 
-  document.getElementById('content').innerHTML=kpiHTML+tableHTML+chartHTML+jalurTableHTML+insightHTML;
+  document.getElementById(contentTargetId()).innerHTML=kpiHTML+tableHTML+chartHTML+jalurTableHTML+insightHTML;
 
   // Render charts
   setTimeout(()=>{
