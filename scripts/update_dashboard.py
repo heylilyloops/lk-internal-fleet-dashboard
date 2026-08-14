@@ -125,7 +125,7 @@ for line in int_data[1:]:
         if not del_date: continue
     except:
         continue
-    if ci is None: continue
+    if ci is None: ci = 0.0  # trip tetep kejadian meski Cost Int kosong di sheet — jangan di-skip, biar trip count akurat
     lt_raw  = line[14].strip() if len(line) > 14 else ''
     lt_ow   = float(lt_raw) if lt_raw and lt_raw not in ('Lead Time One Way',) else None
     ujp_raw  = line[15].strip().replace(',','') if len(line) > 15 else ''
