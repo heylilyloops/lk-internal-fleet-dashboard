@@ -394,6 +394,23 @@ const SAVING_SCOPE={
   'Corp Tallo':   ['Sulawesi Selatan'],
   'IND Jababeka': ['Jawa Barat']
 };
+const ALL_AREA_COLORS={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7','Sumatera Utara':'#00c49a','Sulawesi Selatan':'#e24b4b','Jawa Tengah':'#fb923c','Banten':'#5ba4f5','Bali':'#e879f9','Sumatera Bagian Selatan':'#f5a623','Sumatera Bagian Utara':'#00c49a','Sumatera Bagian Tengah':'#22a06b','Jabodetabek':'#c9a227','Kalimantan Timur':'#8b6cf7'};
+const AREA_COLOR_FALLBACK=['#266CA9','#00c49a','#f5a623','#8b6cf7','#e24b4b','#5ba4f5','#fb923c','#e879f9'];
+function colorForArea(area,idx){return ALL_AREA_COLORS[area]||AREA_COLOR_FALLBACK[idx%AREA_COLOR_FALLBACK.length];}
+// Area yg ditampilin di card YoY/Kontribusi = top 5 destinasi TERBESAR berdasarkan data trip aktual
+// site yg lagi dipilih (bukan daftar SAVING_SCOPE yg di-hardcode) — biar area kayak Jawa Tengah ikut
+// muncul kalau emang volumenya gede, bukan cuma yg "resmi" ada di benchmark saving.
+function currentScopeAreas(){
+  const sites=activeSite==='all'?ALL_SITES:activeSite;
+  const rows=RAW.filter(r=>sites.includes(r[0]));
+  const cnt={};
+  rows.forEach(r=>{
+    const a=r[2]==='Lampung'?'Lampung':r[1];
+    if(!a) return;
+    cnt[a]=(cnt[a]||0)+1;
+  });
+  return Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]);
+}
 // RAW: [site,area,jalur,ci,ce,armada,del_type,del_date,do,cbm,lt_ow,ujp,mpp,sewa,kap,owner]
 //        0    1    2    3  4    5      6         7      8   9   10   11   12   13   14  15
 // owner (r[15]): BU pemilik trip. Saat ini cuma keisi untuk Corp Sidoarjo (HCI/AHI/FBI/KLS).
@@ -798,7 +815,7 @@ function renderTrendChart(view){
     datasets=comboDatasets(d,'#266CA9');
   } else if(view==='area'){
     // Scope areas only: Jawa Barat, Lampung, Jawa Timur
-    const aColors={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
+    const aColors=ALL_AREA_COLORS;
     SCOPE_AREAS.forEach((area,i)=>{
       datasets.push({
         label:area,type:'line',
@@ -1357,7 +1374,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     byMonthArmada[arm][m]++;
   });
 
-  const byMonthArea={};
+  const byMonthArea={__total__:{}};
   rows.forEach(r=>{
     const m=r[7].slice(0,7);
     const key_total='__total__';
@@ -1478,7 +1495,7 @@ function buildYoyHTML(){
   const idxKeep=monthKeysAll.map((m,i)=>m<=capTo?i:-1).filter(i=>i>=0);
   const monthKeys=idxKeep.map(i=>monthKeysAll[i]);
   const MLBL12=idxKeep.map(i=>MLBL_ALL[i]);
-  const YOY_AREAS=['Jawa Barat','Lampung','Jawa Timur'];
+  const YOY_AREAS=currentScopeAreas();
 
   const monthMask=monthKeys.map(m=>monthsWithData.has(m));
   let nOv=0; monthMask.forEach(v=>{if(v) nOv++;});
@@ -1576,16 +1593,14 @@ function computeYoySeries(segment){
   monthKeys.forEach(m=>{
     const lo='2026-'+m+'-'+dayFrom, hi='2026-'+m+'-'+dayTo;
     raw26.filter(r=>r[7]>=lo&&r[7]<=hi).forEach(r=>{
-      const scope=SAVING_SCOPE[r[0]]||[];
       YOY_AREAS.forEach(a=>{
-        if(!scope.includes(a)) return; // bukan scope resmi site ini — kemungkinan anomali data entry
         const match=a==='Lampung'?r[2]==='Lampung':r[1]===a;
         if(match) by26Area[a][m]=(by26Area[a][m]||0)+1;
       });
     });
   });
 
-  const aColorsK={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
+  const aColorsK=ALL_AREA_COLORS;
   const areaCards=YOY_AREAS.map(a=>{
     let sitesForArea=scopeSitesForArea(a);
     if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>siteInFilter(s));
@@ -1665,13 +1680,15 @@ function buildYoyKpiHTML(){
   const scopePct25=(d.scopeSum25+scopeExt25)>0?Math.round(d.scopeSum25/(d.scopeSum25+scopeExt25)*100):null;
   const scopePct26=(d.scopeSum26+scopeExt26)>0?Math.round(d.scopeSum26/(d.scopeSum26+scopeExt26)*100):null;
   const hasExt2025=typeof EXT2025_AREA!=='undefined';
-  const cards=[
-    {key:'Total Keseluruhan'+segLabel,col:'#22a06b',s25:d.sum25ov,s26:d.sum26ov},
-    hasExt2025
-      ?{key:'Jabar+Lampung+Jatim'+segLabel,col:'#5b6b7a',s25:d.scopeSum25,s26:d.scopeSum26,pctInt25:scopePct25,pctInt26:scopePct26}
-      :{key:'Jabar+Lampung+Jatim'+segLabel,col:'#5b6b7a',s25:d.scopeSum25,s26:d.scopeSum26}
-  ].concat(hasExt2025?d.areaCards:d.areaCards.map(({ext25,ext26,pctInt25,pctInt26,...rest})=>rest));
-  return `<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(cards.length,5)},1fr);margin-bottom:12px">${cards.map(cardHTML).join('')}</div>`;
+  const scopeLabel=d.areaCards.map(c=>c.key).join('+')||'Scope';
+  const cards=[{key:'Total Keseluruhan'+segLabel,col:'#22a06b',s25:d.sum25ov,s26:d.sum26ov}];
+  if(d.areaCards.length>1){
+    cards.push(hasExt2025
+      ?{key:scopeLabel+segLabel,col:'#5b6b7a',s25:d.scopeSum25,s26:d.scopeSum26,pctInt25:scopePct25,pctInt26:scopePct26}
+      :{key:scopeLabel+segLabel,col:'#5b6b7a',s25:d.scopeSum25,s26:d.scopeSum26});
+  }
+  const allCards=cards.concat(hasExt2025?d.areaCards:d.areaCards.map(({ext25,ext26,pctInt25,pctInt26,...rest})=>rest));
+  return `<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(allCards.length,5)},1fr);margin-bottom:12px">${allCards.map(cardHTML).join('')}</div>`;
 }
 
 function setKontribSegment(segment){
@@ -1708,10 +1725,10 @@ function renderKontribChart(){
   const wrap=document.getElementById('kontribChartWrap');
   const footer=document.getElementById('kontribFooter');
   if(!wrap) return;
-  const kontribAreas=['Jawa Barat','Lampung','Jawa Timur'];
+  const kontribAreas=currentScopeAreas();
   const year=window._kontribYear||'2026';
   const kData=computeKontribusiArea(window._kontribSegment||'all',kontribAreas,year);
-  const aColors={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
+  const aColors=ALL_AREA_COLORS;
 
   ['cKontrib','cKontrib_0','cKontrib_1','cKontrib_2'].forEach(dc);
   wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(${kData.length},1fr);gap:10px">
@@ -1744,7 +1761,9 @@ function renderKontribChart(){
 }
 
 function scopeSitesForArea(area){
-  return Object.keys(SAVING_SCOPE).filter(site=>SAVING_SCOPE[site].includes(area));
+  // Area sekarang ditentuin dari data aktual (top-N destinasi site yg dipilih), jadi kandidat site-nya
+  // ya site yg lagi aktif aja — nggak di-gate ke SAVING_SCOPE lagi (biar Jateng dkk ikut kehitung).
+  return activeSite==='all'?ALL_SITES.slice():activeSite.slice();
 }
 
 function date25Range(){
@@ -1898,7 +1917,7 @@ function renderYoYChart(view){
               if(!items.length||!pctInt25Series) return '';
               const i=items[0].dataIndex;
               const p25=pctInt25Series[i],p26=pctInt26Series[i];
-              return `%Kontribusi (Jabar+Lampung+Jatim): 2025 ${p25!==null?p25+'%':'—'} · 2026 ${p26!==null?p26+'%':'—'}`;
+              return `%Kontribusi (${YOY_AREAS.join('+')||'Scope'}): 2025 ${p25!==null?p25+'%':'—'} · 2026 ${p26!==null?p26+'%':'—'}`;
             }
           }}
         },
@@ -1909,7 +1928,7 @@ function renderYoYChart(view){
       }
     });
   } else if(view==='area'){
-    const aColors={'Jawa Barat':'#266CA9','Lampung':'#f5a623','Jawa Timur':'#8b6cf7'};
+    const aColors=ALL_AREA_COLORS;
     wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(${YOY_AREAS.length},1fr);gap:10px">
       ${YOY_AREAS.map((a,i)=>`<div>
         <div style="font-size:10px;font-weight:700;color:${aColors[a]};text-align:center;margin-bottom:4px">${a}</div>
