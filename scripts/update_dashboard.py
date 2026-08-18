@@ -416,9 +416,9 @@ for line in data_2025[1:]:
     dest25 = line[DEST_IDX_25].strip() if len(line) > DEST_IDX_25 else ''
     if dest25 == 'Lampung':
         area25 = 'Lampung'
-    # Hanya masukkan kalau area itu memang scope resmi site-nya — data entry error
-    # (mis. AHI Jababeka ke-tag 'Jawa Timur') difilter di sini.
-    if area25 and area25 in SAVING_SCOPE_PY.get(site25, []):
+    # Tangkep semua area beneran (bukan cuma yg ada di SAVING_SCOPE) — biar destinasi kayak
+    # Jawa Tengah/Banten ikut ada data 2025-nya buat pembanding, bukan cuma area yg "resmi" masuk scope saving.
+    if area25 and area25 not in ('#N/A', 'Area', '0'):
         agg_2025_area[site25][ddate25][area25][owner25] += 1
 
 trip_2025_list = [
@@ -481,7 +481,7 @@ for line in data_ext2025[1:]:
     jalur_e25 = line[JALUR_IDX_E25].strip().title() if len(line) > JALUR_IDX_E25 else ''
     if jalur_e25 == 'Lampung':
         area_e25 = 'Lampung'
-    if area_e25 and area_e25 in SAVING_SCOPE_PY.get(site_e25, []):
+    if area_e25 and area_e25 not in ('#N/A', 'Area', '0'):
         agg_ext2025_area[site_e25][ddate_e25][area_e25] += 1
 
 ext_2025_area_list = [
