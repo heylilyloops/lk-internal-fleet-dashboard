@@ -404,9 +404,12 @@ function currentScopeAreas(){
   const sites=activeSite==='all'?ALL_SITES:activeSite;
   const rows=RAW.filter(r=>sites.includes(r[0]));
   const cnt={};
+  // 'Sumatera Bagian Selatan' sengaja di-exclude dari kandidat — Lampung (jalur spesifik di dalam
+  // area itu) udah representasi yg lebih berguna, nampilin dua-duanya bikin keliatan tumpang tindih.
+  const EXCLUDE_AREA=new Set(['Sumatera Bagian Selatan']);
   rows.forEach(r=>{
     const a=r[2]==='Lampung'?'Lampung':r[1];
-    if(!a) return;
+    if(!a||EXCLUDE_AREA.has(a)) return;
     cnt[a]=(cnt[a]||0)+1;
   });
   return Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]);
