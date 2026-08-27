@@ -1596,10 +1596,8 @@ function computeYoySeries(segment){
   monthKeys.forEach(m=>{
     const lo='2026-'+m+'-'+dayFrom, hi='2026-'+m+'-'+dayTo;
     raw26.filter(r=>r[7]>=lo&&r[7]<=hi).forEach(r=>{
-      YOY_AREAS.forEach(a=>{
-        const match=a==='Lampung'?r[2]==='Lampung':r[1]===a;
-        if(match) by26Area[a][m]=(by26Area[a][m]||0)+1;
-      });
+      const canonicalArea=r[2]==='Lampung'?'Lampung':r[1]; // 1 row = 1 area, jangan sampai ke-hitung dobel
+      if(by26Area[canonicalArea]) by26Area[canonicalArea][m]=(by26Area[canonicalArea][m]||0)+1;
     });
   });
 
@@ -1780,7 +1778,7 @@ function areaIntTrips(area,sites,year){
     const in25=date25Range();
     return (typeof TRIP2025_AREA!=='undefined'?TRIP2025_AREA:[]).filter(e=>sites.includes(e.site)&&entryMatchesBUOwner(e)&&e.area===area&&in25(e)).reduce((s,e)=>s+e.trips,0);
   }
-  return RAW.filter(r=>sites.includes(r[0])&&rowMatchesBUOwner(r)&&(area==='Lampung'?r[2]==='Lampung':r[1]===area)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo)).length;
+  return RAW.filter(r=>sites.includes(r[0])&&rowMatchesBUOwner(r)&&(area==='Lampung'?r[2]==='Lampung':(r[1]===area&&r[2]!=='Lampung'))&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo)).length;
 }
 
 function areaExtTrips(area,sites,year){
@@ -1788,10 +1786,14 @@ function areaExtTrips(area,sites,year){
     const in25=date25Range();
     return (typeof EXT2025_AREA!=='undefined'?EXT2025_AREA:[]).filter(e=>sites.includes(e.site)&&e.area===area&&in25(e)).reduce((s,e)=>s+e.trips,0);
   }
+  // Pakai EXT_JALUR konsisten buat 2 kasus (bukan campur EXT_AGG+EXT_JALUR) — row yg jalurnya 'Lampung'
+  // dikecualikan dari area literalnya, biar gak ke-hitung dobel di 'Lampung' DAN area aslinya sekaligus
+  // (mis. 'Sumatera Bagian Selatan').
+  const ej=(typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]).filter(e=>sites.includes(e.site)&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo));
   if(area==='Lampung'){
-    return (typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]).filter(e=>sites.includes(e.site)&&e.jalur==='Lampung'&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
+    return ej.filter(e=>e.jalur==='Lampung').reduce((s,e)=>s+e.trips,0);
   }
-  return (typeof EXT_AGG!=='undefined'?EXT_AGG:[]).filter(e=>sites.includes(e.site)&&e.area===area&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo)).reduce((s,e)=>s+e.trips,0);
+  return ej.filter(e=>e.area===area&&e.jalur!=='Lampung').reduce((s,e)=>s+e.trips,0);
 }
 
 function areaExtTripsMonthly(area,sites,year){
@@ -1808,8 +1810,8 @@ function areaExtTripsMonthly(area,sites,year){
     });
     return out;
   }
-  const src=area==='Lampung'?(typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]):(typeof EXT_AGG!=='undefined'?EXT_AGG:[]);
-  const filtered=src.filter(e=>sites.includes(e.site)&&(area==='Lampung'?e.jalur==='Lampung':e.area===area));
+  const ej=(typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]).filter(e=>sites.includes(e.site));
+  const filtered=area==='Lampung'?ej.filter(e=>e.jalur==='Lampung'):ej.filter(e=>e.area===area&&e.jalur!=='Lampung');
   monthKeys.forEach(m=>{
     const lo='2026-'+m+'-'+dayFrom, hi='2026-'+m+'-'+dayTo;
     out[m]=filtered.filter(e=>e.date>=lo&&e.date<=hi).reduce((s,e)=>s+e.trips,0);
