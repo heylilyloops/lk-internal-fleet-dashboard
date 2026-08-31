@@ -2487,6 +2487,50 @@ function renderContribExpandable(rows){
       // end armada
     });
   });
+
+  // Baris TOTAL — jumlahin semua area
+  const totalInt=data.reduce((s,a)=>s+a.int,0);
+  const totalExt=data.reduce((s,a)=>s+a.ext,0);
+  const totalTrip=totalInt+totalExt;
+  const totalIntCbm=data.reduce((s,a)=>s+(a.jalurs.reduce((s2,j)=>s2+j.intCbm,0)||0),0);
+  const totalExtCbm=data.reduce((s,a)=>s+a.extCbm,0);
+  const totalCbm=totalIntCbm+totalExtCbm;
+  const totalCi=data.reduce((s,a)=>s+a.ci,0);
+  const ceRows=data.filter(a=>a.ce!==null);
+  const totalCe=ceRows.length?ceRows.reduce((s,a)=>s+a.ce,0):null;
+  const totalCiForCe=ceRows.reduce((s,a)=>s+a.ci,0);
+  const allJalurs=data.flatMap(a=>a.jalurs);
+  const olfIntRows=allJalurs.filter(j=>j.olf!==null);
+  const avgOlfInt=olfIntRows.length?+(olfIntRows.reduce((s,j)=>s+j.olf,0)/olfIntRows.length).toFixed(1):null;
+  const olfExtRows=allJalurs.filter(j=>j.olf_ext!==null);
+  const avgOlfExt=olfExtRows.length?+(olfExtRows.reduce((s,j)=>s+j.olf_ext,0)/olfExtRows.length).toFixed(1):null;
+  const ltIntRows=data.filter(a=>a.lt_int!==null);
+  const avgLtInt=ltIntRows.length?+(ltIntRows.reduce((s,a)=>s+a.lt_int,0)/ltIntRows.length).toFixed(2):null;
+  const ltExtRows=data.filter(a=>a.lt_ext!==null);
+  const avgLtExt=ltExtRows.length?+(ltExtRows.reduce((s,a)=>s+a.lt_ext,0)/ltExtRows.length).toFixed(2):null;
+  const avgLtDelta=avgLtInt!==null&&avgLtExt!==null?+(avgLtExt-avgLtInt).toFixed(2):null;
+  const totalPct=totalTrip?Math.round(totalInt/totalTrip*100):0;
+  const totalCbmPct=totalCbm?Math.round(totalIntCbm/totalCbm*100):0;
+  rows_html+=`<tr style="background:var(--bg);border-top:2px solid var(--border2);font-weight:700">
+    <td style="padding:8px 10px;text-transform:uppercase;font-size:10px;color:var(--txt2)">Total</td>
+    <td style="text-align:right">${fmt(totalInt)}</td>
+    <td style="text-align:right">${fmt(totalExt)}</td>
+    <td style="text-align:right">${fmt(totalTrip)}</td>
+    <td style="text-align:right">${totalPct}%</td>
+    <td style="text-align:right;color:var(--blue)">${totalIntCbm>0?totalIntCbm.toFixed(1):'—'}</td>
+    <td style="text-align:right;color:var(--muted)">${totalExtCbm>0?totalExtCbm.toFixed(1):'—'}</td>
+    <td style="text-align:right">${totalCbm.toFixed(1)}</td>
+    <td style="text-align:right">${totalCbmPct}%</td>
+    <td style="text-align:right">${fj(totalCi)}</td>
+    <td style="text-align:right">${fj(totalCe)}</td>
+    <td style="text-align:right">${savPct(totalCiForCe,totalCe)}</td>
+    <td style="text-align:right">${avgOlfInt!==null?avgOlfInt+'%':'—'}</td>
+    <td style="text-align:right">${avgOlfExt!==null?avgOlfExt+'%':'—'}</td>
+    <td style="text-align:right;color:var(--blue)">${avgLtInt!==null?avgLtInt:'<span style="color:var(--muted)">—</span>'}</td>
+    <td style="text-align:right;color:var(--muted)">${avgLtExt!==null?avgLtExt:'<span style="color:var(--muted)">—</span>'}</td>
+    <td style="text-align:right">${fltd(avgLtDelta)}</td>
+  </tr>`;
+
   return`<div class="card mb12">
     <div class="card-title">Kontribusi Internal per Area
       <span class="card-badge">klik area untuk expand jalur</span>
