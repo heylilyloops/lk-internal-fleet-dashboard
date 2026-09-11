@@ -815,7 +815,9 @@ function renderTrendChart(view){
 
   if(view==='total'){
     const d=allMonths.map(m=>byMonthArea['__total__'][m]||{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
-    datasets=comboDatasets(d,'#266CA9');
+    datasets=[
+      {label:'Saving Scope (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y',spanGaps:true},
+    ];
   } else if(view==='area'){
     // Scope areas only: Jawa Barat, Lampung, Jawa Timur
     const aColors=ALL_AREA_COLORS;
@@ -901,8 +903,7 @@ function renderTrendChart(view){
   };
 
   if(view==='total'){
-    opts.scales.y2={type:'linear',position:'right',ticks:{color:'#00c49a',font:{size:10}},grid:{display:false},title:{display:true,text:'CBM',color:'#00c49a',font:{size:10}}};
-    opts.scales.y3={type:'linear',position:'right',ticks:{color:'#22a06b',font:{size:10},callback:v=>v+'Jt'},grid:{display:false},title:{display:true,text:'Saving (Jt)',color:'#22a06b',font:{size:10}},offset:true};
+    opts.scales.y={type:'linear',position:'left',ticks:{color:'#22a06b',font:{size:10},callback:v=>v+'Jt'},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Saving (Jt)',color:'#22a06b',font:{size:10}}};
   }
   if(view==='kontrib'){
     opts.scales.x.stacked=true;
@@ -910,7 +911,31 @@ function renderTrendChart(view){
     opts.scales.y4={type:'linear',position:'right',min:0,max:100,ticks:{color:'#f5a623',font:{size:10},callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'% Internal',color:'#f5a623',font:{size:10}}};
   }
 
-  CH['cTrend']=new Chart(el,{data:{labels:mLabels,datasets},options:opts});
+  // Data label khusus buat garis Saving Scope (Jt) — biar angka Rp-nya keliatan langsung di chart
+  const savingLabelPlugin={
+    id:'savingDataLabel',
+    afterDatasetsDraw(chart){
+      const dsIndex=chart.data.datasets.findIndex(d=>d.label==='Saving Scope (Jt)');
+      if(dsIndex<0) return;
+      const meta=chart.getDatasetMeta(dsIndex);
+      if(meta.hidden) return;
+      const ds=chart.data.datasets[dsIndex];
+      const ctx=chart.ctx;
+      ctx.save();
+      ctx.font='600 10px Helvetica Neue,Arial,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillStyle='#22a06b';
+      meta.data.forEach((point,i)=>{
+        const v=ds.data[i];
+        if(v===null||v===undefined) return;
+        ctx.fillText(v+'Jt',point.x,point.y-10);
+      });
+      ctx.restore();
+    }
+  };
+  const chartPlugins=view==='total'?[savingLabelPlugin]:[];
+
+  CH['cTrend']=new Chart(el,{data:{labels:mLabels,datasets},options:opts,plugins:chartPlugins});
 }
 
 function setTrendView(view){
@@ -920,6 +945,9 @@ function setTrendView(view){
     const active=(k==='Total'&&view==='total')||(k==='Area'&&view==='area')||(k==='DCJ'&&view==='dcj')||(k==='DCS'&&view==='dcs')||(k==='Armada'&&view==='armada')||(k==='Kontrib'&&view==='kontrib');
     if(btn){btn.style.background=active?'var(--blue)':'transparent';btn.style.color=active?'#fff':'var(--muted)';}
   });
+  const badgeTextMap={total:'Line=Saving (scope)',area:'Line=Trip per Area',dcj:'Bar=Trip · Line=Saving (Jt)',dcs:'Bar=Trip · Line=CBM · Line=Saving (scope)',armada:'Bar=Trip per Type Armada',kontrib:'Bar=Trip Internal/Eksternal · Line=%Internal'};
+  const badgeEl=document.getElementById('trendBadgeText');
+  if(badgeEl) badgeEl.textContent=badgeTextMap[view]||'';
   renderTrendChart(view);
 }
 
@@ -1410,7 +1438,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
   const chartsHTML=`<div class="card mb12">
     <div class="card-title">Trend LK Internal per Bulan
-      <span class="card-badge">Bar=Trip · Line=CBM · Line=Saving (scope)</span>
+      <span class="card-badge" id="trendBadgeText">Line=Saving (scope)</span>
       <div style="margin-left:auto;display:flex;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px">
         <button id="trendToggleTotal" onclick="setTrendView('total')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-family:var(--font);font-weight:600">Total LK</button>
         <button id="trendToggleArea" onclick="setTrendView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
