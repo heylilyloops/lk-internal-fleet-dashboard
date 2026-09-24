@@ -379,6 +379,7 @@ AREA_IDX_25  = col2025.get('Area', 2)
 DEST_IDX_25  = col2025.get('Destination', 3)
 OWNER_IDX_25 = col2025.get('Owner', 12)  # kolom 'Owner' cuma muncul di header block Corp Sidoarjo (kolom M), bukan di row 1 sheet — default ke index 12
 DATE_IDX_25  = col2025.get('Delivery Date', 9)
+CBM_IDX_25   = col2025.get('CBM', 11)
 
 def parse_ddate_25(d):
     """Delivery Date format M/D/YYYY -> YYYY-MM-DD (presisi harian, biar bisa difilter date range persis)."""
@@ -391,8 +392,8 @@ def parse_ddate_25(d):
     except:
         return None
 
-agg_2025 = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][date][owner] = trips
-agg_2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int))))  # [site][date][area][owner] = trips
+agg_2025 = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))  # [site][date][owner] = [trips, cbm]
+agg_2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0]))))  # [site][date][area][owner] = [trips, cbm]
 for line in data_2025[1:]:
     if len(line) <= max(SITE_IDX_25, MONTH_IDX_25): continue
     site25 = line[SITE_IDX_25].strip()
@@ -409,7 +410,13 @@ for line in data_2025[1:]:
         if not (1 <= m_fb <= 12): continue
         ddate25 = f"2025-{m_fb:02d}-15"
     owner25 = line[OWNER_IDX_25].strip() if OWNER_IDX_25 >= 0 and len(line) > OWNER_IDX_25 else ''
-    agg_2025[site25][ddate25][owner25] += 1
+    cbm_raw25 = line[CBM_IDX_25].strip() if len(line) > CBM_IDX_25 else ''
+    try:
+        cbm25 = float(cbm_raw25.replace(',', '')) if cbm_raw25 and cbm_raw25 not in ('#N/A', '#VALUE!', '#REF!') else 0.0
+    except:
+        cbm25 = 0.0
+    agg_2025[site25][ddate25][owner25][0] += 1
+    agg_2025[site25][ddate25][owner25][1] += cbm25
     # Area untuk breakdown "Per Area": Lampung tidak pernah muncul sbg nilai Area mentah
     # (sama seperti data 2026), tapi keisi di kolom Destination — override ke 'Lampung' kalau match.
     area25 = line[AREA_IDX_25].strip() if len(line) > AREA_IDX_25 else ''
@@ -419,16 +426,17 @@ for line in data_2025[1:]:
     # Tangkep semua area beneran (bukan cuma yg ada di SAVING_SCOPE) — biar destinasi kayak
     # Jawa Tengah/Banten ikut ada data 2025-nya buat pembanding, bukan cuma area yg "resmi" masuk scope saving.
     if area25 and area25 not in ('#N/A', 'Area', '0'):
-        agg_2025_area[site25][ddate25][area25][owner25] += 1
+        agg_2025_area[site25][ddate25][area25][owner25][0] += 1
+        agg_2025_area[site25][ddate25][area25][owner25][1] += cbm25
 
 trip_2025_list = [
-    {"site": s, "date": d, "m": d[5:7], "owner": o, "trips": v}
+    {"site": s, "date": d, "m": d[5:7], "owner": o, "trips": v[0], "cbm": round(v[1], 2)}
     for s, dates in agg_2025.items()
     for d, owners in dates.items()
     for o, v in owners.items()
 ]
 trip_2025_area_list = [
-    {"site": s, "date": d, "m": d[5:7], "area": a, "owner": o, "trips": v}
+    {"site": s, "date": d, "m": d[5:7], "area": a, "owner": o, "trips": v[0], "cbm": round(v[1], 2)}
     for s, dates in agg_2025_area.items()
     for d, areas in dates.items()
     for a, owners in areas.items()
