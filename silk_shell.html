@@ -1254,6 +1254,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
   // 2.5 YoY 2025 vs 2026 (trip volume only, no cost)
   const yoyHTML=buildYoyHTML();
+  // 2.55 YoY CBM 2025 vs 2026 — sama struktur, tapi CBM bukan trip count
+  const cbmYoyHTML=buildCbmYoyHTML();
 
   // 3. Site cards
   let siteHTML=`<div class="grid4" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
@@ -1483,7 +1485,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   // 2.6 Kontribusi % Internal per Area — sekarang bisa 2025 vs 2026, section terpisah dari YoY
   const kontribHTML=buildKontribHTML();
 
-  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+kontribHTML+alertHTML+siteHTML+scHTML+momHTML;
+  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+cbmYoyHTML+kontribHTML+alertHTML+siteHTML+scHTML+momHTML;
 
   // Store data for toggle
   window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
@@ -1494,6 +1496,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     renderTrendChart('total');
 
     if(window._yoyData) renderYoYChart(window._yoyView||'total');
+    if(window._cbmYoyData) renderCbmYoYChart();
 
     renderKontribChart();
   },30);
@@ -1568,6 +1571,152 @@ function buildYoyHTML(){
     <div id="yoyChartWrap" style="position:relative;min-height:230px"><canvas id="cYoY"></canvas></div>
     <div id="yoyFooter" style="font-size:10px;color:var(--muted);margin-top:6px">${yoyFooterText()}</div>
   </div>`;
+}
+
+// ── CBM 2025 vs 2026 (mirror dari YoY trip, tapi jumlahin CBM bukan trip count) ──
+function buildCbmYoyHTML(){
+  if(typeof TRIP2025==='undefined') return '';
+  const b=window._yoyBase;
+  if(!b) return ''; // butuh buildYoyHTML() udah jalan duluan (nyediain monthKeys/dayFrom/dayTo/allRaw26/allList25)
+  const has2025Cbm=b.allList25.some(e=>e.cbm!==undefined);
+  if(!has2025Cbm){
+    return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Data CBM 2025 belum tersedia (perlu re-generate dashboard setelah update pipeline).</div>`;
+  }
+  window._cbmYoySegment=window._cbmYoySegment||'all';
+  window._cbmYoyData=computeCbmYoySeries(window._cbmYoySegment);
+  const d=window._cbmYoyData;
+  const rangeLabel=b.dayFrom==='01'&&b.dayTo==='31'?'':` (tgl ${b.dayFrom}\u2013${b.dayTo})`;
+  const badge=d.growth===null?'':`<span id="cbmYoyBadge" class="pill ${d.growth>=0?'phi':'pvlo'}" style="margin-left:8px">${d.growth>=0?'▲':'▼'} ${Math.abs(d.growth)}% YoY (${b.ovLabel}${rangeLabel})</span>`;
+  const segLabel=window._cbmYoySegment!=='all'?` (${window._cbmYoySegment})`:'';
+  const kpiHTMLInner=`<div class="kpi-row" style="grid-template-columns:repeat(1,1fr);max-width:340px;margin-bottom:12px">
+    <div class="kpi" style="border-left:3px solid #00c49a">
+      <div class="kpi-label">Total CBM Keseluruhan${segLabel}</div>
+      <div class="kpi-value">${fmt(d.sum26ov)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> vs ${fmt(d.sum25ov)}</span></div>
+      <div class="kpi-sub">${d.growth===null?'—':`<span style="color:${d.growth>=0?CGREEN:CRED}">${d.growth>=0?'▲':'▼'} ${Math.abs(d.growth)}%</span> YoY (${b.ovLabel})`}</div>
+    </div>
+  </div>`;
+  return `<div class="card mb12">
+    <div class="card-title">Perbandingan CBM Internal — 2025 vs 2026${badge}
+      <span class="card-badge">volume CBM (m³), tanpa cost${rangeLabel?' · tiap bulan dihitung tgl '+b.dayFrom+'\u2013'+b.dayTo:''}</span>
+      <span style="float:right;display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px">
+        <button id="cbmYoySegAll" onclick="setCbmYoySegment('all')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--card);color:var(--txt);font-family:var(--font);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)">Semua</button>
+        <button id="cbmYoySegRetail" onclick="setCbmYoySegment('Retail')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Retail</button>
+        <button id="cbmYoySegIndustrial" onclick="setCbmYoySegment('Industrial')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Industrial</button>
+      </span>
+    </div>
+    <div id="cbmYoyKpiWrap">${kpiHTMLInner}</div>
+    <div id="cbmYoyChartWrap" style="position:relative;min-height:230px"><canvas id="cCbmYoY"></canvas></div>
+    <div id="cbmYoyFooter" style="font-size:10px;color:var(--muted);margin-top:6px">Total 2025 (${b.ovLabel}): ${fmt(d.sum25ov)} m³ · Total 2026 (${b.ovLabel}): ${fmt(d.sum26ov)} m³</div>
+  </div>`;
+}
+
+function computeCbmYoySeries(segment){
+  const b=window._yoyBase;
+  if(!b) return null;
+  const {monthKeys,MLBL12,monthMask,dayFrom,dayTo}=b;
+  const raw26=segment==='all'?b.allRaw26:b.allRaw26.filter(r=>siteSegment(r[0])===segment);
+  const list25=segment==='all'?b.allList25:b.allList25.filter(e=>siteSegment(e.site)===segment);
+
+  const by26={}; monthKeys.forEach(m=>{
+    const lo='2026-'+m+'-'+dayFrom, hi='2026-'+m+'-'+dayTo;
+    by26[m]=raw26.filter(r=>r[7]>=lo&&r[7]<=hi).reduce((s,r)=>s+(r[9]||0),0);
+  });
+  const by25={}; monthKeys.forEach(m=>{
+    const lo='2025-'+m+'-'+dayFrom, hi='2025-'+m+'-'+dayTo;
+    by25[m]=list25.filter(e=>e.date&&e.date>=lo&&e.date<=hi).reduce((s,e)=>s+(e.cbm||0),0);
+  });
+  const data25=monthKeys.map(m=>+(by25[m]||0).toFixed(0));
+  const data26=monthKeys.map((m,i)=>monthMask[i]?+(by26[m]||0).toFixed(0):null);
+
+  const litFrom26=dateFrom||null, litTo26=dateTo||null;
+  const sum26ov=Math.round(raw26.filter(r=>(!litFrom26||r[7]>=litFrom26)&&(!litTo26||r[7]<=litTo26)).reduce((s,r)=>s+(r[9]||0),0));
+  const in25Lit=date25Range();
+  const sum25ov=Math.round(list25.filter(e=>in25Lit(e)).reduce((s,e)=>s+(e.cbm||0),0));
+  const growth=sum25ov>0?Math.round((sum26ov-sum25ov)/sum25ov*100):null;
+
+  return{monthKeys,MLBL12,data25,data26,sum25ov,sum26ov,growth};
+}
+
+function setCbmYoySegment(segment){
+  window._cbmYoySegment=segment;
+  const btns={all:'cbmYoySegAll',Retail:'cbmYoySegRetail',Industrial:'cbmYoySegIndustrial'};
+  Object.entries(btns).forEach(([v,id])=>{
+    const bt=document.getElementById(id);
+    if(!bt) return;
+    const active=v===segment;
+    bt.style.background=active?'var(--card)':'transparent';
+    bt.style.color=active?'var(--txt)':'var(--muted)';
+    bt.style.fontWeight=active?'600':'500';
+    bt.style.boxShadow=active?'0 1px 2px rgba(0,0,0,.08)':'none';
+  });
+  window._cbmYoyData=computeCbmYoySeries(segment);
+  const d=window._cbmYoyData;
+  const b=window._yoyBase;
+  const badge=document.getElementById('cbmYoyBadge');
+  if(badge&&d.growth!==null){
+    badge.className=`pill ${d.growth>=0?'phi':'pvlo'}`;
+    badge.innerHTML=`${d.growth>=0?'▲':'▼'} ${Math.abs(d.growth)}% YoY (${b.ovLabel})`;
+  }
+  const segLabel=segment!=='all'?` (${segment})`:'';
+  const kpiWrap=document.getElementById('cbmYoyKpiWrap');
+  if(kpiWrap) kpiWrap.innerHTML=`<div class="kpi-row" style="grid-template-columns:repeat(1,1fr);max-width:340px;margin-bottom:12px">
+    <div class="kpi" style="border-left:3px solid #00c49a">
+      <div class="kpi-label">Total CBM Keseluruhan${segLabel}</div>
+      <div class="kpi-value">${fmt(d.sum26ov)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> vs ${fmt(d.sum25ov)}</span></div>
+      <div class="kpi-sub">${d.growth===null?'—':`<span style="color:${d.growth>=0?CGREEN:CRED}">${d.growth>=0?'▲':'▼'} ${Math.abs(d.growth)}%</span> YoY (${b.ovLabel})`}</div>
+    </div>
+  </div>`;
+  const footer=document.getElementById('cbmYoyFooter');
+  if(footer) footer.innerHTML=`Total 2025 (${b.ovLabel}): ${fmt(d.sum25ov)} m³ · Total 2026 (${b.ovLabel}): ${fmt(d.sum26ov)} m³`;
+  renderCbmYoYChart();
+}
+
+function renderCbmYoYChart(){
+  const d=window._cbmYoyData;
+  if(!d) return;
+  dc('cCbmYoY');
+  const wrap=document.getElementById('cbmYoyChartWrap');
+  if(!wrap) return;
+  wrap.innerHTML=`<div style="position:relative;height:230px"><canvas id="cCbmYoY"></canvas></div>`;
+  const el=document.getElementById('cCbmYoY');
+  const dataLabelPlugin={
+    id:'cbmYoyDataLabel',
+    afterDatasetsDraw(chart){
+      const ctx=chart.ctx;
+      chart.data.datasets.forEach((ds,dsIdx)=>{
+        const meta=chart.getDatasetMeta(dsIdx);
+        if(meta.hidden) return;
+        ctx.save();
+        ctx.font='600 10px Helvetica Neue,Arial,sans-serif';
+        ctx.textAlign='center';
+        ctx.fillStyle=ds.borderColor||'#333';
+        meta.data.forEach((point,i)=>{
+          const v=ds.data[i];
+          if(v===null||v===undefined) return;
+          ctx.fillText(fmt(v),point.x,point.y-9);
+        });
+        ctx.restore();
+      });
+    }
+  };
+  CH['cCbmYoY']=new Chart(el,{
+    type:'line',
+    data:{labels:d.MLBL12,datasets:[
+      {label:'2025',data:d.data25,borderColor:'#9fb3c8',backgroundColor:'rgba(159,179,200,.1)',borderWidth:2,borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#9fb3c8',tension:0.3,spanGaps:true},
+      {label:'2026',data:d.data26,borderColor:'#00c49a',backgroundColor:'rgba(0,196,154,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#00c49a',tension:0.3,spanGaps:false}
+    ]},
+    plugins:[dataLabelPlugin],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:16}},
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
+      scales:{
+        x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
+        y:{ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'CBM (m³)',color:'#637d9a',font:{size:10}}}
+      }
+    }
+  });
 }
 
 function buildKontribHTML(){
