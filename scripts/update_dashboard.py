@@ -116,7 +116,7 @@ for line in int_data[1:]:
         do_val = int(float(do_raw)) if do_raw else 0
         cbm = float(cbm_raw) if cbm_raw else 0.0
         del_date = None
-        for fmt_str in ('%m/%d/%Y', '%d-%b-%Y', '%d/%m/%Y', '%Y-%m-%d'):
+        for fmt_str in ('%m/%d/%Y', '%d-%b-%Y', '%d/%m/%Y', '%Y-%m-%d', '%d %b %Y', '%d %b %y'):
             try:
                 del_date = datetime.strptime(del_date_raw, fmt_str).strftime('%Y-%m-%d')
                 break
