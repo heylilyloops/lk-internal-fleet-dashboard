@@ -467,7 +467,7 @@ def parse_date_e25(d):
     except:
         return None
 
-agg_ext2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # [site][date][area] = trips
+agg_ext2025_area = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))  # [site][date][area] = [trips, cbm]
 skipped_e25 = 0
 for line in data_ext2025[1:]:
     if len(line) <= max(SITE_IDX_E25, MODA_IDX_E25, DATE_IDX_E25):
@@ -489,11 +489,17 @@ for line in data_ext2025[1:]:
     jalur_e25 = line[JALUR_IDX_E25].strip().title() if len(line) > JALUR_IDX_E25 else ''
     if jalur_e25 == 'Lampung':
         area_e25 = 'Lampung'
+    cbm_e25_raw = line[CBM_IDX_E25].strip() if len(line) > CBM_IDX_E25 else ''
+    try:
+        cbm_e25 = float(cbm_e25_raw.replace(',', '')) if cbm_e25_raw and cbm_e25_raw not in ('#N/A', '#VALUE!', '#REF!') else 0.0
+    except:
+        cbm_e25 = 0.0
     if area_e25 and area_e25 not in ('#N/A', 'Area', '0'):
-        agg_ext2025_area[site_e25][ddate_e25][area_e25] += 1
+        agg_ext2025_area[site_e25][ddate_e25][area_e25][0] += 1
+        agg_ext2025_area[site_e25][ddate_e25][area_e25][1] += cbm_e25
 
 ext_2025_area_list = [
-    {"site": s, "date": d, "m": d[5:7], "area": a, "trips": v}
+    {"site": s, "date": d, "m": d[5:7], "area": a, "trips": v[0], "cbm": round(v[1], 2)}
     for s, dates in agg_ext2025_area.items()
     for d, areas in dates.items()
     for a, v in areas.items()
