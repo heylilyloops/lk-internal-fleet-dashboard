@@ -1222,11 +1222,13 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
 
   </div>
-  <div class="kpi-row" style="grid-template-columns:repeat(6,1fr);margin-top:8px">
+  <div class="kpi-row" style="grid-template-columns:repeat(7,1fr);margin-top:8px">
     ${(()=>{
       const totalDO=rows.reduce((s,r)=>s+(r[8]||0),0);
       const avgDOPerTrip=rows.length>0?+(totalDO/rows.length).toFixed(1):0;
       const savAll=rows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0)-(r[3]||0),0);
+      const totalCbmKpi=rows.reduce((s,r)=>s+(r[9]||0),0);
+      const avgCbmPerTrip=rows.length>0?+(totalCbmKpi/rows.length).toFixed(1):0;
       const olfRows=rows.filter(r=>r[14]&&r[9]);
       const olfVal=olfRows.length?+(olfRows.reduce((s,r)=>s+(r[9]/r[14]*100),0)/olfRows.length).toFixed(1):null;
       const olfCls=olfVal>=80?'c-green':olfVal>=60?'c-teal':'c-orange';
@@ -1240,6 +1242,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       <div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${+(tUJP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
       <div class="kpi c-teal"><div class="kpi-label">Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${+(tSewa/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
       <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${+(tMPP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
+      <div class="kpi c-blue"><div class="kpi-label">Total CBM</div><div class="kpi-value">${fmt(totalCbmKpi)}</div><div class="kpi-sub">avg ${avgCbmPerTrip} m³/trip</div></div>
       <div class="kpi ${olfCls}"><div class="kpi-label">OLF Avg Int</div><div class="kpi-value">${olfVal!==null?olfVal+'%':'—'}</div><div class="kpi-sub">CBM/Kapasitas · ${olfRows.length} trip</div></div>`;
     })()}
   </div>`;
@@ -1574,6 +1577,27 @@ function buildYoyHTML(){
 }
 
 // ── CBM 2025 vs 2026 (mirror dari YoY trip, tapi jumlahin CBM bukan trip count) ──
+function buildCbmYoyKpiHTML(){
+  const d=window._cbmYoyData;
+  if(!d) return '';
+  const cardHTML=c=>{
+    const g=c.s25>0?Math.round((c.s26-c.s25)/c.s25*100):null;
+    return`<div class="kpi" style="border-left:3px solid ${c.col}">
+      <div class="kpi-label">${c.key}</div>
+      <div class="kpi-value">${fmt(c.s26)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> vs ${fmt(c.s25)}</span></div>
+      <div class="kpi-sub">${g===null?'—':`<span style="color:${g>=0?CGREEN:CRED}">${g>=0?'▲':'▼'} ${Math.abs(g)}%</span> YoY (${window._yoyBase.ovLabel})`}</div>
+    </div>`;
+  };
+  const segLabel=window._cbmYoySegment&&window._cbmYoySegment!=='all'?` (${window._cbmYoySegment})`:'';
+  const scopeLabel=d.areaCards.map(c=>c.key).join('+')||'Scope';
+  const cards=[{key:'Total CBM Keseluruhan'+segLabel,col:'#22a06b',s25:d.sum25ov,s26:d.sum26ov}];
+  if(d.areaCards.length>1){
+    cards.push({key:scopeLabel+segLabel,col:'#5b6b7a',s25:d.scopeSum25,s26:d.scopeSum26});
+  }
+  const allCards=cards.concat(d.areaCards);
+  return `<div class="kpi-row" style="grid-template-columns:repeat(${Math.min(allCards.length,5)},1fr);margin-bottom:12px">${allCards.map(cardHTML).join('')}</div>`;
+}
+
 function buildCbmYoyHTML(){
   if(typeof TRIP2025==='undefined') return '';
   const b=window._yoyBase;
@@ -1587,14 +1611,6 @@ function buildCbmYoyHTML(){
   const d=window._cbmYoyData;
   const rangeLabel=b.dayFrom==='01'&&b.dayTo==='31'?'':` (tgl ${b.dayFrom}\u2013${b.dayTo})`;
   const badge=d.growth===null?'':`<span id="cbmYoyBadge" class="pill ${d.growth>=0?'phi':'pvlo'}" style="margin-left:8px">${d.growth>=0?'▲':'▼'} ${Math.abs(d.growth)}% YoY (${b.ovLabel}${rangeLabel})</span>`;
-  const segLabel=window._cbmYoySegment!=='all'?` (${window._cbmYoySegment})`:'';
-  const kpiHTMLInner=`<div class="kpi-row" style="grid-template-columns:repeat(1,1fr);max-width:340px;margin-bottom:12px">
-    <div class="kpi" style="border-left:3px solid #00c49a">
-      <div class="kpi-label">Total CBM Keseluruhan${segLabel}</div>
-      <div class="kpi-value">${fmt(d.sum26ov)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> vs ${fmt(d.sum25ov)}</span></div>
-      <div class="kpi-sub">${d.growth===null?'—':`<span style="color:${d.growth>=0?CGREEN:CRED}">${d.growth>=0?'▲':'▼'} ${Math.abs(d.growth)}%</span> YoY (${b.ovLabel})`}</div>
-    </div>
-  </div>`;
   return `<div class="card mb12">
     <div class="card-title">Perbandingan CBM Internal — 2025 vs 2026${badge}
       <span class="card-badge">volume CBM (m³), tanpa cost${rangeLabel?' · tiap bulan dihitung tgl '+b.dayFrom+'\u2013'+b.dayTo:''}</span>
@@ -1604,7 +1620,7 @@ function buildCbmYoyHTML(){
         <button id="cbmYoySegIndustrial" onclick="setCbmYoySegment('Industrial')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Industrial</button>
       </span>
     </div>
-    <div id="cbmYoyKpiWrap">${kpiHTMLInner}</div>
+    <div id="cbmYoyKpiWrap">${buildCbmYoyKpiHTML()}</div>
     <div id="cbmYoyChartWrap" style="position:relative;min-height:230px"><canvas id="cCbmYoY"></canvas></div>
     <div id="cbmYoyFooter" style="font-size:10px;color:var(--muted);margin-top:6px">Total 2025 (${b.ovLabel}): ${fmt(d.sum25ov)} m³ · Total 2026 (${b.ovLabel}): ${fmt(d.sum26ov)} m³</div>
   </div>`;
@@ -1634,7 +1650,19 @@ function computeCbmYoySeries(segment){
   const sum25ov=Math.round(list25.filter(e=>in25Lit(e)).reduce((s,e)=>s+(e.cbm||0),0));
   const growth=sum25ov>0?Math.round((sum26ov-sum25ov)/sum25ov*100):null;
 
-  return{monthKeys,MLBL12,data25,data26,sum25ov,sum26ov,growth};
+  const YOY_AREAS=b.YOY_AREAS;
+  const areaCards=YOY_AREAS.map(a=>{
+    let sitesForArea=scopeSitesForArea(a);
+    if(activeSite!=='all') sitesForArea=sitesForArea.filter(s=>siteInFilter(s));
+    if(segment!=='all') sitesForArea=sitesForArea.filter(s=>siteSegment(s)===segment);
+    const s25=Math.round(areaIntCbm(a,sitesForArea,'2025'));
+    const s26=Math.round(areaIntCbm(a,sitesForArea,'2026'));
+    return{key:a,col:ALL_AREA_COLORS[a],s25,s26};
+  });
+  const scopeSum25=areaCards.reduce((s,c)=>s+c.s25,0);
+  const scopeSum26=areaCards.reduce((s,c)=>s+c.s26,0);
+
+  return{monthKeys,MLBL12,data25,data26,sum25ov,sum26ov,growth,areaCards,scopeSum25,scopeSum26};
 }
 
 function setCbmYoySegment(segment){
@@ -1657,15 +1685,8 @@ function setCbmYoySegment(segment){
     badge.className=`pill ${d.growth>=0?'phi':'pvlo'}`;
     badge.innerHTML=`${d.growth>=0?'▲':'▼'} ${Math.abs(d.growth)}% YoY (${b.ovLabel})`;
   }
-  const segLabel=segment!=='all'?` (${segment})`:'';
   const kpiWrap=document.getElementById('cbmYoyKpiWrap');
-  if(kpiWrap) kpiWrap.innerHTML=`<div class="kpi-row" style="grid-template-columns:repeat(1,1fr);max-width:340px;margin-bottom:12px">
-    <div class="kpi" style="border-left:3px solid #00c49a">
-      <div class="kpi-label">Total CBM Keseluruhan${segLabel}</div>
-      <div class="kpi-value">${fmt(d.sum26ov)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> vs ${fmt(d.sum25ov)}</span></div>
-      <div class="kpi-sub">${d.growth===null?'—':`<span style="color:${d.growth>=0?CGREEN:CRED}">${d.growth>=0?'▲':'▼'} ${Math.abs(d.growth)}%</span> YoY (${b.ovLabel})`}</div>
-    </div>
-  </div>`;
+  if(kpiWrap) kpiWrap.innerHTML=buildCbmYoyKpiHTML();
   const footer=document.getElementById('cbmYoyFooter');
   if(footer) footer.innerHTML=`Total 2025 (${b.ovLabel}): ${fmt(d.sum25ov)} m³ · Total 2026 (${b.ovLabel}): ${fmt(d.sum26ov)} m³`;
   renderCbmYoYChart();
@@ -1971,6 +1992,27 @@ function areaExtTrips(area,sites,year){
     return ej.filter(e=>e.jalur==='Lampung').reduce((s,e)=>s+e.trips,0);
   }
   return ej.filter(e=>e.area===area&&e.jalur!=='Lampung').reduce((s,e)=>s+e.trips,0);
+}
+
+// Sama persis kayak areaIntTrips/areaExtTrips, tapi jumlahin CBM (r[9]/e.cbm) bukan ngitung baris
+function areaIntCbm(area,sites,year){
+  if(year==='2025'){
+    const in25=date25Range();
+    return (typeof TRIP2025_AREA!=='undefined'?TRIP2025_AREA:[]).filter(e=>sites.includes(e.site)&&entryMatchesBUOwner(e)&&e.area===area&&in25(e)).reduce((s,e)=>s+(e.cbm||0),0);
+  }
+  return RAW.filter(r=>sites.includes(r[0])&&rowMatchesBUOwner(r)&&(area==='Lampung'?r[2]==='Lampung':(r[1]===area&&r[2]!=='Lampung'))&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo)).reduce((s,r)=>s+(r[9]||0),0);
+}
+
+function areaExtCbm(area,sites,year){
+  if(year==='2025'){
+    const in25=date25Range();
+    return (typeof EXT2025_AREA!=='undefined'?EXT2025_AREA:[]).filter(e=>sites.includes(e.site)&&e.area===area&&in25(e)).reduce((s,e)=>s+(e.cbm||0),0);
+  }
+  const ej=(typeof EXT_JALUR!=='undefined'?EXT_JALUR:[]).filter(e=>sites.includes(e.site)&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo));
+  if(area==='Lampung'){
+    return ej.filter(e=>e.jalur==='Lampung').reduce((s,e)=>s+(e.cbm||0),0);
+  }
+  return ej.filter(e=>e.area===area&&e.jalur!=='Lampung').reduce((s,e)=>s+(e.cbm||0),0);
 }
 
 function areaExtTripsMonthly(area,sites,year){
