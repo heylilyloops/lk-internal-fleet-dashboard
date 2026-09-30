@@ -1511,10 +1511,7 @@ function buildYoyHTML(){
   const monthKeysAll=MLBL_ALL.map((_,i)=>String(i+1).padStart(2,'0'));
 
   const has2025=activeSite==='all'||TRIP2025.some(e=>siteInFilter(e.site));
-  if(!has2025){
-    const siteNames=activeSite==='all'?'':activeSite.map(s=>SSHORT[s]||s).join(', ');
-    return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Belum ada data trip 2025 untuk ${siteNames} (site baru di 2026).</div>`;
-  }
+  const no2025Note=has2025?'':`<div style="padding:8px 16px;font-size:10.5px;color:var(--muted);background:var(--bg);border-radius:6px;margin-bottom:10px">Belum ada data trip 2025 untuk ${activeSite==='all'?'':activeSite.map(s=>SSHORT[s]||s).join(', ')} (site baru di 2026) — garis 2025 di bawah bakal kosong/0.</div>`;
 
   // Ini chart TREND, jadi kalau user pilih range hari tertentu (mis. 1-7 Agustus), tiap bulan (Jan..Agu)
   // tetap ditampilin, tapi masing-masing cuma dihitung tanggal 1-7 aja (apple-to-apple per bulan) —
@@ -1570,6 +1567,7 @@ function buildYoyHTML(){
         </span>
       </span>
     </div>
+    ${no2025Note}
     ${yoyKpiHTML}
     <div id="yoyChartWrap" style="position:relative;min-height:230px"><canvas id="cYoY"></canvas></div>
     <div id="yoyFooter" style="font-size:10px;color:var(--muted);margin-top:6px">${yoyFooterText()}</div>
@@ -1602,8 +1600,10 @@ function buildCbmYoyHTML(){
   if(typeof TRIP2025==='undefined') return '';
   const b=window._yoyBase;
   if(!b) return ''; // butuh buildYoyHTML() udah jalan duluan (nyediain monthKeys/dayFrom/dayTo/allRaw26/allList25)
-  const has2025Cbm=b.allList25.some(e=>e.cbm!==undefined);
-  if(!has2025Cbm){
+  // Cek di SELURUH TRIP2025 (bukan yg udah difilter per-site) — biar bedain "site ini emang belum ada
+  // data 2025" (harusnya tetep render, garis 2025-nya 0) vs "pipeline belum di-update, field cbm belum ada".
+  const pipelineHasCbm=TRIP2025.length===0||TRIP2025.some(e=>e.cbm!==undefined);
+  if(!pipelineHasCbm){
     return `<div class="card mb12" style="padding:12px 16px;font-size:11px;color:var(--muted)">Data CBM 2025 belum tersedia (perlu re-generate dashboard setelah update pipeline).</div>`;
   }
   window._cbmYoySegment=window._cbmYoySegment||'all';
