@@ -178,7 +178,7 @@ for line in ext_data[1:]:
         continue
 
     del_date = None
-    for fmt_str in ('%d %b %y', '%d-%b-%y', '%m/%d/%Y', '%Y-%m-%d'):
+    for fmt_str in ('%d %b %y', '%d-%b-%y', '%d %b %Y', '%d-%b-%Y', '%m/%d/%Y', '%Y-%m-%d'):
         try:
             del_date = datetime.strptime(delivery_raw, fmt_str).strftime('%Y-%m-%d')
             break
@@ -243,7 +243,7 @@ for line in rdc_data[1:]:
         rdc_skipped += 1; continue
 
     del_date = None
-    for fmt_str in ('%m/%d/%Y', '%d-%b-%Y', '%d %b %y', '%Y-%m-%d'):
+    for fmt_str in ('%m/%d/%Y', '%d-%b-%Y', '%d %b %Y', '%d %b %y', '%Y-%m-%d'):
         try:
             del_date = datetime.strptime(del_raw, fmt_str).strftime('%Y-%m-%d')
             break
