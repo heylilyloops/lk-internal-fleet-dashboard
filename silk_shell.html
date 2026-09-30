@@ -814,9 +814,24 @@ function renderTrendChart(view){
   }
 
   if(view==='total'){
-    const d=allMonths.map(m=>byMonthArea['__total__'][m]||{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
+    // Saving Scope — pakai scope RESMI tiap site (SAVING_SCOPE), bukan dikunci ke Jabar+Lampung+Jatim doang.
+    // Jadi buat Tamora scope-nya Sumatera Utara, Tallo scope-nya Sulawesi Selatan, dst — bukan selalu kosong.
+    const rowsForSaving=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>rowMatchesBUOwner(r)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+    const byMonthScope={}, byMonthAll={};
+    rowsForSaving.forEach(r=>{
+      const m=r[7].slice(0,7);
+      if(!byMonthAll[m]) byMonthAll[m]={ci:0,ce:0,ceN:0};
+      if(!byMonthScope[m]) byMonthScope[m]={ci:0,ce:0,ceN:0};
+      if(r[4]){
+        byMonthAll[m].ci+=r[3]||0;byMonthAll[m].ce+=r[4];byMonthAll[m].ceN++;
+        if(isScopeRow(r)){byMonthScope[m].ci+=r[3]||0;byMonthScope[m].ce+=r[4];byMonthScope[m].ceN++;}
+      }
+    });
+    const dataSavingScope=allMonths.map(m=>byMonthScope[m]&&byMonthScope[m].ceN>0?+((byMonthScope[m].ce-byMonthScope[m].ci)/1e6).toFixed(1):null);
+    const dataSavingAll=allMonths.map(m=>byMonthAll[m]&&byMonthAll[m].ceN>0?+((byMonthAll[m].ce-byMonthAll[m].ci)/1e6).toFixed(1):null);
     datasets=[
-      {label:'Saving Scope (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y',spanGaps:true},
+      {label:'Saving Scope (Jt)',type:'line',data:dataSavingScope,borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y',spanGaps:true},
+      {label:'Saving All Area (Jt)',type:'line',data:dataSavingAll,borderColor:'#5ba4f5',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:4,pointBackgroundColor:'#5ba4f5',tension:0.3,yAxisID:'y',spanGaps:true},
     ];
   } else if(view==='area'){
     // Scope areas only: Jawa Barat, Lampung, Jawa Timur
@@ -915,22 +930,23 @@ function renderTrendChart(view){
   const savingLabelPlugin={
     id:'savingDataLabel',
     afterDatasetsDraw(chart){
-      const dsIndex=chart.data.datasets.findIndex(d=>d.label==='Saving Scope (Jt)');
-      if(dsIndex<0) return;
-      const meta=chart.getDatasetMeta(dsIndex);
-      if(meta.hidden) return;
-      const ds=chart.data.datasets[dsIndex];
       const ctx=chart.ctx;
-      ctx.save();
-      ctx.font='600 10px Helvetica Neue,Arial,sans-serif';
-      ctx.textAlign='center';
-      ctx.fillStyle='#22a06b';
-      meta.data.forEach((point,i)=>{
-        const v=ds.data[i];
-        if(v===null||v===undefined) return;
-        ctx.fillText(v+'Jt',point.x,point.y-10);
+      chart.data.datasets.forEach((ds,dsIndex)=>{
+        if(!ds.label||!ds.label.startsWith('Saving')) return;
+        const meta=chart.getDatasetMeta(dsIndex);
+        if(meta.hidden) return;
+        ctx.save();
+        ctx.font='600 10px Helvetica Neue,Arial,sans-serif';
+        ctx.textAlign='center';
+        ctx.fillStyle=ds.borderColor||'#333';
+        const offset=dsIndex===0?-10:14; // garis pertama label di atas titik, garis kedua di bawah biar gak numpuk
+        meta.data.forEach((point,i)=>{
+          const v=ds.data[i];
+          if(v===null||v===undefined) return;
+          ctx.fillText(v+'Jt',point.x,point.y+offset);
+        });
+        ctx.restore();
       });
-      ctx.restore();
     }
   };
   const chartPlugins=view==='total'?[savingLabelPlugin]:[];
@@ -945,7 +961,7 @@ function setTrendView(view){
     const active=(k==='Total'&&view==='total')||(k==='Area'&&view==='area')||(k==='DCJ'&&view==='dcj')||(k==='DCS'&&view==='dcs')||(k==='Armada'&&view==='armada')||(k==='Kontrib'&&view==='kontrib');
     if(btn){btn.style.background=active?'var(--blue)':'transparent';btn.style.color=active?'#fff':'var(--muted)';}
   });
-  const badgeTextMap={total:'Line=Saving (scope)',area:'Line=Trip per Area',dcj:'Bar=Trip · Line=Saving (Jt)',dcs:'Bar=Trip · Line=CBM · Line=Saving (scope)',armada:'Bar=Trip per Type Armada',kontrib:'Bar=Trip Internal/Eksternal · Line=%Internal'};
+  const badgeTextMap={total:'Line=Saving Scope · Line=Saving All Area',area:'Line=Trip per Area',dcj:'Bar=Trip · Line=Saving (Jt)',dcs:'Bar=Trip · Line=CBM · Line=Saving (scope)',armada:'Bar=Trip per Type Armada',kontrib:'Bar=Trip Internal/Eksternal · Line=%Internal'};
   const badgeEl=document.getElementById('trendBadgeText');
   if(badgeEl) badgeEl.textContent=badgeTextMap[view]||'';
   renderTrendChart(view);
@@ -1443,7 +1459,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
   const chartsHTML=`<div class="card mb12">
     <div class="card-title">Trend LK Internal per Bulan
-      <span class="card-badge" id="trendBadgeText">Line=Saving (scope)</span>
+      <span class="card-badge" id="trendBadgeText">Line=Saving Scope · Line=Saving All Area</span>
       <div style="margin-left:auto;display:flex;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px">
         <button id="trendToggleTotal" onclick="setTrendView('total')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-family:var(--font);font-weight:600">Total LK</button>
         <button id="trendToggleArea" onclick="setTrendView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
