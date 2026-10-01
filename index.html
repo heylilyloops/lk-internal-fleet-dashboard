@@ -928,6 +928,7 @@ function renderTrendChart(view){
 
   const opts={
     responsive:true,maintainAspectRatio:false,
+    layout:{padding:{top:30}},
     interaction:{mode:'index',intersect:false},
     plugins:{
       legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
@@ -958,14 +959,18 @@ function renderTrendChart(view){
         const meta=chart.getDatasetMeta(dsIndex);
         if(meta.hidden) return;
         ctx.save();
-        ctx.font='600 10px Helvetica Neue,Arial,sans-serif';
+        ctx.font='800 14px Helvetica Neue,Arial,sans-serif';
         ctx.textAlign='center';
+        ctx.lineWidth=3;
+        ctx.strokeStyle='#ffffff';
         ctx.fillStyle=ds.borderColor||'#333';
-        const offset=dsIndex===0?-10:14; // garis pertama label di atas titik, garis kedua di bawah biar gak numpuk
+        const offset=dsIndex===0?-16:20; // garis pertama label di atas titik, garis kedua di bawah biar gak numpuk
         meta.data.forEach((point,i)=>{
           const v=ds.data[i];
           if(v===null||v===undefined) return;
-          ctx.fillText(v+'Jt',point.x,point.y+offset);
+          const txt=v+'Jt';
+          ctx.strokeText(txt,point.x,point.y+offset);
+          ctx.fillText(txt,point.x,point.y+offset);
         });
         ctx.restore();
       });
@@ -1746,13 +1751,18 @@ function renderCbmYoYChart(){
         const meta=chart.getDatasetMeta(dsIdx);
         if(meta.hidden) return;
         ctx.save();
-        ctx.font='600 10px Helvetica Neue,Arial,sans-serif';
+        ctx.font='800 14px Helvetica Neue,Arial,sans-serif';
         ctx.textAlign='center';
+        ctx.lineWidth=3;
+        ctx.strokeStyle='#ffffff';
         ctx.fillStyle=ds.borderColor||'#333';
+        const offset=dsIdx===0?-16:-16;
         meta.data.forEach((point,i)=>{
           const v=ds.data[i];
           if(v===null||v===undefined) return;
-          ctx.fillText(fmt(v),point.x,point.y-9);
+          const txt=fmt(v);
+          ctx.strokeText(txt,point.x,point.y+offset);
+          ctx.fillText(txt,point.x,point.y+offset);
         });
         ctx.restore();
       });
@@ -1767,7 +1777,7 @@ function renderCbmYoYChart(){
     plugins:[dataLabelPlugin],
     options:{
       responsive:true,maintainAspectRatio:false,
-      layout:{padding:{top:16}},
+      layout:{padding:{top:30}},
       interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
       scales:{
@@ -2145,13 +2155,17 @@ function renderYoYChart(view){
         const meta=chart.getDatasetMeta(dsIdx);
         if(meta.hidden) return;
         ctx.save();
-        ctx.font='600 10px Helvetica Neue,Arial,sans-serif';
+        ctx.font='800 14px Helvetica Neue,Arial,sans-serif';
         ctx.textAlign='center';
+        ctx.lineWidth=3;
+        ctx.strokeStyle='#ffffff';
         ctx.fillStyle=ds.borderColor||'#333';
         meta.data.forEach((point,i)=>{
           const v=ds.data[i];
           if(v===null||v===undefined) return;
-          ctx.fillText(fmt(v),point.x,point.y-9);
+          const txt=fmt(v);
+          ctx.strokeText(txt,point.x,point.y-16);
+          ctx.fillText(txt,point.x,point.y-16);
         });
         ctx.restore();
       });
@@ -2170,7 +2184,7 @@ function renderYoYChart(view){
       plugins:[dataLabelPlugin],
       options:{
         responsive:true,maintainAspectRatio:false,
-        layout:{padding:{top:16}},
+        layout:{padding:{top:30}},
         interaction:{mode:'index',intersect:false},
         plugins:{
           legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
