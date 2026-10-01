@@ -525,6 +525,18 @@ let dateFrom='', dateTo='';
 
 // HELPERS
 function fmt(n){return Math.round(n).toLocaleString('id-ID')}
+// Area-chart gradient: fade dari warna solid di garis ke transparan di bawah, buat semua line chart
+// biar ada "feel" area-fill (dipanggil sbg scriptable backgroundColor di dataset Chart.js).
+function areaGradient(hexColor){
+  return (ctx)=>{
+    const area=ctx.chart.chartArea;
+    if(!area) return hexColor+'22';
+    const g=ctx.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);
+    g.addColorStop(0,hexColor+'4D'); // ~30% opacity di dekat garis
+    g.addColorStop(1,hexColor+'00'); // transparan penuh di bawah
+    return g;
+  };
+}
 function fmtJt(n){const a=Math.abs(n);return(n<0?'-':'')+(a>=1e9?(a/1e9).toFixed(2)+' M':(a>=1e6?(a/1e6).toFixed(1)+' Jt':(a/1e3).toFixed(0)+' Rb'))}
 function fmtM(v){return fmtJt(v)}
 function pc(p){return p>=50?'phi':p>=25?'pmi':p>=10?'plo':'pvlo'}
@@ -817,8 +829,8 @@ function renderTrendChart(view){
   function comboDatasets(d, color){
     return [
       {label:'Trip Internal',type:'bar',data:d.map(x=>x.trips),backgroundColor:color+'b3',borderColor:color,borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
-      {label:'CBM (m³)',type:'line',data:d.map(x=>+x.cbm.toFixed(0)),borderColor:'#00c49a',backgroundColor:'rgba(0,196,154,.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#00c49a',tension:0.3,yAxisID:'y2',order:1},
-      {label:'Saving Scope (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y3',order:0,spanGaps:true},
+      {label:'CBM (m³)',type:'line',data:d.map(x=>+x.cbm.toFixed(0)),borderColor:'#00c49a',backgroundColor:areaGradient('#00c49a'),fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:'#00c49a',tension:0.3,yAxisID:'y2',order:1},
+      {label:'Saving Scope (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:'#22a06b',backgroundColor:areaGradient('#22a06b'),fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y3',order:0,spanGaps:true},
     ];
   }
 
@@ -839,18 +851,19 @@ function renderTrendChart(view){
     const dataSavingScope=allMonths.map(m=>byMonthScope[m]&&byMonthScope[m].ceN>0?+((byMonthScope[m].ce-byMonthScope[m].ci)/1e6).toFixed(1):null);
     const dataSavingAll=allMonths.map(m=>byMonthAll[m]&&byMonthAll[m].ceN>0?+((byMonthAll[m].ce-byMonthAll[m].ci)/1e6).toFixed(1):null);
     datasets=[
-      {label:'Saving Scope (Jt)',type:'line',data:dataSavingScope,borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y',spanGaps:true},
-      {label:'Saving All Area (Jt)',type:'line',data:dataSavingAll,borderColor:'#5ba4f5',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:4,pointBackgroundColor:'#5ba4f5',tension:0.3,yAxisID:'y',spanGaps:true},
+      {label:'Saving Scope (Jt)',type:'line',data:dataSavingScope,borderColor:'#22a06b',backgroundColor:areaGradient('#22a06b'),fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y',spanGaps:true},
+      {label:'Saving All Area (Jt)',type:'line',data:dataSavingAll,borderColor:'#5ba4f5',backgroundColor:areaGradient('#5ba4f5'),fill:true,borderWidth:2,borderDash:[5,3],pointRadius:4,pointBackgroundColor:'#5ba4f5',tension:0.3,yAxisID:'y',spanGaps:true},
     ];
   } else if(view==='area'){
     // Scope areas only: Jawa Barat, Lampung, Jawa Timur
     const aColors=ALL_AREA_COLORS;
     SCOPE_AREAS.forEach((area,i)=>{
+      const colArea=aColors[area]||AREA_COLORS[i];
       datasets.push({
         label:area,type:'line',
         data:allMonths.map(m=>(byMonthArea[area]&&byMonthArea[area][m])?byMonthArea[area][m].trips:0),
-        borderColor:aColors[area]||AREA_COLORS[i],
-        backgroundColor:'transparent',
+        borderColor:colArea,
+        backgroundColor:areaGradient(colArea),fill:true,
         borderWidth:2.5,pointRadius:4,
         tension:0.3,yAxisID:'y',order:i,spanGaps:true
       });
@@ -861,7 +874,7 @@ function renderTrendChart(view){
       const d=allMonths.map(m=>byMonthArea[area]&&byMonthArea[area][m]?byMonthArea[area][m]:{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
       const col=Object.values(DCJ_COLORS)[i]||AREA_COLORS[i];
       datasets.push({label:'Trip '+area,type:'bar',data:d.map(x=>x.trips),backgroundColor:col+'99',borderColor:col,borderWidth:1,borderRadius:3,yAxisID:'y',order:i+2,stack:'trips'});
-      datasets.push({label:'Saving '+area+' (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:col,backgroundColor:'transparent',borderWidth:2,pointRadius:4,pointBackgroundColor:col,tension:0.3,yAxisID:'y3',order:i,spanGaps:true,borderDash:i>0?[4,3]:[]});
+      datasets.push({label:'Saving '+area+' (Jt)',type:'line',data:d.map(x=>x.ceS_n>0?+((x.ce_s-x.ci_s)/1e6).toFixed(1):null),borderColor:col,backgroundColor:areaGradient(col),fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:col,tension:0.3,yAxisID:'y3',order:i,spanGaps:true,borderDash:i>0?[4,3]:[]});
     });
   } else if(view==='dcs'){
     const d=allMonths.map(m=>byMonthArea['Jawa Timur']&&byMonthArea['Jawa Timur'][m]?byMonthArea['Jawa Timur'][m]:{trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0});
@@ -909,7 +922,7 @@ function renderTrendChart(view){
     datasets=[
       {label:'Trip Internal',type:'bar',data:intData,backgroundColor:'#1e2d4a',borderRadius:3,yAxisID:'y',order:3,stack:'trips'},
       {label:'Trip Eksternal',type:'bar',data:extData,backgroundColor:'#a8c5e8',borderRadius:3,yAxisID:'y',order:2,stack:'trips'},
-      {label:'% Internal',type:'line',data:pctData,borderColor:'#f5a623',backgroundColor:'transparent',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#f5a623',tension:0.3,yAxisID:'y4',order:1,spanGaps:true}
+      {label:'% Internal',type:'line',data:pctData,borderColor:'#f5a623',backgroundColor:areaGradient('#f5a623'),fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#f5a623',tension:0.3,yAxisID:'y4',order:1,spanGaps:true}
     ];
   }
 
@@ -1748,8 +1761,8 @@ function renderCbmYoYChart(){
   CH['cCbmYoY']=new Chart(el,{
     type:'line',
     data:{labels:d.MLBL12,datasets:[
-      {label:'2025',data:d.data25,borderColor:'#9fb3c8',backgroundColor:'rgba(159,179,200,.1)',borderWidth:2,borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#9fb3c8',tension:0.3,spanGaps:true},
-      {label:'2026',data:d.data26,borderColor:'#00c49a',backgroundColor:'rgba(0,196,154,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#00c49a',tension:0.3,spanGaps:false}
+      {label:'2025',data:d.data25,borderColor:'#9fb3c8',backgroundColor:areaGradient('#9fb3c8'),fill:true,borderWidth:2,borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#9fb3c8',tension:0.3,spanGaps:true},
+      {label:'2026',data:d.data26,borderColor:'#00c49a',backgroundColor:areaGradient('#00c49a'),fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#00c49a',tension:0.3,spanGaps:false}
     ]},
     plugins:[dataLabelPlugin],
     options:{
@@ -2151,8 +2164,8 @@ function renderYoYChart(view){
     CH['cYoY']=new Chart(el,{
       type:'line',
       data:{labels:MLBL12,datasets:[
-        {label:'2025',data:data25,borderColor:'#9fb3c8',backgroundColor:'rgba(159,179,200,.1)',borderWidth:2,borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#9fb3c8',tension:0.3,spanGaps:true},
-        {label:'2026',data:data26,borderColor:'#266CA9',backgroundColor:'rgba(38,108,169,.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#266CA9',tension:0.3,spanGaps:false}
+        {label:'2025',data:data25,borderColor:'#9fb3c8',backgroundColor:areaGradient('#9fb3c8'),fill:true,borderWidth:2,borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#9fb3c8',tension:0.3,spanGaps:true},
+        {label:'2026',data:data26,borderColor:'#266CA9',backgroundColor:areaGradient('#266CA9'),fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#266CA9',tension:0.3,spanGaps:false}
       ]},
       plugins:[dataLabelPlugin],
       options:{
@@ -2408,7 +2421,7 @@ function renderBU(){
           datasets:[
             {label:'Trip Internal',type:'bar',data:buDataShow.map(b=>b.intTrips),backgroundColor:buDataShow.map(b=>(BU_COL[b.key]||'#266CA9')+'b3'),borderColor:buDataShow.map(b=>BU_COL[b.key]||'#266CA9'),borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
             {label:'Trip Eksternal',type:'bar',data:buDataShow.map(b=>b.extTrips),backgroundColor:'#c9d6e3',borderColor:'#9fb3c8',borderWidth:1,borderRadius:4,yAxisID:'y',order:3},
-            {label:'%Internal',type:'line',data:buDataShow.map(b=>b.pctInt),borderColor:'#22a06b',backgroundColor:'rgba(34,160,107,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y2',order:1,spanGaps:true}
+            {label:'%Internal',type:'line',data:buDataShow.map(b=>b.pctInt),borderColor:'#22a06b',backgroundColor:areaGradient('#22a06b'),fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:'#22a06b',tension:0.3,yAxisID:'y2',order:1,spanGaps:true}
           ]
         },
         options:{
@@ -2434,12 +2447,15 @@ function renderBU(){
       CH['cBUTrend']=new Chart(elT,{
         data:{
           labels:mLabels,
-          datasets:buDataShow.map(b=>({
-            label:b.key,type:'line',
-            data:calcBUMonthlySeries(b.key,allMonths),
-            borderColor:BU_COL[b.key]||'#266CA9',backgroundColor:'transparent',
-            borderWidth:2.5,pointRadius:4,tension:0.3,spanGaps:true
-          }))
+          datasets:buDataShow.map(b=>{
+            const buCol=BU_COL[b.key]||'#266CA9';
+            return{
+              label:b.key,type:'line',
+              data:calcBUMonthlySeries(b.key,allMonths),
+              borderColor:buCol,backgroundColor:areaGradient(buCol),fill:true,
+              borderWidth:2.5,pointRadius:4,tension:0.3,spanGaps:true
+            };
+          })
         },
         options:{
           responsive:true,maintainAspectRatio:false,
