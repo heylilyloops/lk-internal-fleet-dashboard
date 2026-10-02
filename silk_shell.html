@@ -919,7 +919,7 @@ function renderTrendChart(view){
 
   const opts={
     responsive:true,maintainAspectRatio:false,
-    layout:{padding:{top:30}},
+    layout:{padding:{top:30,right:36,left:20}},
     interaction:{mode:'index',intersect:false},
     plugins:{
       legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
@@ -951,14 +951,15 @@ function renderTrendChart(view){
         if(meta.hidden) return;
         ctx.save();
         ctx.font='800 14px Helvetica Neue,Arial,sans-serif';
-        ctx.textAlign='center';
         ctx.lineWidth=3;
         ctx.strokeStyle='#ffffff';
         ctx.fillStyle=ds.borderColor||'#333';
         const offset=dsIndex===0?-16:20; // garis pertama label di atas titik, garis kedua di bawah biar gak numpuk
+        const lastIdx=meta.data.length-1;
         meta.data.forEach((point,i)=>{
           const v=ds.data[i];
           if(v===null||v===undefined) return;
+          ctx.textAlign=i===0?'left':i===lastIdx?'right':'center';
           const txt=v+'Jt';
           ctx.strokeText(txt,point.x,point.y+offset);
           ctx.fillText(txt,point.x,point.y+offset);
@@ -1743,14 +1744,15 @@ function renderCbmYoYChart(){
         if(meta.hidden) return;
         ctx.save();
         ctx.font='800 14px Helvetica Neue,Arial,sans-serif';
-        ctx.textAlign='center';
         ctx.lineWidth=3;
         ctx.strokeStyle='#ffffff';
         ctx.fillStyle=ds.borderColor||'#333';
-        const offset=dsIdx===0?-16:-16;
+        const offset=-16;
+        const lastIdx=meta.data.length-1;
         meta.data.forEach((point,i)=>{
           const v=ds.data[i];
           if(v===null||v===undefined) return;
+          ctx.textAlign=i===0?'left':i===lastIdx?'right':'center';
           const txt=fmt(v);
           ctx.strokeText(txt,point.x,point.y+offset);
           ctx.fillText(txt,point.x,point.y+offset);
@@ -1768,7 +1770,7 @@ function renderCbmYoYChart(){
     plugins:[dataLabelPlugin],
     options:{
       responsive:true,maintainAspectRatio:false,
-      layout:{padding:{top:30}},
+      layout:{padding:{top:30,right:36,left:20}},
       interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}}},
       scales:{
@@ -2147,13 +2149,14 @@ function renderYoYChart(view){
         if(meta.hidden) return;
         ctx.save();
         ctx.font='800 14px Helvetica Neue,Arial,sans-serif';
-        ctx.textAlign='center';
         ctx.lineWidth=3;
         ctx.strokeStyle='#ffffff';
         ctx.fillStyle=ds.borderColor||'#333';
+        const lastIdx=meta.data.length-1;
         meta.data.forEach((point,i)=>{
           const v=ds.data[i];
           if(v===null||v===undefined) return;
+          ctx.textAlign=i===0?'left':i===lastIdx?'right':'center';
           const txt=fmt(v);
           ctx.strokeText(txt,point.x,point.y-16);
           ctx.fillText(txt,point.x,point.y-16);
@@ -2175,7 +2178,7 @@ function renderYoYChart(view){
       plugins:[dataLabelPlugin],
       options:{
         responsive:true,maintainAspectRatio:false,
-        layout:{padding:{top:30}},
+        layout:{padding:{top:30,right:36,left:20}},
         interaction:{mode:'index',intersect:false},
         plugins:{
           legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
