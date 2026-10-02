@@ -96,14 +96,18 @@ input[type=date]:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(38,108
 
 /* KPI */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
-.kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;position:relative;overflow:hidden;transition:box-shadow .15s}
-.kpi:hover{box-shadow:0 2px 12px rgba(38,108,169,.1)}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.kpi.c-blue::before{background:var(--blue)}.kpi.c-teal::before{background:var(--teal)}
-.kpi.c-orange::before{background:var(--orange)}.kpi.c-purple::before{background:var(--purple)}
-.kpi.c-green::before{background:var(--green)}.kpi.c-red::before{background:var(--red)}
-.kpi.c-cyan::before{background:var(--cyan)}.kpi.c-yellow::before{background:var(--yellow)}
-.kpi-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:700}
+.kpi{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden;transition:box-shadow .15s,transform .15s}
+.kpi:hover{box-shadow:0 4px 16px rgba(38,108,169,.12);transform:translateY(-1px)}
+.kpi-icon{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;margin-bottom:7px}
+.kpi.c-blue{background:#eaf3fd;border-color:#bcdcfb}.kpi.c-blue .kpi-icon{background:#d6eafd;color:var(--blue)}
+.kpi.c-teal{background:#e6faf5;border-color:#aeeedd}.kpi.c-teal .kpi-icon{background:#cdf5e9;color:var(--teal)}
+.kpi.c-orange{background:#fff3e8;border-color:#fcd9b0}.kpi.c-orange .kpi-icon{background:#fee7cc;color:var(--orange)}
+.kpi.c-purple{background:#f3eefd;border-color:#dccbfa}.kpi.c-purple .kpi-icon{background:#e9ddfc;color:var(--purple)}
+.kpi.c-green{background:#eafaf0;border-color:#b9efcc}.kpi.c-green .kpi-icon{background:#d3f5e0;color:var(--green)}
+.kpi.c-red{background:#fdedee;border-color:#f8c6ca}.kpi.c-red .kpi-icon{background:#fbdade;color:var(--red)}
+.kpi.c-cyan{background:#e7f8fb;border-color:#aee9f3}.kpi.c-cyan .kpi-icon{background:#cdf0f6;color:var(--cyan)}
+.kpi.c-yellow{background:#fff9e6;border-color:#f9e49f;}.kpi.c-yellow .kpi-icon{background:#fcefc2;color:#a87f00}
+.kpi-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:700;display:flex;align-items:center;gap:6px}
 .kpi-value{font-size:22px;font-weight:700;color:var(--txt);line-height:1;letter-spacing:-.5px}
 .kpi-sub{font-size:10px;color:var(--muted);margin-top:4px}
 
@@ -527,6 +531,20 @@ let dateFrom='', dateTo='';
 function fmt(n){return Math.round(n).toLocaleString('id-ID')}
 // Area-chart gradient: fade dari warna solid di garis ke transparan di bawah, buat semua line chart
 // biar ada "feel" area-fill (dipanggil sbg scriptable backgroundColor di dataset Chart.js).
+// Buat KPI card yg warnanya dinamis (inline style, bukan class c-*) — background pastel + border
+// warna penuh, konsisten sama style card yg pake class tetap.
+function kpiPastelStyle(hex){
+  return `background:${hex}17;border:1.5px solid ${hex}55;border-radius:14px`;
+}
+function kpiIconStyle(hex){
+  return `background:${hex}2A;color:${hex}`;
+}
+// Icon generik buat card area/scope yg namanya dinamis (nama area beda-beda tergantung site yg dipilih)
+function kpiIconFor(label){
+  if(label.includes('Total Keseluruhan')||label.includes('Total CBM Keseluruhan')) return '📊';
+  if(label.includes('+')) return '🗂️';
+  return '📍';
+}
 function areaGradient(hexColor){
   return (ctx)=>{
     const area=ctx.chart.chartArea;
@@ -1260,10 +1278,10 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
   // 1. KPI Row
   const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
-    <div class="kpi c-blue"><div class="kpi-label">Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi<br><span style="font-size:9px;color:var(--muted);font-style:italic">*ext: hanya trip darat</span></div></div>
-    <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label">Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
-    <div class="kpi c-teal"><div class="kpi-label">Keunggulan Pengiriman</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
-    <div class="kpi c-orange"><div class="kpi-label">Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
+    <div class="kpi c-blue"><div class="kpi-label"><span class="kpi-icon">🚛</span>Trip Internal LK</div><div class="kpi-value">${fmt(rows.length)}</div><div class="kpi-sub">${fmt(tInt)} int / ${fmt(tAll)} total · ${pct}% kontribusi<br><span style="font-size:9px;color:var(--muted);font-style:italic">*ext: hanya trip darat</span></div></div>
+    <div class="kpi c-${sav>=0?'green':'red'}"><div class="kpi-label"><span class="kpi-icon">💰</span>Savings vs External</div><div class="kpi-value" style="color:${sav>=0?CGREEN:CRED}">${sav>=0?'+':''}${fmtM(sav)}</div><div class="kpi-sub">${scopeLabel}</div></div>
+    <div class="kpi c-teal"><div class="kpi-label"><span class="kpi-icon">⏱️</span>Keunggulan Pengiriman</div><div class="kpi-value" style="color:${slaAvg!==null&&slaAvg>0?CGREEN:slaAvg!==null?CRED:'var(--txt)'}">${slaAvg!==null?(slaAvg>=0?'+':'')+slaAvg+' hari':'—'}</div><div class="kpi-sub">avg lebih cepat vs external</div></div>
+    <div class="kpi c-orange"><div class="kpi-label"><span class="kpi-icon">💵</span>Cost Internal</div><div class="kpi-value">${fmtM(kpi.tCI)}</div><div class="kpi-sub">Rp ${fmt(Math.round(cpdo))}/DO · ${fmt(kpi.tDO)} DO · ${kpi.tCBM.toFixed(0)} CBM</div></div>
 
   </div>
   <div class="kpi-row" style="grid-template-columns:repeat(7,1fr);margin-top:8px">
@@ -1281,12 +1299,12 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       const tSewa=rows.reduce((s,r)=>s+(r[13]||0),0);
       const tArm=tUJP+tMPP+tSewa||1;
       return`
-      <div class="kpi c-blue"><div class="kpi-label">Total DO Internal</div><div class="kpi-value">${fmt(totalDO)}</div><div class="kpi-sub">avg ${avgDOPerTrip} DO/trip</div></div>
-      <div class="kpi c-${savAll>=0?'green':'red'}"><div class="kpi-label">Saving All Area</div><div class="kpi-value" style="color:${savAll>=0?CGREEN:CRED}">${savAll>=0?'+':''}${fmtM(savAll)}</div><div class="kpi-sub">semua jalur yg ada rate ext</div></div>
-      <div class="kpi c-yellow"><div class="kpi-label">Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${+(tUJP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
-      <div class="kpi c-teal"><div class="kpi-label">Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${+(tSewa/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
-      <div class="kpi c-cyan"><div class="kpi-label">Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${+(tMPP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
-      <div class="kpi c-blue"><div class="kpi-label">Total CBM</div><div class="kpi-value">${fmt(totalCbmKpi)}</div><div class="kpi-sub">avg ${avgCbmPerTrip} m³/trip</div></div>
+      <div class="kpi c-blue"><div class="kpi-label"><span class="kpi-icon">📦</span>Total DO Internal</div><div class="kpi-value">${fmt(totalDO)}</div><div class="kpi-sub">avg ${avgDOPerTrip} DO/trip</div></div>
+      <div class="kpi c-${savAll>=0?'green':'red'}"><div class="kpi-label"><span class="kpi-icon">💰</span>Saving All Area</div><div class="kpi-value" style="color:${savAll>=0?CGREEN:CRED}">${savAll>=0?'+':''}${fmtM(savAll)}</div><div class="kpi-sub">semua jalur yg ada rate ext</div></div>
+      <div class="kpi c-yellow"><div class="kpi-label"><span class="kpi-icon">🪙</span>Total UJP</div><div class="kpi-value">${fmtM(tUJP)}</div><div class="kpi-sub">${+(tUJP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
+      <div class="kpi c-teal"><div class="kpi-label"><span class="kpi-icon">🚚</span>Total Sewa Armada</div><div class="kpi-value">${fmtM(tSewa)}</div><div class="kpi-sub">${+(tSewa/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
+      <div class="kpi c-cyan"><div class="kpi-label"><span class="kpi-icon">👥</span>Total MPP</div><div class="kpi-value">${fmtM(tMPP)}</div><div class="kpi-sub">${+(tMPP/tArm*100).toFixed(1)}% dari Cost Armada</div></div>
+      <div class="kpi c-blue"><div class="kpi-label"><span class="kpi-icon">📐</span>Total CBM</div><div class="kpi-value">${fmt(totalCbmKpi)}</div><div class="kpi-sub">avg ${avgCbmPerTrip} m³/trip</div></div>
       <div class="kpi ${olfCls}"><div class="kpi-label">OLF Avg Int</div><div class="kpi-value">${olfVal!==null?olfVal+'%':'—'}</div><div class="kpi-sub">CBM/Kapasitas · ${olfRows.length} trip</div></div>`;
     })()}
   </div>`;
@@ -1624,8 +1642,8 @@ function buildCbmYoyKpiHTML(){
   if(!d) return '';
   const cardHTML=c=>{
     const g=c.s25>0?Math.round((c.s26-c.s25)/c.s25*100):null;
-    return`<div class="kpi" style="border-left:3px solid ${c.col}">
-      <div class="kpi-label">${c.key}</div>
+    return`<div class="kpi" style="${kpiPastelStyle(c.col)}">
+      <div class="kpi-label"><span class="kpi-icon" style="${kpiIconStyle(c.col)}">${kpiIconFor(c.key)}</span>${c.key}</div>
       <div class="kpi-value">${fmt(c.s26)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> vs ${fmt(c.s25)}</span></div>
       <div class="kpi-sub">${g===null?'—':`<span style="color:${g>=0?CGREEN:CRED}">${g>=0?'▲':'▼'} ${Math.abs(g)}%</span> YoY (${window._yoyBase.ovLabel})`}</div>
     </div>`;
@@ -1916,8 +1934,8 @@ function buildYoyKpiHTML(){
         pctLine=`<div class="kpi-sub" style="margin-top:2px">%Internal: ${p25!==null?p25+'%':'—'} → <b>${p26!==null?p26+'%':'—'}</b></div>`;
       }
     }
-    return`<div class="kpi" style="border-left:3px solid ${c.col}">
-      <div class="kpi-label">${c.key}</div>
+    return`<div class="kpi" style="${kpiPastelStyle(c.col)}">
+      <div class="kpi-label"><span class="kpi-icon" style="${kpiIconStyle(c.col)}">${kpiIconFor(c.key)}</span>${c.key}</div>
       <div class="kpi-value">${fmt(c.s26)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> vs ${fmt(c.s25)}</span></div>
       <div class="kpi-sub">${g===null?'—':`<span style="color:${g>=0?CGREEN:CRED}">${g>=0?'▲':'▼'} ${Math.abs(g)}%</span> YoY (${d.ovLabel})`}</div>
       ${pctLine}
@@ -2362,9 +2380,9 @@ function renderBU(){
     const col=BU_COL[b.key]||'#266CA9';
     const pctTxt=b.pctInt!==null?b.pctInt+'%':'—';
     const pCls=pc(b.pctInt||0);
-    html+=`<div class="kpi" style="border-left:3px solid ${col};position:relative">
+    html+=`<div class="kpi" style="${kpiPastelStyle(col)};position:relative">
       <div style="position:absolute;top:10px;right:12px;font-size:13px">${rankIcon(i)}</div>
-      <div class="kpi-label" style="cursor:pointer" onclick="setBUFilter('${b.key}')" title="Klik buat filter ke ${b.key}">${b.key} 🔎</div>
+      <div class="kpi-label" style="cursor:pointer" onclick="setBUFilter('${b.key}')" title="Klik buat filter ke ${b.key}"><span class="kpi-icon" style="${kpiIconStyle(col)}">🏢</span>${b.key} 🔎</div>
       <div class="kpi-value">${fmt(b.intTrips)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> trip int</span></div>
       <div class="kpi-sub"><span class="pill ${pCls}">${pctTxt} internal</span> · ${b.hasSav?(b.sav>=0?'Hemat '+fmtM(b.sav):fmtM(Math.abs(b.sav))+' lebih mahal'):'—'}</div>
     </div>`;
@@ -3467,17 +3485,17 @@ function renderCostAnalysis(rows){
 
   const kpiHTML=`<div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
     <div class="kpi c-orange">
-      <div class="kpi-label">Total UJP</div>
+      <div class="kpi-label"><span class="kpi-icon">🪙</span>Total UJP</div>
       <div class="kpi-value">${fmtM(totalAvgUJP)}</div>
       <div class="kpi-sub">${pUJPtot2}% dari Total Cost Armada</div>
     </div>
     <div class="kpi c-teal">
-      <div class="kpi-label">Total Sewa Armada</div>
+      <div class="kpi-label"><span class="kpi-icon">🚚</span>Total Sewa Armada</div>
       <div class="kpi-value">${fmtM(totalAvgSewa)}</div>
       <div class="kpi-sub">${pSewatot2}% dari Total Cost Armada</div>
     </div>
     <div class="kpi c-purple">
-      <div class="kpi-label">Total MPP</div>
+      <div class="kpi-label"><span class="kpi-icon">👥</span>Total MPP</div>
       <div class="kpi-value">${fmtM(totalAvgMPP)}</div>
       <div class="kpi-sub">${pMPPtot2}% dari Total Cost Armada</div>
     </div>
