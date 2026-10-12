@@ -124,38 +124,44 @@ for line in int_data[1:]:
     if not del_date_raw:
         int_skip_counts[site]['delivery date kosong'] += 1
         continue
-    try:
-        ci = float(ci_raw) if ci_raw else None
-        ce = float(ce_raw) if ce_raw else None
-        do_val = int(float(do_raw)) if do_raw else 0
-        cbm = float(cbm_raw) if cbm_raw else 0.0
-        del_date = None
-        for fmt_str in ('%m/%d/%Y', '%d-%b-%Y', '%d/%m/%Y', '%Y-%m-%d', '%d %b %Y', '%d %b %y'):
-            try:
-                del_date = datetime.strptime(del_date_raw, fmt_str).strftime('%Y-%m-%d')
-                break
-            except:
-                continue
-        if not del_date:
-            int_skip_counts[site][f'format tanggal tak dikenal ({del_date_raw!r})'] += 1
+    # Cost Int/Ext/DO/CBM kadang isinya error formula ('#N/A','#REF!', dst) bukan angka
+    # kosong — float() langsung exception kalau dikasih itu, dan itu dulu bikin SELURUH
+    # baris (trip-nya ikut) hilang dari dashboard meski trip-nya valid, cuma rate
+    # pembanding yang belum ke-lookup. Sekarang error-string itu diperlakukan sebagai
+    # kosong (None/0), trip-nya tetap kehitung.
+    BAD_NUM = ('#N/A', '#REF!', '#VALUE!', '#DIV/0!', '#NULL!', '#NAME?', '-')
+    def safe_float(raw):
+        if not raw or raw.strip().upper() in BAD_NUM:
+            return None
+        try:
+            return float(raw)
+        except:
+            return None
+    ci = safe_float(ci_raw)
+    ce = safe_float(ce_raw)
+    do_val = int(safe_float(do_raw)) if safe_float(do_raw) is not None else 0
+    cbm = safe_float(cbm_raw) or 0.0
+    del_date = None
+    for fmt_str in ('%m/%d/%Y', '%d-%b-%Y', '%d/%m/%Y', '%Y-%m-%d', '%d %b %Y', '%d %b %y'):
+        try:
+            del_date = datetime.strptime(del_date_raw, fmt_str).strftime('%Y-%m-%d')
+            break
+        except:
             continue
-    except:
-        int_skip_counts[site]['error parsing angka (Cost Int/Ext/DO/CBM)'] += 1
+    if not del_date:
+        int_skip_counts[site][f'format tanggal tak dikenal ({del_date_raw!r})'] += 1
         continue
     if ci is None: ci = 0.0  # trip tetep kejadian meski Cost Int kosong di sheet — jangan di-skip, biar trip count akurat
     lt_raw  = line[14].strip() if len(line) > 14 else ''
-    lt_ow   = float(lt_raw) if lt_raw and lt_raw not in ('Lead Time One Way',) else None
+    lt_ow   = safe_float(lt_raw) if lt_raw not in ('Lead Time One Way',) else None
     ujp_raw  = line[15].strip().replace(',','') if len(line) > 15 else ''
     mpp_raw  = line[16].strip().replace(',','') if len(line) > 16 else ''
     sewa_raw = line[17].strip().replace(',','') if len(line) > 17 else ''
-    ujp  = float(ujp_raw)  if ujp_raw  else None
-    mpp  = float(mpp_raw)  if mpp_raw  else None
-    sewa = float(sewa_raw) if sewa_raw else None
+    ujp  = safe_float(ujp_raw)
+    mpp  = safe_float(mpp_raw)
+    sewa = safe_float(sewa_raw)
     kap_raw  = line[KAP_IDX].strip().replace(',','') if len(line) > KAP_IDX else ''
-    try:
-        kap = float(kap_raw) if kap_raw and kap_raw not in ('#N/A','#VALUE!','#REF!','#DIV/0!','#NULL!','#NAME?') else None
-    except:
-        kap = None
+    kap = safe_float(kap_raw)
     owner = line[OWNER_IDX].strip() if len(line) > OWNER_IDX else ''
     int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap, owner])
 
