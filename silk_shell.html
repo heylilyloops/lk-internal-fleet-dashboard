@@ -264,6 +264,33 @@ canvas{display:block}
   </button>
 
   <div class="sb-divider"></div>
+  <div class="sb-section">BU</div>
+  <button class="sb-site-item" data-bu="HCI" onclick="selectBU('HCI')">
+    <span class="sb-dot" style="background:#5ba4f5"></span>HCI
+    <span class="sb-badge" id="badge-bu-HCI">—</span>
+  </button>
+  <button class="sb-site-item" data-bu="AHI" onclick="selectBU('AHI')">
+    <span class="sb-dot" style="background:#f5a623"></span>AHI
+    <span class="sb-badge" id="badge-bu-AHI">—</span>
+  </button>
+  <button class="sb-site-item" data-bu="FBI" onclick="selectBU('FBI')">
+    <span class="sb-dot" style="background:#00c49a"></span>FBI
+    <span class="sb-badge" id="badge-bu-FBI">—</span>
+  </button>
+  <button class="sb-site-item" data-bu="KLS" onclick="selectBU('KLS')">
+    <span class="sb-dot" style="background:#e879f9"></span>KLS
+    <span class="sb-badge" id="badge-bu-KLS">—</span>
+  </button>
+  <button class="sb-site-item" data-bu="Corp" onclick="selectBU('Corp')">
+    <span class="sb-dot" style="background:#8b6cf7"></span>Corp (Tamora/Tallo)
+    <span class="sb-badge" id="badge-bu-Corp">—</span>
+  </button>
+  <button class="sb-site-item" data-bu="IND" onclick="selectBU('IND')">
+    <span class="sb-dot" style="background:#e24b4b"></span>IND
+    <span class="sb-badge" id="badge-bu-IND">—</span>
+  </button>
+
+  <div class="sb-divider"></div>
   <div class="sb-section">SITE</div>
   <button class="sb-site-item active" data-site="all" onclick="navToGroup('all')">
     <span class="sb-dot" style="background:#266CA9"></span>Semua Site
@@ -1016,8 +1043,13 @@ function setMenu(menu){
 function updateSidebarActive(){
   document.querySelectorAll('.sb-site-item').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.sb-expand-arrow').forEach(el=>el.classList.remove('open'));
-  if(activeSite==='all'&&!window._sidebarOwner&&!window._siteOwnerMap){
+  if(activeSite==='all'&&!window._sidebarOwner&&!window._siteOwnerMap&&!window._buFilter){
     const el=document.querySelector('.sb-site-item[data-site="all"]');
+    if(el) el.classList.add('active');
+    return;
+  }
+  if(window._buFilter){
+    const el=document.querySelector('.sb-site-item[data-bu="'+window._buFilter+'"]');
     if(el) el.classList.add('active');
     return;
   }
@@ -1076,6 +1108,32 @@ function navToGroupBU(groupKey,buIdx){
   window._sidebarOwner=bu.owner||null;
   updateSidebarActive();
   render();
+}
+
+// Filter sidebar "BU" (section terpisah dari SITE, lintas lokasi — misal HCI = HCI Jababeka +
+// HCI Cikupa + Corp Sidoarjo(owner HCI)). Pakai BU_DEF yg sama dgn Summary BU lama, tapi sekarang
+// jadi filter global: scope activeSite ke site2 komponen BU-nya + _buFilter buat restrict Owner
+// Corp Sidoarjo. getRows()/rowMatchesBUOwner() udah otomatis ngehormatin kombinasi ini.
+function selectBU(buKey){
+  const comps=BU_DEF[buKey];
+  if(!comps) return;
+  window._buFilter=buKey;
+  window._sidebarOwner=null;
+  window._siteOwnerMap=null;
+  clearAllChecks();
+  activeSite=[...new Set(comps.map(c=>c.site))];
+  updateSidebarActive();
+  render();
+}
+// Pure helper buat badge count BU di sidebar — gak nyentuh window._buFilter global.
+function rowInBU(r,buKey){
+  const comps=BU_DEF[buKey]||[];
+  return comps.some(c=>{
+    if(r[0]!==c.site) return false;
+    if(c.owner===null) return true;
+    if(c.owner==='__OTHER__') return !SIDOARJO_KNOWN_OWNERS.includes(r[15]);
+    return r[15]===c.owner;
+  });
 }
 
 function toggleGroupExpand(groupKey){
@@ -1203,7 +1261,7 @@ function render(){
   const sav=kpi.sav;
 
   const menuLabels={overview:'Overview',detail:'Detail Metrik'};
-  const siteTitleLabel=activeSite==='all'?'Semua Site':(activeSite.length===1?(window._sidebarOwner?SSHORT[activeSite[0]]+' — '+window._sidebarOwner:activeSite[0]):`${activeSite.length} Site (${activeSite.map(s=>SSHORT[s]||s).join(', ')})`);
+  const siteTitleLabel=window._buFilter?('BU '+window._buFilter):(activeSite==='all'?'Semua Site':(activeSite.length===1?(window._sidebarOwner?SSHORT[activeSite[0]]+' — '+window._sidebarOwner:activeSite[0]):`${activeSite.length} Site (${activeSite.map(s=>SSHORT[s]||s).join(', ')})`));
   document.getElementById('mainTitle').textContent=siteTitleLabel+' — '+menuLabels[activeMenu];
   const dFrom=dateFrom?new Date(dateFrom).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
   const dTo=dateTo?new Date(dateTo).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
@@ -1223,6 +1281,10 @@ function render(){
   });
   const elAll=document.getElementById('badge-all');
   if(elAll) elAll.textContent=RAW.filter(r=>(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo)).length||'—';
+  ['HCI','AHI','FBI','KLS','Corp','IND'].forEach(buKey=>{
+    const br=RAW.filter(r=>rowInBU(r,buKey)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+    const elb=document.getElementById('badge-bu-'+buKey);if(elb) elb.textContent=br.length||'—';
+  });
 
   if(rows.length===0){document.getElementById(contentTargetId()).innerHTML=`<div class="no-data">Tidak ada data untuk range tanggal yang dipilih.</div>`;return;}
 
@@ -1233,11 +1295,13 @@ function render(){
 // ── DETAIL METRIK (gabungan Coverage + Sebaran + Cost Analysis + Summary BU, sub-tab) ──
 function renderDetailMetrik(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   window._detailTab=window._detailTab||'coverage';
+  // 'bu' (Summary BU) udah dipindah jadi filter sidebar sendiri (selectBU) — kalau ada state lama
+  // nyangkut ke 'bu' (dari sesi sebelumnya), fallback ke 'coverage' biar gak nunjuk tab yg udah gak ada.
+  if(window._detailTab==='bu') window._detailTab='coverage';
   const tabs=[
     {key:'coverage',label:'Coverage',icon:'📋'},
     {key:'sebaran',label:'Sebaran',icon:'📍'},
-    {key:'cost',label:'Cost Detail',icon:'💰'},
-    {key:'bu',label:'Summary BU',icon:'🏢'}
+    {key:'cost',label:'Cost Detail',icon:'💰'}
   ];
   const tabHTML=`<div class="card mb12" style="padding:8px 12px">
     <div style="display:inline-flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px">
@@ -1253,7 +1317,6 @@ function renderDetailMetrik(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   if(window._detailTab==='coverage') renderCoverage(rows,contrib,tInt,tAll,pct);
   else if(window._detailTab==='sebaran') renderSebaran(rows);
   else if(window._detailTab==='cost') renderCostAnalysis(rows);
-  else if(window._detailTab==='bu') renderBU();
 }
 
 function setDetailTab(key){
