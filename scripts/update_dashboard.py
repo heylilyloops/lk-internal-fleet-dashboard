@@ -96,10 +96,19 @@ KAP_IDX   = int_col.get('Kapasitas Armada', 21)
 print(f"INT header — Owner idx: {OWNER_IDX}, Kapasitas Armada idx: {KAP_IDX}")
 
 int_rows = []
+int_skip_counts = defaultdict(lambda: defaultdict(int))  # [site][reason] = count
+NEED_COLS = max(13, OWNER_IDX + 1, KAP_IDX + 1)
 for line in int_data[1:]:
-    if len(line) < 13: continue
-    site = line[0].strip()
-    if not site or site == 'Site': continue
+    # gspread get_all_values() trims trailing blank cells per row, so a row whose
+    # last-filled column is e.g. CBM (blank Lead Time/UJP/MPP/Sewa/Owner after it) comes
+    # back shorter than the header. Padding instead of skipping stops those trips from
+    # silently vanishing from the dashboard (this was dropping real Oct trips — see
+    # 2026-10-12 "Sidoarjo cuma kebaca 79, harusnya 103" investigation).
+    if len(line) < NEED_COLS:
+        line = line + [''] * (NEED_COLS - len(line))
+    site_probe = line[0].strip() if line else ''
+    if not site_probe or site_probe == 'Site': continue
+    site = site_probe
     area  = line[2].strip()
     jalur = line[3].strip()
     ci_raw = line[4].strip().replace(',','')
@@ -109,7 +118,12 @@ for line in int_data[1:]:
     del_date_raw = line[10].strip()
     do_raw   = line[11].strip()
     cbm_raw  = line[12].strip()
-    if not jalur or not del_date_raw: continue
+    if not jalur:
+        int_skip_counts[site]['jalur kosong'] += 1
+        continue
+    if not del_date_raw:
+        int_skip_counts[site]['delivery date kosong'] += 1
+        continue
     try:
         ci = float(ci_raw) if ci_raw else None
         ce = float(ce_raw) if ce_raw else None
@@ -122,8 +136,11 @@ for line in int_data[1:]:
                 break
             except:
                 continue
-        if not del_date: continue
+        if not del_date:
+            int_skip_counts[site][f'format tanggal tak dikenal ({del_date_raw!r})'] += 1
+            continue
     except:
+        int_skip_counts[site]['error parsing angka (Cost Int/Ext/DO/CBM)'] += 1
         continue
     if ci is None: ci = 0.0  # trip tetep kejadian meski Cost Int kosong di sheet — jangan di-skip, biar trip count akurat
     lt_raw  = line[14].strip() if len(line) > 14 else ''
@@ -143,6 +160,11 @@ for line in int_data[1:]:
     int_rows.append([site, area, jalur, ci, ce, armada, del_type, del_date, do_val, cbm, lt_ow, ujp, mpp, sewa, kap, owner])
 
 print(f"INT parsed: {len(int_rows)} rows")
+if int_skip_counts:
+    print("INT skipped rows (by site / reason) — cek ini kalau ada site yang kebaca trip-nya kurang:")
+    for s, reasons in int_skip_counts.items():
+        for reason, n in reasons.items():
+            print(f"  - {s}: {n} baris di-skip karena {reason}")
 
 # ── PARSE EXTERNAL NDC ───────────────────────────────────────────
 ext_header = ext_data[0]
