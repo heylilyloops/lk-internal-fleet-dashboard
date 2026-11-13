@@ -620,7 +620,8 @@ function calcKpi(rows){
   const tDO=rows.reduce((s,r)=>s+(r[8]||0),0);
   const tCBM=rows.reduce((s,r)=>s+(r[9]||0),0);
   const scopeRows=rows.filter(r=>isScopeRow(r));
-  const tCI_s=scopeRows.reduce((s,r)=>s+(r[3]||0),0);
+  // Saving apple-to-apple: Cost Int cuma dihitung dari trip yg punya Cost Ext (benchmark) — sama dgn chart Trend
+  const tCI_s=scopeRows.filter(r=>r[4]).reduce((s,r)=>s+(r[3]||0),0);
   const tCE_s=scopeRows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
   return{trips:rows.length,tCI,tCE,tDO,tCBM,sav:tCE_s-tCI_s,tCI_s,tCE_s};
 }
@@ -1542,8 +1543,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
       if(!byMonthArea[k][m]) byMonthArea[k][m]={trips:0,cbm:0,ci_s:0,ce_s:0,ceS_n:0};
       byMonthArea[k][m].trips++;
       byMonthArea[k][m].cbm+=(r[9]||0);
-      byMonthArea[k][m].ci_s+=r[3]||0;
-      if(r[4]){byMonthArea[k][m].ce_s+=r[4];byMonthArea[k][m].ceS_n++;}
+      if(r[4]){byMonthArea[k][m].ci_s+=r[3]||0;byMonthArea[k][m].ce_s+=r[4];byMonthArea[k][m].ceS_n++;}
     });
   });
 
@@ -2371,7 +2371,7 @@ function calcBU(buKey){
     const cExt=compExtTrips(c.site,c.owner);
     const cCi=cr.reduce((s,r)=>s+(r[3]||0),0);
     const scopeRows=cr.filter(isScopeRow);
-    const cCiS=scopeRows.reduce((s,r)=>s+(r[3]||0),0);
+    const cCiS=scopeRows.filter(r=>r[4]).reduce((s,r)=>s+(r[3]||0),0);
     const cCeRows=scopeRows.filter(r=>r[4]);
     const cCeS=cCeRows.reduce((s,r)=>s+(r[4]||0),0);
     intTrips+=cInt;extTrips+=cExt;ci+=cCi;ciS+=cCiS;ceS+=cCeS;
@@ -3261,7 +3261,8 @@ function buildSlideData(rows,kpi,tInt,tAll,pct,sav){
       const aCI=aRows.reduce((s,r)=>s+(r[3]||0),0);
       const aCE=aRows.filter(r=>r[4]).reduce((s,r)=>s+(r[4]||0),0);
       const aCECnt=aRows.filter(r=>r[4]).length;
-      const savPct=aCECnt>0&&aCI>0?+((aCE-aCI)/aCI*100).toFixed(1):null;
+      const aCIm=aRows.filter(r=>r[4]).reduce((s,r)=>s+(r[3]||0),0);
+      const savPct=aCECnt>0&&aCIm>0?+((aCE-aCIm)/aCIm*100).toFixed(1):null;
       // SLA for area
       const aJalurs=isLampung?jalurs.filter(j=>j.j==='Lampung'&&j.lt_delta!==null):jalurs.filter(j=>j.area===area&&j.lt_delta!==null);
       const aSLA=aJalurs.length?+(aJalurs.reduce((s,j)=>s+j.lt_delta,0)/aJalurs.length).toFixed(2):null;
