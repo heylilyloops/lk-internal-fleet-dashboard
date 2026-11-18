@@ -226,20 +226,22 @@ for line in ext_data[1:]:
     try: kap2 = float(kap_raw2.replace(',','')) if kap_raw2 and kap_raw2 not in ('#N/A','#VALUE!','#REF!','') else 0.0
     except: kap2 = 0.0
     olf_ext = (cbm2/kap2*100) if kap2>0 and cbm2>0 else 0.0
-    ext_agg_area[site][del_date][area][0] += 1
-    ext_agg_area[site][del_date][area][1] += cbm2
+    # Owner (BU) cuma dipakai buat Corp Sidoarjo (site shared 4 BU) — site lain owner='' biar jumlah entri gak bengkak
+    own = bu_raw if site == 'Corp Sidoarjo' else ''
+    ext_agg_area[site][del_date][(area, own)][0] += 1
+    ext_agg_area[site][del_date][(area, own)][1] += cbm2
     if bu_raw:
         ext_agg_owner[site][del_date][bu_raw][0] += 1
         ext_agg_owner[site][del_date][bu_raw][1] += cbm2
     if jalur:
-        ext_agg_jalur[site][del_date][area][jalur][0] += 1
-        ext_agg_jalur[site][del_date][area][jalur][1] += cbm2
+        ext_agg_jalur[site][del_date][(area, own)][jalur][0] += 1
+        ext_agg_jalur[site][del_date][(area, own)][jalur][1] += cbm2
         if olf_ext > 0:
-            ext_agg_jalur[site][del_date][area][jalur][2] += olf_ext
-            ext_agg_jalur[site][del_date][area][jalur][3] += 1
+            ext_agg_jalur[site][del_date][(area, own)][jalur][2] += olf_ext
+            ext_agg_jalur[site][del_date][(area, own)][jalur][3] += 1
         if arm_raw:
-            ext_agg_armada[site][del_date][jalur][arm_raw][0] += 1
-            ext_agg_armada[site][del_date][jalur][arm_raw][1] += cbm2
+            ext_agg_armada[site][del_date][(jalur, own)][arm_raw][0] += 1
+            ext_agg_armada[site][del_date][(jalur, own)][arm_raw][1] += cbm2
 
 print(f"EXT skipped: {skipped}")
 
@@ -311,14 +313,14 @@ for line in rdc_data[1:]:
     try: cbm_rdc = float(cbm_rdc_raw.replace(',','')) if cbm_rdc_raw else 0.0
     except: cbm_rdc = 0.0
     arm_rdc_raw = norm_armada(get_rdc('TYPE ARMADA', 4).strip())
-    ext_agg_area[site][del_date][area_key][0] += 1
-    ext_agg_area[site][del_date][area_key][1] += cbm_rdc
+    ext_agg_area[site][del_date][(area_key, '')][0] += 1
+    ext_agg_area[site][del_date][(area_key, '')][1] += cbm_rdc
     if jalur_r:
-        ext_agg_jalur[site][del_date][area_key][jalur_r][0] += 1
-        ext_agg_jalur[site][del_date][area_key][jalur_r][1] += cbm_rdc
+        ext_agg_jalur[site][del_date][(area_key, '')][jalur_r][0] += 1
+        ext_agg_jalur[site][del_date][(area_key, '')][jalur_r][1] += cbm_rdc
         if arm_rdc_raw:
-            ext_agg_armada[site][del_date][jalur_r][arm_rdc_raw][0] += 1
-            ext_agg_armada[site][del_date][jalur_r][arm_rdc_raw][1] += cbm_rdc
+            ext_agg_armada[site][del_date][(jalur_r, '')][arm_rdc_raw][0] += 1
+            ext_agg_armada[site][del_date][(jalur_r, '')][arm_rdc_raw][1] += cbm_rdc
 
     # Collect LT for benchmark
     try:
@@ -329,17 +331,21 @@ for line in rdc_data[1:]:
 
 print(f"RDC EXT skipped: {rdc_skipped}")
 
+# Field "owner" cuma ditulis buat Corp Sidoarjo (dipakai filter Owner/BU di dashboard: extMatchesBUOwner)
+def _own(s, o):
+    return {"owner": o} if s == 'Corp Sidoarjo' else {}
+
 ext_list_area = [
-    {"fleet":"External","site":s,"date":d,"area":a,"trips":v[0],"cbm":round(v[1],2)}
+    {"fleet":"External","site":s,"date":d,"area":a,"trips":v[0],"cbm":round(v[1],2), **_own(s, o)}
     for s, dates in ext_agg_area.items()
     for d, areas in dates.items()
-    for a, v in areas.items()
+    for (a, o), v in areas.items()
 ]
 ext_list_jalur = [
-    {"site":s,"date":d,"area":a,"jalur":j,"trips":v[0],"cbm":round(v[1],2),"olf_ext":round(v[2]/v[3],1) if v[3]>0 else None}
+    {"site":s,"date":d,"area":a,"jalur":j,"trips":v[0],"cbm":round(v[1],2),"olf_ext":round(v[2]/v[3],1) if v[3]>0 else None, **_own(s, o)}
     for s, dates in ext_agg_jalur.items()
     for d, areas in dates.items()
-    for a, jalurs in areas.items()
+    for (a, o), jalurs in areas.items()
     for j, v in jalurs.items()
 ]
 ext_list_owner = [
@@ -349,10 +355,10 @@ ext_list_owner = [
     for o, v in owners.items()
 ]
 ext_list_armada = [
-    {"site":s,"date":d,"jalur":j,"armada":a,"trips":v[0],"cbm":round(v[1],2)}
+    {"site":s,"date":d,"jalur":j,"armada":a,"trips":v[0],"cbm":round(v[1],2), **_own(s, o)}
     for s, dates in ext_agg_armada.items()
     for d, jalurs in dates.items()
-    for j, armadas in jalurs.items()
+    for (j, o), armadas in jalurs.items()
     for a, v in armadas.items()
 ]
 print(f"EXT area entries (incl RDC): {len(ext_list_area)}, EXT jalur entries: {len(ext_list_jalur)}, EXT owner (BU) entries: {len(ext_list_owner)}, EXT armada entries: {len(ext_list_armada)}")
