@@ -2143,12 +2143,9 @@ function computeCbmIntExt(rows,area){
 
 function cbmIntExtHeadHTML(d){
   const pctTxt=d.pctAll===null?'':`<span class="pill ${pc(d.pctAll)}" style="margin-left:8px">${String(d.pctAll).replace('.',',')}% internal by CBM</span>`;
-  const scope3=['Jawa Barat','Lampung','Jawa Timur'];
-  const shown=window._areaSel?scope3.filter(a=>window._areaSel.has(a)):scope3;
-  const short={'Jawa Barat':'Jabar','Lampung':'Lampung','Jawa Timur':'Jatim'};
-  const scope=shown.length?'scope '+shown.map(a=>short[a]).join(' + '):'area terpilih di luar scope Jabar/Lampung/Jatim';
-  const win=d.dayFrom==='01'&&d.dayTo==='31'?'':` · tiap bulan dihitung tgl ${d.dayFrom}\u2013${d.dayTo}`;
-  return `${pctTxt}<span class="card-badge">${scope} · volume CBM (m³)${win}</span>`;
+  // Badge scope dihapus — area sekarang diatur lewat filter Area global; badge cuma muncul kalau range tgl parsial
+  const win=d.dayFrom==='01'&&d.dayTo==='31'?'':`<span class="card-badge">tiap bulan dihitung tgl ${d.dayFrom}–${d.dayTo}</span>`;
+  return pctTxt+win;
 }
 function cbmIntExtFootHTML(d){
   const partialNote=(d.partial&&d.months.includes(d.partial))?` · * bulan berjalan (data s/d ${d.maxDate.slice(8,10)}/${d.maxDate.slice(5,7)})`:'';
