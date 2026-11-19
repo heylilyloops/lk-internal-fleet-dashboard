@@ -2055,17 +2055,10 @@ function renderCbmYoYChart(){
 // Internal: rows (getRows, udah kena filter site/owner/tanggal) yg lolos isJbLpJtRow → jumlah CBM (r[9]).
 // Eksternal: EXT_AGG area Jabar/Jatim (scope resmi site) + EXT_JALUR jalur Lampung; owner Sidoarjo ikut filter
 // lewat extAgg()/extJalur(). Bar int vs ext berdampingan + strip angka per bulan di bawah chart.
-function computeCbmIntExt(rows,area){
-  // Mirror perilaku chart CBM 2025 vs 2026: ini chart TREND — kalau user pilih range tanggal (mis. 1–29 Nov),
-  // semua bulan Jan..bulan "sampai" tetap tampil, tapi tiap bulan cuma dihitung tgl dayFrom–dayTo.
-  // Total & badge % di header = periode literal yg dipilih di topbar.
-  area=area||'all';
-  const intArea=r=>{
-    const s=SAVING_SCOPE[r[0]]||[];
-    if(s.includes('Lampung')&&r[2]==='Lampung') return 'Lampung';
-    if((r[1]==='Jawa Barat'||r[1]==='Jawa Timur')&&s.includes(r[1])) return r[1];
-    return null;
-  };
+function computeCbmIntExt(rows){
+  // Semua tujuan & semua site yg lagi difilter (sidebar site/BU/owner + filter Area global) — angka internal
+  // sama persis dgn chart CBM 2025 vs 2026 di atasnya. Mau lihat area tertentu → pakai filter Area.
+  // Pola trend: kalau user pilih range tanggal, semua bulan Jan..bulan "sampai" tetap tampil.
   // Rentang penuh (tombol "Semua") atau 1 bulan penuh (tombol bulan) → tiap bulan dihitung sebulan penuh.
   // Range hari parsial (mis. MTD / 1–18) → tiap bulan dihitung tgl yg sama (apple-to-apple).
   const src=(typeof _AREA_SRC!=='undefined'&&_AREA_SRC.RAW)?_AREA_SRC.RAW.full:RAW;
@@ -2075,8 +2068,10 @@ function computeCbmIntExt(rows,area){
   const lastDayOf=x=>{const y=+x.slice(0,4),mo=+x.slice(5,7);return new Date(y,mo,0).getDate();};
   // Tombol bulan nge-set "sampai" = hari terakhir bulan itu → anggap sebulan penuh
   const fullMonths=!!(dateFrom&&dateTo)&&dateFrom.slice(8,10)==='01'&&(+dateTo.slice(8,10)>=lastDayOf(dateTo));
-  const dayFrom=(fullRange||fullMonths||!dateFrom)?'01':dateFrom.slice(8,10);
-  const dayTo=(fullRange||fullMonths||!dateTo)?'31':dateTo.slice(8,10);
+  // Window tanggal per bulan disamakan PERSIS dgn chart CBM 2025 vs 2026 (pakai tgl dari & sampai di topbar),
+  // biar angka internal kedua chart selalu identik di filter apa pun.
+  const dayFrom=dateFrom?dateFrom.slice(8,10):'01';
+  const dayTo=dateTo?dateTo.slice(8,10):'31';
   const inWin=d=>{const dd=d.slice(8,10);return d.startsWith('2026-')&&dd>=dayFrom&&dd<=dayTo;};
   const inLit=d=>(!dateFrom||d>=dateFrom)&&(!dateTo||d<=dateTo);
   const allRows=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>rowMatchesBUOwner(r));
@@ -2084,32 +2079,21 @@ function computeCbmIntExt(rows,area){
   let litInt=0, litExt=0;
   const monthsInt=new Set();
   allRows.forEach(r=>{
-    if(!isJbLpJtRow(r)) return;
-    const a=intArea(r); if(!a) return;
-    if(area!=='all'&&a!==area) return;
     const m=r[7].slice(0,7); monthsInt.add(m);
     if(inWin(r[7])) intBy[m]=(intBy[m]||0)+(r[9]||0);
     if(inLit(r[7])) litInt+=r[9]||0;
   });
   const siteOk=e=>activeSite==='all'||siteInFilter(e.site);
-  const addExt=(e)=>{
+  const addExt=e=>{
     const m=e.date.slice(0,7);
     if(inWin(e.date)) extBy[m]=(extBy[m]||0)+(e.cbm||0);
     if(inLit(e.date)) litExt+=e.cbm||0;
   };
-  extAgg().forEach(e=>{
-    if(!siteOk(e)) return;
-    if(e.area!=='Jawa Barat'&&e.area!=='Jawa Timur') return; // Lampung lewat EXT_JALUR di bawah
-    if(!(SAVING_SCOPE[e.site]||[]).includes(e.area)) return;
-    if(area!=='all'&&e.area!==area) return;
-    addExt(e);
-  });
-  extJalur().forEach(e=>{
-    if(!siteOk(e)) return;
-    if(e.jalur!=='Lampung'||!(SAVING_SCOPE[e.site]||[]).includes('Lampung')) return;
-    if(area!=='all'&&area!=='Lampung') return;
-    addExt(e);
-  });
+  // Eksternal semua tujuan: EXT_AGG semua area KECUALI Sumatera Bagian Selatan; Sumsel diambil dari EXT_JALUR
+  // (sudah pecah per jalur, termasuk Lampung) — jadi filter Area Lampung / Sumsel tetap kepisah dgn benar
+  // dan gak ada yg kehitung dobel.
+  extAgg().forEach(e=>{ if(siteOk(e)&&e.area!=='Sumatera Bagian Selatan') addExt(e); });
+  extJalur().forEach(e=>{ if(siteOk(e)&&e.area==='Sumatera Bagian Selatan') addExt(e); });
   // Bulan: Jan s/d bulan "sampai" (atau bulan terakhir yg ada data internal), sama dgn chart YoY
   const lastData=[...monthsInt].filter(m=>m.startsWith('2026-')).sort().pop();
   const capTo=dateTo?dateTo.slice(0,7):(lastData||'2026-12');
@@ -2138,7 +2122,7 @@ function computeCbmIntExt(rows,area){
   const pct=months.map((m,i)=>{const t=intData[i]+extData[i];return t>0?Math.round(intData[i]/t*100):null;});
   const sumInt=Math.round(litInt), sumExt=Math.round(litExt);
   const pctAll=sumInt+sumExt>0?Math.round(sumInt/(sumInt+sumExt)*1000)/10:null;
-  return{area,months,labels,intData,extData,pct,sumInt,sumExt,pctAll,partial,maxDate,dayFrom,dayTo,selected,narrowed};
+  return{months,labels,intData,extData,pct,sumInt,sumExt,pctAll,partial,maxDate,dayFrom,dayTo,selected,narrowed};
 }
 
 function cbmIntExtHeadHTML(d){
@@ -2155,12 +2139,12 @@ function cbmIntExtFootHTML(d){
   return `Total internal${per}: <b>${fmt(d.sumInt)} m³</b> · Total eksternal${per}: <b>${fmt(d.sumExt)} m³</b> · Label atas bar = % internal by CBM${partialNote}`;
 }
 function buildCbmIntExtHTML(rows){
-  const d=computeCbmIntExt(rows,'all');
+  const d=computeCbmIntExt(rows);
   window._cbmIntExt=d;
   if(!d.months.length){
     window._cbmIntExt=null;
     return `<div class="card mb12"><div class="card-title">Perbandingan CBM Internal vs Eksternal</div>
-      <div style="font-size:11.5px;color:var(--muted);padding:6px 2px">Chart ini cuma untuk area scope Jabar / Lampung / Jatim (yang punya data eksternal pembanding). Area yang dipilih di filter tidak termasuk scope tsb.</div></div>`;
+      <div style="font-size:11.5px;color:var(--muted);padding:6px 2px">Tidak ada data CBM untuk filter yang dipilih.</div></div>`;
   }
   return `<div class="card mb12">
     <div class="card-title">Perbandingan CBM Internal vs Eksternal<span id="cbmIntExtHead">${cbmIntExtHeadHTML(d)}</span></div>
