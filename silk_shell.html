@@ -1417,6 +1417,8 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   const yoyHTML=buildYoyHTML();
   // 2.55 YoY CBM 2025 vs 2026 — sama struktur, tapi CBM bukan trip count
   const cbmYoyHTML=buildCbmYoyHTML();
+  // 2.56 CBM Internal vs Eksternal per bulan (scope Jabar+Lampung+Jatim) — section baru, gak ubah chart lain
+  const cbmIntExtHTML=buildCbmIntExtHTML(rows);
 
   // 3. Site cards
   let siteHTML=`<div class="grid4" style="grid-template-columns:repeat(${Math.min(sitesToShow.length,4)},1fr)">`;
@@ -1645,7 +1647,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   // 2.6 Kontribusi % Internal per Area — sekarang bisa 2025 vs 2026, section terpisah dari YoY
   const kontribHTML=buildKontribHTML();
 
-  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+cbmYoyHTML+kontribHTML+alertHTML+siteHTML+scHTML+momHTML;
+  document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+cbmYoyHTML+cbmIntExtHTML+kontribHTML+alertHTML+siteHTML+scHTML+momHTML;
 
   // Store data for toggle
   window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
@@ -1657,6 +1659,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
 
     if(window._yoyData) renderYoYChart(window._yoyView||'total');
     if(window._cbmYoyData) renderCbmYoYChart();
+    if(window._cbmIntExt) renderCbmIntExtChart();
 
     renderKontribChart();
   },30);
@@ -1898,6 +1901,135 @@ function renderCbmYoYChart(){
       scales:{
         x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
         y:{ticks:{color:'#637d9a',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'CBM (m³)',color:'#637d9a',font:{size:10}}}
+      }
+    }
+  });
+}
+
+// ── CBM INTERNAL vs EKSTERNAL per bulan (scope Jabar+Lampung+Jatim, sama dgn trend "Internal vs Eksternal") ──
+// Internal: rows (getRows, udah kena filter site/owner/tanggal) yg lolos isJbLpJtRow → jumlah CBM (r[9]).
+// Eksternal: EXT_AGG area Jabar/Jatim (scope resmi site) + EXT_JALUR jalur Lampung; owner Sidoarjo ikut filter
+// lewat extAgg()/extJalur(). Bar int vs ext berdampingan + strip angka per bulan di bawah chart.
+function computeCbmIntExt(rows){
+  const intBy={}, extBy={};
+  rows.forEach(r=>{
+    if(!isJbLpJtRow(r)) return;
+    const m=r[7].slice(0,7);
+    intBy[m]=(intBy[m]||0)+(r[9]||0);
+  });
+  const inRange=e=>(activeSite==='all'||siteInFilter(e.site))&&(!dateFrom||e.date>=dateFrom)&&(!dateTo||e.date<=dateTo);
+  extAgg().forEach(e=>{
+    if(!inRange(e)) return;
+    if(e.area!=='Jawa Barat'&&e.area!=='Jawa Timur') return; // Lampung lewat EXT_JALUR di bawah
+    if(!(SAVING_SCOPE[e.site]||[]).includes(e.area)) return;
+    const m=e.date.slice(0,7);
+    extBy[m]=(extBy[m]||0)+(e.cbm||0);
+  });
+  extJalur().forEach(e=>{
+    if(!inRange(e)) return;
+    if(e.jalur!=='Lampung'||!(SAVING_SCOPE[e.site]||[]).includes('Lampung')) return;
+    const m=e.date.slice(0,7);
+    extBy[m]=(extBy[m]||0)+(e.cbm||0);
+  });
+  const months=[...new Set(Object.keys(intBy).concat(Object.keys(extBy)))].filter(m=>m.startsWith('2026-')).sort();
+  const MLBL={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'Mei','06':'Jun','07':'Jul','08':'Agu','09':'Sep','10':'Okt','11':'Nov','12':'Des'};
+  // Bulan terakhir ditandai * kalau datanya belum sebulan penuh (bulan berjalan)
+  const maxDate=rows.reduce((mx,r)=>r[7]>mx?r[7]:mx,'');
+  let partial=null;
+  if(maxDate){
+    const y=+maxDate.slice(0,4), mo=+maxDate.slice(5,7), dd=+maxDate.slice(8,10);
+    const last=new Date(y,mo,0).getDate();
+    if(dd<last&&(!dateTo||dateTo>=maxDate)) partial=maxDate.slice(0,7);
+  }
+  const labels=months.map(m=>(MLBL[m.slice(5,7)]||m)+(m===partial?'*':''));
+  const intData=months.map(m=>Math.round(intBy[m]||0));
+  const extData=months.map(m=>Math.round(extBy[m]||0));
+  const pct=months.map((m,i)=>{const t=intData[i]+extData[i];return t>0?Math.round(intData[i]/t*100):null;});
+  const sumInt=intData.reduce((a,b)=>a+b,0), sumExt=extData.reduce((a,b)=>a+b,0);
+  const pctAll=sumInt+sumExt>0?Math.round(sumInt/(sumInt+sumExt)*1000)/10:null;
+  return{months,labels,intData,extData,pct,sumInt,sumExt,pctAll,partial,maxDate};
+}
+
+function buildCbmIntExtHTML(rows){
+  const d=computeCbmIntExt(rows);
+  window._cbmIntExt=d;
+  if(!d.months.length) return '';
+  const pctTxt=d.pctAll===null?'':`<span class="pill ${pc(d.pctAll)}" style="margin-left:8px">${String(d.pctAll).replace('.',',')}% internal by CBM</span>`;
+  const partialNote=d.partial?` · * bulan berjalan (data s/d ${d.maxDate.slice(8,10)}/${d.maxDate.slice(5,7)})`:'';
+  return `<div class="card mb12">
+    <div class="card-title">Perbandingan CBM Internal vs Eksternal${pctTxt}
+      <span class="card-badge">scope Jabar + Lampung + Jatim · volume CBM (m³)</span>
+    </div>
+    <div id="cbmIntExtChartWrap" style="position:relative;height:250px"><canvas id="cCbmIntExt"></canvas></div>
+    <div id="cbmIntExtStrip" style="position:relative;margin-top:2px;border-top:1px solid var(--border)"></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">Total internal: <b>${fmt(d.sumInt)} m³</b> · Total eksternal: <b>${fmt(d.sumExt)} m³</b> · Label atas bar = % internal by CBM${partialNote}</div>
+  </div>`;
+}
+
+function renderCbmIntExtChart(){
+  const d=window._cbmIntExt;
+  if(!d||!d.months.length) return;
+  dc('cCbmIntExt');
+  const el=document.getElementById('cCbmIntExt');
+  const strip=document.getElementById('cbmIntExtStrip');
+  if(!el) return;
+  const kFmt=v=>v>=1000?(v/1000).toFixed(1).replace('.',',')+'k':String(v);
+  const pctLabel={
+    id:'cbmIntExtPct',
+    afterDatasetsDraw(chart){
+      const ctx=chart.ctx, m0=chart.getDatasetMeta(0), m1=chart.getDatasetMeta(1);
+      if(m0.hidden&&m1.hidden) return;
+      ctx.save();
+      ctx.font='700 11px Helvetica Neue,Arial,sans-serif';
+      ctx.fillStyle='#1e2d4a';
+      ctx.textAlign='center';
+      m0.data.forEach((b0,i)=>{
+        const p=d.pct[i]; if(p===null) return;
+        const b1=m1.data[i];
+        const x=b1?(b0.x+b1.x)/2:b0.x;
+        const y=Math.min(m0.hidden?Infinity:b0.y,(b1&&!m1.hidden)?b1.y:Infinity)-6;
+        ctx.fillText(p+'%',x,isFinite(y)?y:chart.chartArea.top);
+      });
+      ctx.restore();
+    }
+  };
+  // Strip angka di bawah chart — kolomnya diselaraskan ke chartArea biar pas di bawah tiap pasangan bar
+  const alignStrip={
+    id:'cbmIntExtStripAlign',
+    afterLayout(chart){
+      if(!strip) return;
+      const a=chart.chartArea; if(!a) return;
+      const n=d.months.length;
+      const cell=(v,st)=>`<div style="text-align:center;padding:3px 0;${st||''}">${v}</div>`;
+      const row=(lab,vals,st)=>`<div style="position:absolute;left:0;width:${Math.max(a.left-6,30)}px;text-align:right;padding:3px 0;font-size:10px;color:var(--muted)">${lab}</div>`+
+        `<div style="margin-left:${a.left}px;width:${a.right-a.left}px;display:grid;grid-template-columns:repeat(${n},minmax(0,1fr));font-size:10px">${vals.map(v=>cell(v,st)).join('')}</div>`;
+      strip.innerHTML=
+        `<div style="position:relative">${row('Int',d.intData.map(kFmt),'color:var(--txt);font-weight:600')}</div>`+
+        `<div style="position:relative">${row('Ext',d.extData.map(kFmt),'color:var(--muted)')}</div>`+
+        `<div style="position:relative">${row('% Int',d.pct.map(p=>p===null?'—':p+'%'),'color:#1e2d4a;font-weight:700')}</div>`;
+    }
+  };
+  CH['cCbmIntExt']=new Chart(el,{
+    type:'bar',
+    data:{labels:d.labels,datasets:[
+      {label:'CBM Internal',data:d.intData,backgroundColor:'#1e2d4a',borderRadius:{topLeft:4,topRight:4},maxBarThickness:22,categoryPercentage:0.72,barPercentage:0.92},
+      {label:'CBM Eksternal',data:d.extData,backgroundColor:'#a8c5e8',borderRadius:{topLeft:4,topRight:4},maxBarThickness:22,categoryPercentage:0.72,barPercentage:0.92}
+    ]},
+    plugins:[pctLabel,alignStrip],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:24,right:16,left:8}},
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:10,family:'Helvetica Neue'},boxWidth:12,padding:12}},
+        tooltip:{callbacks:{
+          label:c=>`${c.dataset.label}: ${fmt(c.parsed.y)} m³`,
+          footer:items=>{const i=items[0].dataIndex;return d.pct[i]===null?'':`% internal: ${d.pct[i]}%`;}
+        }}
+      },
+      scales:{
+        x:{ticks:{color:'#637d9a',font:{size:11,family:'Helvetica Neue'}},grid:{display:false}},
+        y:{beginAtZero:true,ticks:{color:'#637d9a',font:{size:10},callback:v=>kFmt(v)},grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'CBM (m³)',color:'#637d9a',font:{size:10}}}
       }
     }
   });
