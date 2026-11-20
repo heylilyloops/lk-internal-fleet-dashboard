@@ -396,7 +396,7 @@ canvas{display:block}
     <div class="date-quick" id="quickBtns"></div>
     <div id="areaFilterWrap" style="position:relative">
       <button id="areaFilterBtn" onclick="toggleAreaPanel(event)" style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid var(--border2);background:var(--bg);color:var(--txt);font-family:var(--font);font-weight:600;white-space:nowrap">📍 <span id="areaFilterLabel">Area: Semua</span> <span style="font-size:9px;color:var(--muted)">▼</span></button>
-      <div id="areaFilterPanel" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:1000;width:300px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(15,30,60,.18);padding:10px"></div>
+      <div id="areaFilterPanel" onclick="event.stopPropagation()" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:1000;width:300px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(15,30,60,.18);padding:10px"></div>
     </div>
     <div id="sb-multiselect-bar" style="display:none;align-items:center;gap:6px;margin-left:10px">
       <span style="font-size:10.5px;color:var(--muted)" id="sb-multiselect-count">0 site dipilih</span>
@@ -672,6 +672,9 @@ function renderAreaPanel(){
       <span style="flex:1">${o.area}</span><span style="font-size:10px;color:var(--muted)">${o.n?fmt(o.n)+' trip':'ext saja'}</span></label>`;
   const qb=(lab,fn)=>`<button onclick="${fn}" style="padding:3px 8px;border-radius:5px;font-size:10px;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--txt2,#4a5b70);font-family:var(--font);font-weight:600">${lab}</button>`;
   p.innerHTML=`<div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap">${qb('Semua',"setAreaDraft('all')")}${qb('Jabar+Lampung+Jatim',"setAreaDraft('scope')")}${qb('Kosongkan',"setAreaDraft('none')")}</div>
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 6px;border-top:1px solid var(--border);cursor:pointer;font-size:11.5px;font-weight:700;color:var(--txt)">
+      <input type="checkbox" id="areaAllChk" ${!sel?'checked':''} onchange="setAreaDraft(this.checked?'all':'none')" style="accent-color:#1e2d4a;width:14px;height:14px;cursor:pointer">
+      <span style="flex:1">Pilih semua</span><span style="font-size:10px;color:var(--muted);font-weight:500">${!sel?'semua dicentang':(sel.size?sel.size+' dipilih':'kosong')}</span></label>
     <div style="max-height:300px;overflow:auto;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 0">${opts.map(row).join('')}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
       <span style="font-size:10px;color:var(--muted)">${sel?sel.size:opts.length} dari ${opts.length} area</span>
@@ -680,6 +683,8 @@ function renderAreaPanel(){
         <button onclick="commitAreaFilter()" style="padding:5px 12px;border-radius:6px;font-size:10.5px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-family:var(--font);font-weight:600">Terapkan</button>
       </span></div>`;
   window._areaScope3=scope3;
+  const allChk=document.getElementById('areaAllChk');
+  if(allChk) allChk.indeterminate=!!(sel&&sel.size>0);
 }
 function toggleAreaPanel(ev){
   if(ev) ev.stopPropagation();
@@ -720,7 +725,7 @@ function alertAreaEmpty(){
   if(!n){n=document.createElement('div');n.id='areaEmptyNote';n.style.cssText='font-size:10px;color:#c0392b;margin-top:6px';p.appendChild(n);}
   n.textContent='Pilih minimal 1 area dulu.';
 }
-document.addEventListener('click',e=>{const w=document.getElementById('areaFilterWrap');if(w&&!w.contains(e.target))closeAreaPanel();});
+document.addEventListener('click',e=>{const w=document.getElementById('areaFilterWrap');if(!w)return;const path=e.composedPath?e.composedPath():[e.target];if(!path.includes(w))closeAreaPanel();});
 function sitesToShowList(){
   return activeSite==='all'?ALL_SITES:activeSite;
 }
