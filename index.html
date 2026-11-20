@@ -1046,9 +1046,36 @@ function applySelection(){
   render();
 }
 
+// ── Window tanggal untuk chart TREND (Trend LK Internal per Bulan + MoM) ──
+// Default (tombol "Semua") → perilaku lama persis (pakai baris terfilter tanggal).
+// Kalau user milih bulan / range tanggal → semua bulan Jan..bulan "sampai" tetap tampil (biar keliatan trend):
+//   - 1 bulan penuh (tombol bulan) → tiap bulan dihitung sebulan penuh
+//   - range hari parsial (mis. 13–19 / MTD) → tiap bulan dihitung tgl yg sama (apple-to-apple)
+function trendWindow(){
+  const src=(typeof _AREA_SRC!=='undefined'&&_AREA_SRC.RAW)?_AREA_SRC.RAW.full:RAW;
+  if(!window._trendFullRange){const ds=src.map(r=>r[7]).sort();window._trendFullRange=[ds[0],ds[ds.length-1]];}
+  const [minD,maxD]=window._trendFullRange;
+  const fullRange=(!dateFrom||dateFrom<=minD)&&(!dateTo||dateTo>=maxD);
+  if(fullRange) return {active:false,ok:d=>(!dateFrom||d>=dateFrom)&&(!dateTo||d<=dateTo)};
+  const lastDayOf=x=>new Date(+x.slice(0,4),+x.slice(5,7),0).getDate();
+  const fullMonths=!!(dateFrom&&dateTo)&&dateFrom.slice(8,10)==='01'&&(+dateTo.slice(8,10)>=lastDayOf(dateTo));
+  const dayFrom=(fullMonths||!dateFrom)?'01':dateFrom.slice(8,10);
+  const dayTo=(fullMonths||!dateTo)?'31':dateTo.slice(8,10);
+  const capTo=dateTo?dateTo.slice(0,7):'2026-12';
+  const ok=d=>{if(!d.startsWith('2026-')||d.slice(0,7)>capTo)return false;const dd=d.slice(8,10);return dd>=dayFrom&&dd<=dayTo;};
+  return {active:true,dayFrom,dayTo,capTo,partialDays:!(dayFrom==='01'&&dayTo==='31'),ok};
+}
+function trendRowsFrom(rows){
+  const w=trendWindow();
+  window._trendWin=w;
+  if(!w.active) return rows;
+  return (activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>rowMatchesBUOwner(r)&&w.ok(r[7]));
+}
+function trendDateOk(d){const w=window._trendWin||trendWindow();return w.ok(d);}
+
 function renderTrendChart(view){
   if(!window._trendData) return;
-  const {byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS}=window._trendData;
+  const {byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS,byMonthArmada,ARMADA_TYPES,ARMADA_COLORS}=window._trendData; // armada: sebelumnya gak ikut dikirim → view Type Armada error
   dc('cTrend');
   const el=document.getElementById('cTrend');
   if(!el) return;
@@ -1072,7 +1099,7 @@ function renderTrendChart(view){
   if(view==='total'){
     // Saving Scope — pakai scope RESMI tiap site (SAVING_SCOPE), bukan dikunci ke Jabar+Lampung+Jatim doang.
     // Jadi buat Tamora scope-nya Sumatera Utara, Tallo scope-nya Sulawesi Selatan, dst — bukan selalu kosong.
-    const rowsForSaving=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>rowMatchesBUOwner(r)&&(!dateFrom||r[7]>=dateFrom)&&(!dateTo||r[7]<=dateTo));
+    const rowsForSaving=(activeSite==='all'?RAW:RAW.filter(r=>siteInFilter(r[0]))).filter(r=>rowMatchesBUOwner(r)&&trendDateOk(r[7]));
     const byMonthScope={}, byMonthAll={};
     rowsForSaving.forEach(r=>{
       const m=r[7].slice(0,7);
@@ -1129,8 +1156,7 @@ function renderTrendChart(view){
     const extByMonth={};
     extAgg().forEach(e=>{
       if(activeSite!=='all'&&!siteInFilter(e.site)) return;
-      if(dateFrom&&e.date<dateFrom) return;
-      if(dateTo&&e.date>dateTo) return;
+      if(!trendDateOk(e.date)) return;
       const scope=SAVING_SCOPE[e.site]||[];
       if(e.area!=='Jawa Barat'&&e.area!=='Jawa Timur') return; // batasi ke 2 area ini aja (Lampung ditangani terpisah lewat EXT_JALUR)
       if(!scope.includes(e.area)) return; // bukan scope resmi site ini (hindari anomali data entry)
@@ -1139,8 +1165,7 @@ function renderTrendChart(view){
     });
     extJalur().forEach(e=>{
       if(activeSite!=='all'&&!siteInFilter(e.site)) return;
-      if(dateFrom&&e.date<dateFrom) return;
-      if(dateTo&&e.date>dateTo) return;
+      if(!trendDateOk(e.date)) return;
       const scope=SAVING_SCOPE[e.site]||[];
       if(e.jalur!=='Lampung'||!scope.includes('Lampung')) return;
       // EXT_AGG tidak pernah punya area='Lampung' (sama seperti data internal, Lampung cuma
@@ -1717,10 +1742,12 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   });
 
   // 5. Trend Chart — combo Bar(Trip) + Line(CBM) + Line(Saving) with toggle Total/Per Area
+  // trendRows: = rows di mode default; kalau user pilih bulan/range → semua bulan s/d bulan "sampai" (lihat trendWindow)
+  const trendRows=trendRowsFrom(rows);
   const byMonthArmada={};
   const ARMADA_TYPES=['CDDLC','CDELC','WINGBOX','FUSO'];
   const ARMADA_COLORS={'CDDLC':'#266CA9','CDELC':'#5ba4f5','WINGBOX':'#00c49a','FUSO':'#f5a623'};
-  rows.forEach(r=>{
+  trendRows.forEach(r=>{
     if(!isJbLpJtRow(r)) return;
     const arm=r[5]||'Other';
     const m=r[7].slice(0,7);
@@ -1730,7 +1757,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   });
 
   const byMonthArea={__total__:{}};
-  rows.forEach(r=>{
+  trendRows.forEach(r=>{
     const m=r[7].slice(0,7);
     const key_total='__total__';
     const scope=SAVING_SCOPE[r[0]]||[];
@@ -1749,19 +1776,19 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
     });
   });
 
-  const allMonths=[...new Set(rows.map(r=>r[7].slice(0,7)))].sort();
+  const allMonths=[...new Set(trendRows.map(r=>r[7].slice(0,7)))].sort();
   const MLBL={'2026-01':'Jan','2026-02':'Feb','2026-03':'Mar','2026-04':'Apr','2026-05':'Mei','2026-06':'Jun','2026-07':'Jul','2026-08':'Agu','2026-09':'Sep','2026-10':'Okt','2026-11':'Nov','2026-12':'Des'};
   const mLabels=allMonths.map(m=>MLBL[m]||m);
 
   // Top areas by trip count
   const areaTrips={};
-  rows.forEach(r=>{areaTrips[r[1]]=(areaTrips[r[1]]||0)+1;});
+  trendRows.forEach(r=>{areaTrips[r[1]]=(areaTrips[r[1]]||0)+1;});
   const topAreas=Object.entries(areaTrips).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([a])=>a);
   const AREA_COLORS=['#266CA9','#00c49a','#f5a623','#8b6cf7','#e24b4b','#5ba4f5','#fb923c','#e879f9'];
 
   const chartsHTML=`<div class="card mb12">
     <div class="card-title">Trend LK Internal per Bulan
-      <span class="card-badge" id="trendBadgeText">Line=Saving Scope · Line=Saving All Area</span>
+      <span class="card-badge" id="trendBadgeText">Line=Saving Scope · Line=Saving All Area</span>${window._trendWin&&window._trendWin.active&&window._trendWin.partialDays?`<span class="card-badge">tiap bulan dihitung tgl ${window._trendWin.dayFrom}\u2013${window._trendWin.dayTo}</span>`:''}
       <div style="margin-left:auto;display:flex;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px">
         <button id="trendToggleTotal" onclick="setTrendView('total')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-family:var(--font);font-weight:600">Total LK</button>
         <button id="trendToggleArea" onclick="setTrendView('area')" style="padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:500">Per Area</button>
@@ -1797,7 +1824,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
         <td style="font-weight:700">${m.m}</td>
         <td style="text-align:right">${fmt(m.trips)}</td>
         <td style="text-align:right">${m.prevTrips!=null?`<span class="${m.trips>=m.prevTrips?'pos':'neg'}">${m.trips>=m.prevTrips?'▲':'▼'}${Math.abs(m.trips-m.prevTrips)}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
-        <td style="text-align:right">${(rows.filter(r=>r[7].slice(0,7)===allMonths[momRows.indexOf(m)]).reduce((s,r)=>s+(r[3]||0),0)/1e6).toFixed(1)}</td>
+        <td style="text-align:right">${(trendRows.filter(r=>r[7].slice(0,7)===allMonths[momRows.indexOf(m)]).reduce((s,r)=>s+(r[3]||0),0)/1e6).toFixed(1)}</td>
         <td style="text-align:right;color:${m.sav>=0?CGREEN:CRED};font-weight:700">${m.sav>=0?'+':''}${m.sav}</td>
       </tr>`).join('')}</tbody>
     </table>
@@ -1809,7 +1836,7 @@ function renderOverview(rows,kpi,contrib,tInt,tAll,pct,sav,slaAvg){
   document.getElementById('content').innerHTML=kpiHTML+chartsHTML+yoyHTML+cbmYoyHTML+cbmIntExtHTML+kontribHTML+alertHTML+siteHTML+scHTML+momHTML;
 
   // Store data for toggle
-  window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS};
+  window._trendData={byMonthArea,allMonths,mLabels,topAreas,AREA_COLORS,byMonthArmada,ARMADA_TYPES,ARMADA_COLORS};
   window._trendView='total';
 
   setTimeout(()=>{
