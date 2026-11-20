@@ -2167,9 +2167,8 @@ function renderCbmIntExtChart(){
   const vGrad=(top,bottom)=>ctx=>{
     const a=ctx.chart.chartArea;
     if(!a) return bottom;
-    const fade=d.selected&&ctx.dataIndex!==undefined&&!d.selected[ctx.dataIndex]; // bulan di luar periode → pudar
     const g=ctx.chart.ctx.createLinearGradient(0,a.top,0,a.bottom);
-    g.addColorStop(0,fade?top+'59':top); g.addColorStop(1,fade?bottom+'59':bottom);
+    g.addColorStop(0,top); g.addColorStop(1,bottom);
     return g;
   };
   const isPartial=i=>d.partial&&d.months[i]===d.partial;
@@ -2219,7 +2218,6 @@ function renderCbmIntExtChart(){
         const top=Math.min(m0.hidden?Infinity:b0.y,(b1&&!m1.hidden)?b1.y:Infinity);
         const y=(isFinite(top)?top:chart.chartArea.top)-16;
         const t=p+'%', tw=c.measureText(t).width+14, th=20;
-        c.globalAlpha=(d.selected&&!d.selected[i])?0.5:1;
         c.shadowColor='rgba(20,35,70,.18)'; c.shadowBlur=6; c.shadowOffsetY=2;
         c.fillStyle='#ffffff';
         c.beginPath(); c.roundRect?c.roundRect(x-tw/2,y-th/2,tw,th,10):c.rect(x-tw/2,y-th/2,tw,th); c.fill();
@@ -2237,7 +2235,7 @@ function renderCbmIntExtChart(){
       if(!strip) return;
       const a=chart.chartArea; if(!a) return;
       const n=d.months.length;
-      const cell=(v,st,i)=>`<div style="text-align:center;padding:5px 0;${st||''};${d.selected&&!d.selected[i]?'opacity:.4':''}">${v}</div>`;
+      const cell=(v,st,i)=>`<div style="text-align:center;padding:5px 0;${st||''};">${v}</div>`;
       const row=(lab,dot,vals,st,bg)=>`<div style="position:relative;${bg?'background:'+bg+';border-radius:6px':''}">`+
         `<div style="position:absolute;left:0;width:${Math.max(a.left-8,40)}px;text-align:right;padding:5px 0;font-size:11px;font-weight:600;color:var(--muted);display:flex;justify-content:flex-end;align-items:center;gap:5px">${dot?`<span style="width:9px;height:9px;border-radius:2px;background:${dot}"></span>`:''}${lab}</div>`+
         `<div style="margin-left:${a.left}px;width:${a.right-a.left}px;display:grid;grid-template-columns:repeat(${n},minmax(0,1fr));font-size:12px">${vals.map((v,i)=>cell(v,st,i)).join('')}</div></div>`;
