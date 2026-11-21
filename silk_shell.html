@@ -2110,7 +2110,12 @@ function computeCbmIntExt(rows){
   const intBy={}, extBy={};
   let litInt=0, litExt=0;
   const monthsInt=new Set();
+  // Aturan Jatim: kiriman ke Jawa Timur cuma dihitung dari Sidoarjo (Jababeka/Cikupa → Jatim di-skip,
+  // baik internal maupun eksternal) — sama dgn deck & chart Internal vs Eksternal.
+  const isJatim=a=>String(a||'').trim().toLowerCase()==='jawa timur';
+  const skipJatim=(site,area)=>isJatim(area)&&site!=='Corp Sidoarjo';
   allRows.forEach(r=>{
+    if(r[2]!=='Lampung'&&skipJatim(r[0],r[1])) return;
     const m=r[7].slice(0,7); monthsInt.add(m);
     if(inWin(r[7])) intBy[m]=(intBy[m]||0)+(r[9]||0);
     if(inLit(r[7])) litInt+=r[9]||0;
@@ -2124,7 +2129,7 @@ function computeCbmIntExt(rows){
   // Eksternal semua tujuan: EXT_AGG semua area KECUALI Sumatera Bagian Selatan; Sumsel diambil dari EXT_JALUR
   // (sudah pecah per jalur, termasuk Lampung) — jadi filter Area Lampung / Sumsel tetap kepisah dgn benar
   // dan gak ada yg kehitung dobel.
-  extAgg().forEach(e=>{ if(siteOk(e)&&e.area!=='Sumatera Bagian Selatan') addExt(e); });
+  extAgg().forEach(e=>{ if(siteOk(e)&&e.area!=='Sumatera Bagian Selatan'&&!skipJatim(e.site,e.area)) addExt(e); });
   extJalur().forEach(e=>{ if(siteOk(e)&&e.area==='Sumatera Bagian Selatan') addExt(e); });
   // Bulan: Jan s/d bulan "sampai" (atau bulan terakhir yg ada data internal), sama dgn chart YoY
   const lastData=[...monthsInt].filter(m=>m.startsWith('2026-')).sort().pop();
@@ -2168,7 +2173,7 @@ function cbmIntExtFootHTML(d){
   const MS=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const lit=x=>x?`${parseInt(x.slice(8,10))} ${MS[parseInt(x.slice(5,7))-1]}`:null;
   const per=(dateFrom||dateTo)?` (${lit(dateFrom)||'awal'}\u2013${lit(dateTo)||'akhir'})`:'';
-  return `Total internal${per}: <b>${fmt(d.sumInt)} m³</b> · Total eksternal${per}: <b>${fmt(d.sumExt)} m³</b> · Label atas bar = % internal by CBM${partialNote}`;
+  return `Total internal${per}: <b>${fmt(d.sumInt)} m³</b> · Total eksternal${per}: <b>${fmt(d.sumExt)} m³</b> · Label atas bar = % internal by CBM · Jatim hanya dihitung dari Sidoarjo${partialNote}`;
 }
 function buildCbmIntExtHTML(rows){
   const d=computeCbmIntExt(rows);
